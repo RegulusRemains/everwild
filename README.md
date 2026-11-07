@@ -1,10 +1,16 @@
 # Everwild
 
-**Version 0.3.0 — the first expedition**
+**Version 0.3.1 — impact and discovery**
 
 Everwild is a solo fantasy RPG about exploring a dangerous frontier with a summoned companion. Fight through Willowmere's forest and crypt camps, collect equipment, and grow an earth or air pet into the center of your combat strategy.
 
 The game runs entirely in your browser with HTML, CSS, and JavaScript. It has no runtime dependencies, account requirement, or server-side game state.
+
+## Impact and discovery
+
+The world now renders on a lightly pixelated canvas layer while names, damage numbers, and interface text stay crisp. Use **Pixel art / Smooth art** in the header to choose your preference. Hits have a brief brightness and recoil response plus small impact particles; reduced-motion settings remove the recoil and particle travel.
+
+New equipment gets a discovery banner, with a longer violet presentation for rare items. Duplicate salvage does not replay a discovery. Optional synthesized effects add low impact tones, spell sounds, and an item discovery chime. Sound starts off; enable **Sound on** to listen. Both presentation preferences stay in this browser, independently of character saves.
 
 ## Play locally
 
@@ -113,3 +119,4 @@ The source files already work at the repository root. Hosting is not enabled by 
 ## Scope
 
 This release is a playable starting point with a top-down presentation and one solo character. It is not a complete production RPG: there is no multiplayer service, shared persistent world, or cloud account system. Encounter balance, art, audio, and the breadth of content will continue to evolve. See [the roadmap](docs/ROADMAP.md) for the next development areas.
+

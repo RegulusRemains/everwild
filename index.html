@@ -18,6 +18,8 @@
       <button type="button" data-dialog="spellbook">Spellbook</button>
       <button type="button" data-dialog="inventory">Pack <kbd>I</kbd></button>
       <button type="button" data-dialog="save">Save</button>
+      <button type="button" id="art-style" aria-pressed="true" title="Toggle lightly pixelated world art">Pixel art</button>
+      <button type="button" id="sound" aria-pressed="false" title="Toggle sound effects">Sound off</button>
       <button type="button" id="pause" aria-label="Pause game">Ⅱ</button>
     </nav>
     <span class="build-label">THE EASTERN ROAD <span id="version">0.3</span></span>
@@ -25,6 +27,7 @@
   <main id="shell">
     <section class="adventure" aria-label="Game world">
       <div id="scene" class="scene">
+        <div id="discovery" class="discovery" hidden role="status" aria-live="polite"></div>
         <canvas id="game" tabindex="0" aria-label="Willowmere game world. Use WASD or arrows to move. Press Space to target a nearby enemy."></canvas>
         <div class="scene-top">
           <div class="vitals panel-glass">
@@ -69,3 +72,4 @@
   <script src="src/app.js"></script>
 </body>
 </html>
+

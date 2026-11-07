@@ -42,6 +42,76 @@
   let pendingNpc = null;
   let currentNpcId = null;
   let hotbarSignature = '';
+  let lastVisualId = 0, discoveryUntil = 0;
+  const discoveryQueue = [];
+  let audioContext = null, soundEnabled = false, lastImpactSound = -Infinity;
+  try {
+    renderer.pixelArt = localStorage.getItem('everwild_pixel_art') !== 'false';
+    soundEnabled = localStorage.getItem('everwild_sound') === 'true';
+  } catch (_) {}
+  function syncPresentationButtons() {
+    $('sound').textContent = soundEnabled ? 'Sound on' : 'Sound off';
+    $('sound').setAttribute('aria-pressed', String(soundEnabled));
+    $('art-style').setAttribute('aria-pressed', String(renderer.pixelArt));
+    $('art-style').textContent = renderer.pixelArt ? 'Pixel art' : 'Smooth art';
+  }
+  function unlockAudio() {
+    if (!soundEnabled) return;
+    try {
+      const Audio = window.AudioContext || window.webkitAudioContext;
+      if (!Audio) return;
+      if (!audioContext) audioContext = new Audio();
+      if (audioContext.state === 'suspended') audioContext.resume().catch(() => {});
+    } catch (_) { /* Sound is optional on browsers without Web Audio. */ }
+  }
+  function tone(frequency, delay, duration, volume, endFrequency, type = 'sine') {
+    if (!soundEnabled || !audioContext || audioContext.state !== 'running') return;
+    const oscillator = audioContext.createOscillator(), gain = audioContext.createGain();
+    const start = audioContext.currentTime + delay;
+    oscillator.type = type;
+    oscillator.frequency.setValueAtTime(frequency, start);
+    oscillator.frequency.exponentialRampToValueAtTime(endFrequency || frequency, start + duration);
+    gain.gain.setValueAtTime(0.0001, start);
+    gain.gain.exponentialRampToValueAtTime(volume, start + 0.008);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+    oscillator.connect(gain); gain.connect(audioContext.destination);
+    oscillator.start(start); oscillator.stop(start + duration + 0.01);
+    oscillator.onended = () => { oscillator.disconnect(); gain.disconnect(); };
+  }
+  function presentationFeedback(now) {
+    for (const visual of game.visuals) {
+      if (visual.id <= lastVisualId) continue;
+      lastVisualId = visual.id;
+      if (visual.kind === 'impact' && now - lastImpactSound > 85) {
+        lastImpactSound = now;
+        const enemy = visual.source === 'enemy';
+        tone(enemy ? 105 : 190, 0, 0.14, enemy ? 0.065 : 0.035, enemy ? 38 : 65, 'triangle');
+      } else if (visual.kind === 'bolt') tone(380, 0, 0.22, 0.018, 100, 'triangle');
+      else if (visual.kind === 'discovery') discoveryQueue.push({ id: visual.itemId, rare: visual.rare });
+    }
+    if (now >= discoveryUntil && discoveryQueue.length) {
+      const found = discoveryQueue.shift(), item = ITEMS[found.id];
+      if (item) {
+        const panel = $('discovery');
+        panel.classList.toggle('rare', found.rare);
+        panel.innerHTML = '<small>' + (found.rare ? 'A RARE DISCOVERY' : 'SOMETHING WORTH KEEPING') + '</small><strong>' + escape(item.name) + '</strong><span>Open your pack [I] to inspect and equip</span>';
+        panel.hidden = false; discoveryUntil = now + (found.rare ? 6500 : 4200);
+        [392, 493.88, 587.33, ...(found.rare ? [783.99] : [])].forEach((note, i) => tone(note, i * 0.13, 0.65, 0.018));
+      }
+    } else if (now >= discoveryUntil) $('discovery').hidden = true;
+  }
+  $('sound').addEventListener('click', () => {
+    soundEnabled = !soundEnabled; unlockAudio(); syncPresentationButtons();
+    try { localStorage.setItem('everwild_sound', String(soundEnabled)); } catch (_) {}
+  });
+  $('art-style').addEventListener('click', () => {
+    renderer.pixelArt = !renderer.pixelArt; syncPresentationButtons();
+    try { localStorage.setItem('everwild_pixel_art', String(renderer.pixelArt)); } catch (_) {}
+  });
+  document.addEventListener('pointerdown', unlockAudio);
+  document.addEventListener('keydown', unlockAudio);
+  syncPresentationButtons();
+
 
   function validSave(value) {
     return value && typeof value === 'object' && !Array.isArray(value) &&
@@ -468,6 +538,8 @@
   }
 
   function replaceGame(data) {
+    lastVisualId = 0; discoveryQueue.length = 0; discoveryUntil = 0;
+    $('discovery').hidden = true;
     game = new Game({ save: data });
     pendingImport = null;
     lastDead = game.dead;
@@ -648,6 +720,7 @@
       saveElapsed += dt;
       if (saveElapsed >= 7 || lastDead !== game.dead) { saveElapsed = 0; lastDead = game.dead; save(); }
     }
+    presentationFeedback(now);
     renderer.draw(game);
     uiElapsed += dt;
     if (uiElapsed >= 0.1) { uiElapsed = 0; updateUI(); }
@@ -662,3 +735,4 @@
   if (loadWarning) { game.log(loadWarning, 'warning'); toast(loadWarning); }
   requestAnimationFrame(frame);
 })();
+

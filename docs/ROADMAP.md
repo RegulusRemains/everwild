@@ -12,6 +12,10 @@ Willowmere now has three villagers with distinct jobs: Rowan offers patrols, Lio
 
 Spell progression adds Frost Lance at level 3 and Ember Nova at level 5, with ten learned spells and eight assignable bar slots. Pet Guard and Taunt add ways to control enemy attention while Follow remains a passive recall. Enemy roles and visible attack warnings create reasons to move, recall a companion, or interrupt with Root. Named camps have distinct equipment rewards.
 
+## 0.3.1: impact and discovery
+
+A separate world render pass adds light pixelation without reducing interface clarity. Optional synthesized impact, spell, and discovery sounds accompany hit reactions and item discovery banners. Presentation preferences persist separately from character saves. Reduced motion removes recoil and particle travel. This is an initial presentation pass; original character sprites, environmental artwork, and a fuller soundscape remain future work.
+
 ## Next: make repeated expeditions richer
 
 - Tune progression, tonic prices, pet durability, spell choices, and recovery time using observed play sessions.
@@ -29,3 +33,4 @@ Spell progression adds Frost Lance at level 3 and Ember Nova at level 5, with te
 ## Separate future project: online play
 
 Cooperative or multiplayer play would require an authoritative server, player identity, shared persistence, and a different security model. The current solo browser prototype does not implement those systems. Define the intended multiplayer experience before committing to that architecture.
+

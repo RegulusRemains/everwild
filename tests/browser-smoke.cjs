@@ -64,7 +64,7 @@ async function main() {
   let page;
   try {
     await fs.mkdir(screenshots, { recursive: true });
-    browser = await chromium.launch({ headless: true });
+    browser = await chromium.launch({ headless: true, ...(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH } : {}) });
     const started = await startServer();
     server = started.server;
     const errors = [];
@@ -76,6 +76,24 @@ async function main() {
     await page.waitForFunction(() => Boolean(window.everwild?.game));
     assert.match(await page.title(), /Everwild/);
     assert.equal(await page.locator('#actionbar button').count(), 8);
+
+    // Presentation toggles preserve a crisp UI and persist across reloads.
+    assert.equal(await page.locator('#art-style').getAttribute('aria-pressed'), 'true');
+    await page.locator('#art-style').click();
+    assert.equal(await page.evaluate(() => window.everwild.renderer.pixelArt), false);
+    await page.reload();
+    await page.waitForFunction(() => Boolean(window.everwild?.game));
+    assert.equal(await page.locator('#art-style').getAttribute('aria-pressed'), 'false');
+    await page.locator('#art-style').click();
+    await page.locator('#sound').click();
+    assert.equal(await page.locator('#sound').getAttribute('aria-pressed'), 'true');
+    await page.locator('#sound').click();
+    await page.evaluate(() => window.everwild.game._loot('griks-lucky-charm'));
+    await page.waitForFunction(() => !document.getElementById('discovery').hidden);
+    assert.match(await page.locator('#discovery').textContent(), /RARE DISCOVERY/);
+    // Reload clears transient discoveries but retains character progression.
+    await page.reload();
+    await page.waitForFunction(() => Boolean(window.everwild?.game));
 
     // Menus must pause the simulation and return focus to the game safely.
     await page.locator('nav [data-dialog="guide"]').click();
@@ -307,3 +325,4 @@ main().catch(error => {
   console.error(error.stack || error.message);
   process.exitCode = 1;
 });
+

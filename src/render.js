@@ -1,4 +1,4 @@
-/* Everwild — procedural woodland illustration, with no external assets. */
+/* Everwild — layered woodland illustration with a low-resolution world pass. */
 (function (root) {
   'use strict';
   const { WORLD, CAMPS, NPCS = [], QUESTS = [] } = root.Everwild;
@@ -64,6 +64,9 @@
     constructor(surface) {
       this.canvas = surface;
       this.ctx = surface.getContext('2d');
+      this.worldSurface = canvas(1, 1);
+      this.worldCtx = this.worldSurface.getContext('2d');
+      this.pixelArt = true;
       this.camera = { x: 0, y: 0 };
       this.width = 1; this.height = 1; this.dpr = 1; this.zoom = 1.3;
       this.motionPreference = typeof root.matchMedia === 'function' ? root.matchMedia('(prefers-reduced-motion: reduce)') : null;
@@ -257,11 +260,18 @@
     }
 
     draw(game) {
-      const c = this.ctx, p = game.player, time = game.clock || 0;
+      let c = this.worldCtx;
+      const p = game.player, time = game.clock || 0;
+      // World art uses a stable pixel grid; names and interface stay at display resolution.
+      const scale = this.pixelArt ? 0.75 : this.dpr;
+      const w = Math.max(1, Math.round(this.width * scale)), h = Math.max(1, Math.round(this.height * scale));
+      if (this.worldSurface.width !== w || this.worldSurface.height !== h) {
+        this.worldSurface.width = w; this.worldSurface.height = h;
+      }
       const motionTime = this.reducedMotion ? 0 : time;
       this.camera.x = clamp(p.x - this.width / this.zoom / 2, 0, Math.max(0, WORLD.w - this.width / this.zoom));
       this.camera.y = clamp(p.y - this.height / this.zoom / 2, 0, Math.max(0, WORLD.h - this.height / this.zoom));
-      c.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+      c.setTransform(scale, 0, 0, scale, 0, 0);
       c.fillStyle = '#203d2c'; c.fillRect(0, 0, this.width, this.height);
       c.save(); c.scale(this.zoom, this.zoom); c.translate(-this.camera.x, -this.camera.y);
       c.drawImage(this.terrain, 0, 0);
@@ -292,6 +302,12 @@
         c.restore();
       }
       this._visuals(c, game, true);
+      c.restore();
+      c = this.ctx;
+      c.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+      c.imageSmoothingEnabled = !this.pixelArt;
+      c.drawImage(this.worldSurface, 0, 0, this.width, this.height);
+      c.save(); c.scale(this.zoom, this.zoom); c.translate(-this.camera.x, -this.camera.y);
       for (const actor of actors) if (actor.kind === 'mob' || actor.kind === 'pet') this._actorLabel(c, actor.kind, actor.entity, game, time);
       for (const npc of NPCS) if (this._visible(npc.x, npc.y)) this._npcLabel(c, npc, game);
       for (const camp of CAMPS) if (this._visible(camp.x, camp.y) && !game.mobs.some(mob => mob.campId === camp.id && mob.aggro && !mob.returning)) {
@@ -396,7 +412,19 @@
         const progress = clamp(1 - visual.life / Math.max(0.001, visual.maxLife || visual.life), 0, 1);
         const fade = clamp((1 - progress) * 2, 0, 1), color = visual.color || '#d7cb9b';
         c.save(); c.lineJoin = 'round'; c.lineCap = 'round'; c.globalAlpha = fade;
-        if (visual.kind === 'bolt') {
+        if (visual.kind === 'impact' || visual.kind === 'discovery') {
+          if (foreground) {
+            c.translate(visual.x, visual.y - 18);
+            const discovery = visual.kind === 'discovery';
+            const spread = this.reducedMotion ? 10 : (discovery ? 12 + progress * 35 : 3 + progress * radius);
+            c.globalAlpha = fade * (discovery ? 0.65 : 0.9);
+            for (let i = 0; i < (discovery ? 9 : 6); i++) {
+              const a = i * TAU / (discovery ? 9 : 6) + 0.35;
+              const x = Math.cos(a) * spread, y = Math.sin(a) * spread * 0.7;
+              c.fillStyle = color; c.fillRect(Math.round(x), Math.round(y), discovery ? 2 : 3, discovery ? 3 : 2);
+            }
+          }
+        } else if (visual.kind === 'bolt') {
           if (foreground) this._bolt(c, visual, progress, color);
         } else {
           c.translate(visual.x, visual.y);
@@ -688,7 +716,9 @@
         for (let i = 0; !this.reducedMotion && i < 3; i++) ellipse(c, Math.sin(time * 0.6 + i * 2) * 20, -12 + Math.cos(time + i) * 10, 0.8, 0.8, '#ddc78a');
       }
       const bob = this.reducedMotion ? 0 : Math.sin(time * (kind === 'pet' && entity.type === 'Air' ? 3 : 2.1) + (entity.index || 0)) * 0.6;
-      c.save(); c.translate(0, bob);
+      const hit = Math.max(0, (entity.hitUntil || 0) - time) / 0.22;
+      c.save(); c.translate(this.reducedMotion ? 0 : Math.sin(hit * Math.PI * 2) * 3, bob);
+      if (hit > 0) c.filter = 'brightness(' + (1 + hit * 0.65) + ')';
       if (kind === 'player') this._magician(c, game, time);
       else if (kind === 'pet') this._elemental(c, entity, motionTime);
       else {
@@ -912,3 +942,4 @@
 
   root.Everwild.Renderer = Renderer;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
+

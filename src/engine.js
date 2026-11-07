@@ -7,7 +7,7 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '0.3.0';
+  const VERSION = '0.3.1';
   const WORLD = Object.freeze({ w: 1900, h: 1350, spawn: Object.freeze({ x: 260, y: 250 }), bindstone: Object.freeze({ x: 202, y: 214 }) });
   const CAMPS = Object.freeze([
     { id: 'briar', name: 'Briarwatch', x: 710, y: 350, type: 'goblin', n: 4, level: 1, delay: 45, namedName: 'Grik the Hoarder', rareItemId: 'griks-lucky-charm', description: 'A ragged goblin lookout watches the old trade road.', roleHint: 'Pull the western scout alone. Move out of Grik’s marked ground slam.' },
@@ -87,6 +87,7 @@
       this.logs = [];
       this.effects = [];
       this.visuals = [];
+      this._visualId = 0;
       this._uid = 0;
       this._logId = 0;
       this._moving = false;
@@ -255,7 +256,7 @@
 
     _visual(kind, entity, options = {}) {
       const life = options.life || 0.7;
-      this.visuals.push({ kind, x: entity.x, y: entity.y, radius: 28, color: '#e4b77f', ...options, life, maxLife: life });
+      this.visuals.push({ id: ++this._visualId, kind, x: entity.x, y: entity.y, radius: 28, color: '#e4b77f', ...options, life, maxLife: life });
       if (this.visuals.length > 64) this.visuals.splice(0, this.visuals.length - 64);
     }
 
@@ -742,8 +743,18 @@
       if (!mob.alive || mob.returning || this.dead) return;
       this._engage(mob, source, amount * (source === 'pet' ? 1.55 : 1), true);
       mob.hp = Math.max(0, mob.hp - amount);
+      this._impact(mob, amount, source);
       this._effect(mob, '−' + amount, source === 'pet' ? '#d2dbb0' : '#f3be8b');
       if (mob.hp <= 0) this._kill(mob);
+    }
+
+    _impact(entity, amount, source) {
+      entity.hitUntil = this.clock + 0.22;
+      this._visual('impact', entity, {
+        entityId: entity.id || 'player', source, amount,
+        color: source === 'enemy' ? '#eca58b' : '#f4d8a3',
+        radius: Math.min(30, 10 + amount * 0.2), life: 0.3
+      });
     }
 
     _kill(mob) {
@@ -784,6 +795,7 @@
         return;
       }
       this.player.inventory.push(id);
+      this._visual('discovery', this.player, { itemId: id, rare: item.rarity === 'rare', color: item.rarity === 'rare' ? '#cbb6f1' : '#dfc28a', radius: 42, life: 1.8 });
       this.log('Found ' + item.name + '. Equip it from your pack.', item.rarity === 'rare' ? 'rare' : 'loot');
       this._effect(this.player, item.name, item.rarity === 'rare' ? '#cbb6f1' : '#dfc28a');
       this._recordQuestItems();
@@ -835,6 +847,7 @@
       if (this.meditate) { this.meditate = false; this.log('Taking damage ends your meditation.', 'warning'); }
       const damage = Math.max(1, Math.round(amount * (this.shieldUntil > this.clock ? 0.55 : 1)));
       this.player.hp = Math.max(0, this.player.hp - damage);
+      this._impact(this.player, damage, 'enemy');
       this._effect(this.player, '−' + damage, '#ef9c90');
       if (this.player.hp <= 0) this._die();
       else if (attacker && this.pet && this.pet.mode === 'guard' && !this.pet.targetId && distance(attacker, this.player) <= 230) this._assistPet(attacker);
@@ -844,6 +857,7 @@
       const pet = this.pet;
       if (!pet || this.dead) return;
       pet.hp = Math.max(0, pet.hp - amount);
+      this._impact(pet, amount, 'enemy');
       this._effect(pet, '−' + amount, '#efb691');
       if (pet.hp <= 0) {
         this.log('Your ' + pet.type.toLowerCase() + ' elemental crumbles. Summon another or retreat.', 'danger');
@@ -1088,3 +1102,4 @@
   // The renderer extends this namespace after loading; shared data stay frozen.
   return { Game, WORLD, CAMPS, SPELLS, ITEMS, NPCS, QUESTS, SUPPLIES, VERSION };
 });
+
