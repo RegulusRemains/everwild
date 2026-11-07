@@ -45,3 +45,10 @@ jobs:
         run: npx --no-install playwright install --with-deps chromium
       - name: Exercise the playable game in Chromium
         run: node tests/browser-smoke.cjs
+      - name: Keep browser review screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: everwild-browser-review
+          path: test-results/browser-smoke/
+          if-no-files-found: ignore

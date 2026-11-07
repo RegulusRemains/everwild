@@ -1,9 +1,12 @@
 /* Everwild — procedural woodland illustration, with no external assets. */
 (function (root) {
   'use strict';
-  const { WORLD, CAMPS } = root.Everwild;
+  const { WORLD, CAMPS, NPCS = [], QUESTS = [] } = root.Everwild;
+  const bindstone = WORLD.bindstone || { x: WORLD.spawn.x - 58, y: WORLD.spawn.y - 36 };
   const TAU = Math.PI * 2;
   const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
+  const intentColors = { slam: '#dfad70', hex: '#e29581', heal: '#bcb6d2' };
+  const activeIntent = (mob, time) => mob.intent && mob.alive && !mob.returning && !(mob.rootUntil > time) && mob.intent.done > time;
   const roads = [[180, 200], [310, 260], [430, 325], [550, 335], [710, 325], [860, 345], [970, 415], [1090, 410], [1190, 560], [1240, 720], [1330, 890], [1460, 980], [1570, 1040], [1730, 1140]];
   function random(seed) {
     return () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
@@ -63,6 +66,9 @@
       this.ctx = surface.getContext('2d');
       this.camera = { x: 0, y: 0 };
       this.width = 1; this.height = 1; this.dpr = 1; this.zoom = 1.3;
+      this.motionPreference = typeof root.matchMedia === 'function' ? root.matchMedia('(prefers-reduced-motion: reduce)') : null;
+      this.reducedMotion = Boolean(this.motionPreference && this.motionPreference.matches);
+      this.motionPreference?.addEventListener?.('change', event => { this.reducedMotion = event.matches; });
       this.trees = [];
       this.treeSprites = Array.from({ length: 8 }, (_, i) => this._treeSprite(i));
       this.terrain = this._terrain();
@@ -118,6 +124,7 @@
         const x = 130 + r() * 1660, y = 160 + r() * 1040;
         if (roadDistance(x, y) < 23) ellipse(c, x, y, 0.6 + r() * 2.8, 0.4 + r(), i % 3 ? '#ddc59a45' : '#665c4245');
       }
+      this._villageGround(c);
       lake(c); c.fillStyle = '#84906b'; c.lineWidth = 18; c.strokeStyle = '#70835b'; c.stroke(); c.fill();
       const water = c.createLinearGradient(220, 750, 520, 1050);
       water.addColorStop(0, '#497f77'); water.addColorStop(1, '#264e4d');
@@ -150,7 +157,7 @@
       // Reproducible decor; clearings and the main route stay open.
       for (let i = 0; i < 700; i++) {
         const x = 25 + r() * (WORLD.w - 50), y = 40 + r() * (WORLD.h - 65);
-        if (roadDistance(x, y) < 62 || Math.hypot(x - 260, y - 250) < 175 ||
+        if (roadDistance(x, y) < 62 || ((x - 270) / 222) ** 2 + ((y - 260) / 167) ** 2 < 1 ||
             CAMPS.some(camp => Math.hypot(x - camp.x, y - camp.y) < 172) ||
             (x > 190 && x < 570 && y > 715 && y < 1080) ||
             (x > 1150 && x < 1770 && y > 735 && y < 1235)) continue;
@@ -175,6 +182,37 @@
         }
       }
       return image;
+    }
+
+    _villageGround(c) {
+      c.save();
+      const paths = [[[260, 250], [305, 215], [365, 210]], [[260, 250], [228, 290], [180, 320]], [[310, 260], [354, 299], [418, 291]]];
+      for (const points of paths) {
+        line(c, points, '#8c906354', 29); line(c, points, '#a499704f', 18);
+        for (let i = 0; i < 5; i++) {
+          const t = i / 5, a = points[0], b = points[2];
+          const x = a[0] + (b[0] - a[0]) * t, y = a[1] + (b[1] - a[1]) * t;
+          polygon(c, [[x - 6, y - 3], [x + 4, y - 4], [x + 8, y + 1], [x - 3, y + 4]], '#a8a18160', '#69735460');
+        }
+      }
+      ellipse(c, 180, 320, 36, 20, '#97b09b12', '#a7be9b66');
+      ellipse(c, 180, 320, 29, 16, null, '#bed0a540');
+      for (let i = 0; i < 8; i++) {
+        const a = TAU * i / 8, x = 180 + Math.cos(a) * 32, y = 320 + Math.sin(a) * 18;
+        line(c, [[x - 2, y + 2], [x, y - 2], [x + 2, y + 2]], '#b0c29885', 0.8);
+      }
+      ellipse(c, 399, 295, 54, 20, '#827e5230');
+      // Small vegetable beds and stacked timber make this a lived-in refuge.
+      for (let row = 0; row < 3; row++) {
+        line(c, [[83, 235 + row * 10], [125, 229 + row * 10]], '#554d3466', 6);
+        for (let col = 0; col < 5; col++) {
+          const x = 87 + col * 8, y = 234 + row * 10 - col;
+          ellipse(c, x - 1.5, y - 1, 2.5, 1.8, '#92a367'); ellipse(c, x + 1, y - 2, 2, 2.6, '#b0b97c');
+        }
+      }
+      line(c, [[76, 231], [76, 266], [130, 258]], '#8b8158', 2);
+      for (const [x, y] of [[76, 231], [76, 266], [130, 258]]) line(c, [[x, y + 3], [x, y - 9]], '#b4a06d', 3);
+      c.restore();
     }
 
     _treeSprite(index) {
@@ -220,38 +258,48 @@
 
     draw(game) {
       const c = this.ctx, p = game.player, time = game.clock || 0;
+      const motionTime = this.reducedMotion ? 0 : time;
       this.camera.x = clamp(p.x - this.width / this.zoom / 2, 0, Math.max(0, WORLD.w - this.width / this.zoom));
       this.camera.y = clamp(p.y - this.height / this.zoom / 2, 0, Math.max(0, WORLD.h - this.height / this.zoom));
       c.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
       c.fillStyle = '#203d2c'; c.fillRect(0, 0, this.width, this.height);
       c.save(); c.scale(this.zoom, this.zoom); c.translate(-this.camera.x, -this.camera.y);
       c.drawImage(this.terrain, 0, 0);
+      this._visuals(c, game, false);
+      this._intents(c, game, time);
       this._groundDetails(c, game, time);
       const actors = [{ kind: 'player', entity: p, y: p.y }];
       if (game.pet) actors.push({ kind: 'pet', entity: game.pet, y: game.pet.y });
       for (const mob of game.mobs) if (mob.alive && this._visible(mob.x, mob.y)) actors.push({ kind: 'mob', entity: mob, y: mob.y });
-      const objects = [...actors, { kind: 'lodge', x: 140, y: 175 }, { kind: 'stone', x: WORLD.spawn.x - 58, y: WORLD.spawn.y - 36 }];
-      for (const tree of this.trees) if (this._visible(tree.x, tree.y)) objects.push({ kind: 'tree', ...tree });
+      for (const npc of NPCS) if (this._visible(npc.x, npc.y)) actors.push({ kind: 'npc', entity: npc, y: npc.y });
+      const objects = [...actors, { kind: 'lodge', x: 140, y: 175 }, { kind: 'stone', x: bindstone.x, y: bindstone.y },
+        { kind: 'signpost', x: 402, y: 202 }, { kind: 'study', x: 133, y: 307 }, { kind: 'market', x: 412, y: 285 }];
+      for (const tree of this.trees) if (this._visible(tree.x, tree.y, 190)) objects.push({ kind: 'tree', ...tree });
       for (const camp of CAMPS) if (this._visible(camp.x, camp.y, 220)) objects.push({ kind: 'camp', camp, y: camp.y - 25 });
       objects.sort((a, b) => a.y - b.y);
       for (const object of objects) {
         c.save();
         if (object.kind === 'tree') {
-          const occludes = actors.some(({ entity: e }) => Math.abs(e.x - object.x) < 43 * object.scale && e.y < object.y + 9 && e.y > object.y - 116 * object.scale);
+          const occludes = actors.some(({ entity: e }) => Math.abs(e.x - object.x) < 48 * object.scale + 8 && e.y < object.y + 15 && e.y > object.y - 155 * object.scale);
           c.globalAlpha = occludes ? 0.25 : 1;
           c.drawImage(this.treeSprites[object.sprite], object.x - 64 * object.scale, object.y - 155 * object.scale, 128 * object.scale, 168 * object.scale);
         } else if (object.kind === 'lodge') this._lodge(c, object.x, object.y, p);
-        else if (object.kind === 'stone') this._bindstone(c, object.x, object.y, time, p);
-        else if (object.kind === 'camp') this._camp(c, object.camp, time);
+        else if (object.kind === 'stone') this._bindstone(c, object.x, object.y, motionTime, p);
+        else if (object.kind === 'camp') this._camp(c, object.camp, motionTime, actors.filter(actor => actor.kind !== 'mob' || actor.entity.aggro || actor.entity.id === game.selectedId));
+        else if (['signpost', 'study', 'market'].includes(object.kind)) this._villageProp(c, object, game);
+        else if (object.kind === 'npc') this._villager(c, object.entity);
         else this._actor(c, object.kind, object.entity, game, time);
         c.restore();
       }
-      for (const camp of CAMPS) if (this._visible(camp.x, camp.y)) {
-        text(c, camp.name, camp.x, camp.y - 158, 15, '#e0d6b5', true);
-        text(c, `LEVEL ${camp.level}–${camp.level + 1}`, camp.x, camp.y - 141, 7, '#b6c69d');
+      this._visuals(c, game, true);
+      for (const actor of actors) if (actor.kind === 'mob' || actor.kind === 'pet') this._actorLabel(c, actor.kind, actor.entity, game, time);
+      for (const npc of NPCS) if (this._visible(npc.x, npc.y)) this._npcLabel(c, npc, game);
+      for (const camp of CAMPS) if (this._visible(camp.x, camp.y) && !game.mobs.some(mob => mob.campId === camp.id && mob.aggro && !mob.returning)) {
+        text(c, camp.name, camp.x, camp.y - 190, 15, '#e0d6b5', true);
+        text(c, `LEVEL ${camp.level}–${camp.level + 1}`, camp.x, camp.y - 173, 7, '#b6c69d');
       }
       this._effects(c, game, time);
-      for (let i = 0; i < 32; i++) {
+      for (let i = 0; !this.reducedMotion && i < 32; i++) {
         const x = (i * 269 + Math.sin(time * 0.22 + i) * 19 + 80) % WORLD.w;
         const y = (i * 173 + Math.cos(time * 0.16 + i) * 15 + 140) % WORLD.h;
         if (this._visible(x, y, 5)) ellipse(c, x, y, 0.8, 0.8, `rgba(231,223,154,${0.18 + 0.2 * (1 + Math.sin(time + i)) / 2})`);
@@ -263,23 +311,27 @@
     }
 
     _groundDetails(c, game, time) {
-      const spawn = WORLD.spawn;
-      ellipse(c, spawn.x - 58, spawn.y - 33, 50, 22, '#c9cc7d0b', '#c1cb8a21');
+      const motionTime = this.reducedMotion ? 0 : time;
+      ellipse(c, bindstone.x, bindstone.y + 3, 50, 22, '#c9cc7d0b', '#c1cb8a21');
       for (let i = 0; i < 12; i++) {
         const a = i * TAU / 12;
-        ellipse(c, spawn.x - 58 + Math.cos(a) * 44, spawn.y - 33 + Math.sin(a) * 21, 4, 2.3, '#8e9673', '#526448');
+        ellipse(c, bindstone.x + Math.cos(a) * 44, bindstone.y + 3 + Math.sin(a) * 21, 4, 2.3, '#8e9673', '#526448');
       }
       if (game.moveTarget) {
         const { x, y } = game.moveTarget;
         c.lineWidth = 1.2;
-        ellipse(c, x, y, 8 + Math.sin(time * 5), 4, null, '#e8d498aa');
+        ellipse(c, x, y, 8 + Math.sin(motionTime * 5), 4, null, '#e8d498aa');
         line(c, [[x - 3, y], [x + 3, y]], '#eadcb5', 1);
         line(c, [[x, y - 2], [x, y + 2]], '#eadcb5', 1);
       }
       if (game.selected) {
         const m = game.selected;
+        if (Math.hypot(m.x - game.player.x, m.y - game.player.y) > 330) {
+          c.save(); c.setLineDash([5, 7]); c.lineWidth = 1;
+          ellipse(c, game.player.x, game.player.y, 330, 330, null, '#cbd4b83d'); c.restore();
+        }
         c.lineWidth = 1.4; ellipse(c, m.x, m.y + 1, 20, 9, '#bd664222', '#edbd82');
-        c.save(); c.translate(m.x, m.y + 1); c.scale(1, 0.45); c.rotate(time * 0.65);
+        c.save(); c.translate(m.x, m.y + 1); c.scale(1, 0.45); c.rotate(motionTime * 0.65);
         for (let i = 0; i < 4; i++) {
           c.rotate(Math.PI / 2); line(c, [[-4, -27], [0, -23], [4, -27]], '#ecd098', 1.4);
         }
@@ -290,17 +342,257 @@
         c.save(); c.translate(game.player.x, game.player.y + 2); c.scale(1, 0.5);
         c.lineWidth = 2; ellipse(c, 0, 0, 25, 25, '#b4c9a310', '#b9c8a055');
         c.beginPath(); c.arc(0, 0, 26, -Math.PI / 2, -Math.PI / 2 + TAU * progress); c.strokeStyle = '#ead699'; c.stroke();
-        c.rotate(-time * 0.6);
+        c.rotate(-motionTime * 0.6);
         for (let i = 0; i < 6; i++) { c.rotate(TAU / 6); polygon(c, [[0, -31], [-2, -28], [2, -28]], '#d7d6a6'); }
         c.restore();
       }
       if (game.meditate) {
         const p = game.player;
         for (let i = 0; i < 3; i++) {
-          const phase = (time * 0.45 + i / 3) % 1;
+          const phase = (motionTime * 0.45 + i / 3) % 1;
           ellipse(c, p.x, p.y + 2, 15 + phase * 17, 7 + phase * 6, null, `rgba(176,205,174,${(1 - phase) * 0.3})`);
         }
       }
+      if (game.pet?.mode === 'guard') {
+        const pet = game.pet;
+        c.save(); c.translate(pet.x, pet.y + 1); c.lineWidth = 0.8;
+        ellipse(c, 0, 0, 21, 10, '#adbd8110', '#b8ca8b66');
+        polygon(c, [[-5, 8], [-5, 13], [0, 17], [5, 13], [5, 8]], '#c0d59b35', '#ccdfa5a0');
+        line(c, [[0, 9], [0, 13]], '#d0dfad', 0.8); c.restore();
+      }
+    }
+
+    _intents(c, game, time) {
+      for (const mob of game.mobs) {
+        if (!activeIntent(mob, time)) continue;
+        const intent = mob.intent, radius = Math.max(5, intent.radius || 24);
+        if (!this._visible(intent.x, intent.y, radius + 10)) continue;
+        const progress = clamp((time - intent.started) / Math.max(0.01, intent.done - intent.started), 0, 1);
+        const color = intent.kind !== 'heal' && progress > 0.75 ? '#ef9b81' : intentColors[intent.kind] || intentColors.hex;
+        c.save(); c.translate(intent.x, intent.y); c.lineWidth = 1.2;
+        c.globalAlpha = 0.1 + progress * 0.05; ellipse(c, 0, 0, radius, radius, color);
+        c.globalAlpha = 0.65; ellipse(c, 0, 0, radius, radius, null, color);
+        c.globalAlpha = 0.35; c.setLineDash([4, 5]); ellipse(c, 0, 0, Math.max(1, radius - 5), Math.max(1, radius - 5), null, color); c.setLineDash([]);
+        c.globalAlpha = 0.95; c.lineWidth = 2.5;
+        c.beginPath(); c.arc(0, 0, radius, -Math.PI / 2, -Math.PI / 2 + progress * TAU); c.strokeStyle = color; c.stroke();
+        // These circles use the engine's fixed world coordinates and actual radius.
+        // They never chase the player after the enemy begins its windup.
+        if (intent.kind === 'heal') {
+          line(c, [[-5, 0], [5, 0]], color, 2); line(c, [[0, -5], [0, 5]], color, 2);
+        } else {
+          polygon(c, [[0, -9], [-8, 6], [8, 6]], '#2d342d80', color);
+          text(c, '!', 0, 1, 9, color);
+        }
+        c.restore();
+      }
+    }
+
+    _visuals(c, game, foreground) {
+      for (const visual of game.visuals || []) {
+        if (!(visual.life > 0)) continue;
+        const radius = Math.max(8, visual.radius || 24);
+        if (!this._visible(visual.x, visual.y, radius + 60) &&
+            !(Number.isFinite(visual.fromX) && this._visible(visual.fromX, visual.fromY, 50))) continue;
+        const progress = clamp(1 - visual.life / Math.max(0.001, visual.maxLife || visual.life), 0, 1);
+        const fade = clamp((1 - progress) * 2, 0, 1), color = visual.color || '#d7cb9b';
+        c.save(); c.lineJoin = 'round'; c.lineCap = 'round'; c.globalAlpha = fade;
+        if (visual.kind === 'bolt') {
+          if (foreground) this._bolt(c, visual, progress, color);
+        } else {
+          c.translate(visual.x, visual.y);
+          if (!foreground) {
+            const spread = this.reducedMotion ? 0.8 : 0.2 + progress * 0.8;
+            if (visual.kind === 'nova' || visual.kind === 'taunt') {
+              c.globalAlpha = fade * 0.09; ellipse(c, 0, 0, radius * spread, radius * spread, color);
+              c.globalAlpha = fade * 0.85; c.lineWidth = visual.kind === 'nova' ? 2.5 : 1.5;
+              ellipse(c, 0, 0, radius * spread, radius * spread, null, color);
+              c.globalAlpha = fade * 0.35; ellipse(c, 0, 0, radius * spread * 0.85, radius * spread * 0.85, null, color);
+            } else if (visual.kind === 'heal') {
+              c.lineWidth = 1.4; ellipse(c, 0, 2, 18 + spread * 13, 7 + spread * 5, null, color);
+            } else if (visual.kind === 'root') {
+              c.globalAlpha = fade * 0.65; c.lineWidth = 1.4;
+              ellipse(c, 0, 1, radius, radius * 0.45, null, color);
+              for (let i = 0; i < 6; i++) {
+                const a = i * TAU / 6, x = Math.cos(a) * radius, y = Math.sin(a) * radius * 0.45;
+                line(c, [[x * 1.3, y * 1.3], [x * 1.07, y * 0.6], [x * 0.65, y * 0.65]], color, 1.5);
+              }
+            }
+          } else if (visual.kind === 'heal') {
+            for (let i = 0; i < (this.reducedMotion ? 3 : 6); i++) {
+              const a = i * 2.4, lift = this.reducedMotion ? 12 : progress * 28;
+              const x = Math.cos(a) * 18, y = -13 - lift + Math.sin(a) * 11;
+              line(c, [[x - 2, y], [x + 2, y]], color, 1.4); line(c, [[x, y - 2], [x, y + 2]], color, 1.4);
+            }
+          } else if (visual.kind === 'root') {
+            const height = this.reducedMotion ? 25 : 8 + Math.min(1, progress * 4) * 22;
+            for (let i = 0; i < 4; i++) {
+              const x = -14 + i * 9;
+              c.beginPath(); c.moveTo(x, 3); c.bezierCurveTo(x + 8, -height / 3, x - 8, -height / 2, x + 2, -height);
+              c.strokeStyle = color; c.lineWidth = 1.5; c.stroke();
+              polygon(c, [[x + 2, -height + 5], [x + 8, -height + 1], [x + 5, -height + 8]], color);
+            }
+          } else if (visual.kind === 'taunt') {
+            const spread = this.reducedMotion ? 1 : progress;
+            for (const side of [-1, 1]) {
+              c.beginPath(); c.ellipse(0, -19, 22 + spread * 14, 27 + spread * 6, 0,
+                side < 0 ? Math.PI * 0.8 : -Math.PI * 0.2, side < 0 ? Math.PI * 1.2 : Math.PI * 0.2);
+              c.strokeStyle = color; c.lineWidth = 2; c.stroke();
+            }
+          } else if (visual.kind === 'nova' && !this.reducedMotion) {
+            for (let i = 0; i < 10; i++) {
+              const a = i * TAU / 10 + 0.3, distance = radius * (0.2 + progress * 0.8);
+              const x = Math.cos(a) * distance, y = Math.sin(a) * distance - Math.sin(progress * Math.PI) * 15;
+              line(c, [[x * 0.94, y * 0.94], [x, y]], color, 2 * (1 - progress) + 0.5);
+            }
+          }
+        }
+        c.restore();
+      }
+    }
+
+    _bolt(c, visual, progress, color) {
+      const fromX = Number.isFinite(visual.fromX) ? visual.fromX : visual.x;
+      const fromY = Number.isFinite(visual.fromY) ? visual.fromY : visual.y;
+      const dx = visual.x - fromX, dy = visual.y - fromY;
+      const channels = /^#[0-9a-f]{6}$/i.test(color) ? [parseInt(color.slice(1, 3), 16), parseInt(color.slice(5, 7), 16)] : [200, 100];
+      const frost = channels[1] > channels[0] * 1.1;
+      const travel = this.reducedMotion ? 1 : clamp(progress / 0.58, 0, 1);
+      if (travel < 1) {
+        const tail = Math.max(0, travel - 0.16), arc = Math.sin(travel * Math.PI) * (frost ? 0 : 12);
+        const x = fromX + dx * travel, y = fromY + dy * travel - 20 - arc;
+        c.globalAlpha *= 0.65;
+        line(c, [[fromX + dx * tail, fromY + dy * tail - 20 - Math.sin(tail * Math.PI) * (frost ? 0 : 12)], [x, y]], color, frost ? 2.5 : 4);
+        c.globalAlpha = 1; c.translate(x, y);
+        if (frost) {
+          c.rotate(Math.atan2(dy, dx)); polygon(c, [[-10, 0], [-1, -3], [7, 0], [-1, 3]], color, '#e0f1eb');
+        } else {
+          c.globalAlpha = 0.15; ellipse(c, 0, 0, 11, 11, color); c.globalAlpha = 1;
+          ellipse(c, 0, 0, 4.5, 4.5, color); ellipse(c, 1, -1, 2, 2, '#f4e4b3');
+        }
+      } else {
+        const impact = this.reducedMotion ? 0.5 : clamp((progress - 0.58) / 0.42, 0, 1);
+        c.translate(visual.x, visual.y - 18); c.lineWidth = 1.5;
+        ellipse(c, 0, 0, 8 + impact * 20, 6 + impact * 16, null, color);
+        for (let i = 0; i < 6; i++) {
+          const a = i * TAU / 6, inner = 4 + impact * 9, outer = 9 + impact * 15;
+          line(c, [[Math.cos(a) * inner, Math.sin(a) * inner], [Math.cos(a) * outer, Math.sin(a) * outer]], color, frost ? 1.5 : 2.5);
+          if (frost) {
+            const x = Math.cos(a) * outer * 0.8, y = Math.sin(a) * outer * 0.8;
+            line(c, [[x - Math.sin(a + 0.5) * 3, y + Math.cos(a + 0.5) * 3], [x, y], [x + Math.sin(a - 0.5) * 3, y - Math.cos(a - 0.5) * 3]], color, 1);
+          }
+        }
+      }
+    }
+
+    _villageProp(c, prop, game) {
+      const { x, y, kind } = prop;
+      c.translate(x, y); c.lineWidth = 1; c.lineJoin = 'round';
+      if (kind === 'market') {
+        if ([game.player, game.pet].some(actor => actor && Math.abs(actor.x - x) < 52 && actor.y > y - 82 && actor.y < y + 6)) c.globalAlpha = 0.3;
+        ellipse(c, 3, 6, 47, 13, '#172e2545');
+        for (const px of [-39, 37]) line(c, [[px, 2], [px, -71]], '#69583d', 3.5);
+        polygon(c, [[-43, -72], [20, -77], [46, -49], [-46, -45]], '#c3b382', '#5c6848');
+        for (let i = 0; i < 4; i++) polygon(c, [[-41 + i * 16, -72 - i], [-33 + i * 16, -73 - i], [-25 + i * 23, -46 - i], [-37 + i * 23, -46 - i]], '#657c63');
+        line(c, [[-46, -45], [46, -49]], '#e1cca0', 2);
+        for (let i = 0; i < 7; i++) polygon(c, [[-45 + i * 13, -45 - i * 0.55], [-39 + i * 13, -38 - i * 0.55], [-33 + i * 13, -46 - i * 0.55]], i % 2 ? '#af9b6c' : '#718568');
+        polygon(c, [[-39, -15], [38, -19], [38, -5], [-39, 0]], '#8a6d46', '#4e5338');
+        polygon(c, [[-39, -15], [-30, -25], [43, -28], [38, -19]], '#b1a079', '#716440');
+        line(c, [[-31, -9], [-31, 7]], '#615437', 4); line(c, [[31, -12], [31, 4]], '#615437', 4);
+        for (const [px, color] of [[-20, '#ab795c'], [-7, '#7da7b4'], [6, '#9cb180']]) {
+          polygon(c, [[px - 3, -25], [px - 4, -32], [px - 1, -35], [px - 1, -39], [px + 2, -39], [px + 2, -35], [px + 5, -32], [px + 4, -25]], color, '#4d6250');
+          line(c, [[px - 1, -39], [px + 2, -39]], '#dac89b', 2); line(c, [[px - 1, -31], [px - 1, -27]], '#dce1bb80');
+        }
+        ellipse(c, 26, -27, 10, 4, '#82704b', '#c3ab77');
+        for (let i = 0; i < 5; i++) ellipse(c, 19 + i * 3, -29 - i % 2 * 2, 3, 2.5, i % 2 ? '#c4b873' : '#a3ac69');
+        text(c, 'PROVISIONS', 0, -8, 6.5, '#d6c69b');
+      } else if (kind === 'study') {
+        ellipse(c, 0, 3, 27, 9, '#18322740');
+        polygon(c, [[-13, 2], [-11, -15], [13, -15], [15, 2]], '#6f7e66', '#445e44');
+        ellipse(c, 0, -17, 24, 9, '#a5aa88', '#62745a');
+        polygon(c, [[-16, -22], [-3, -25], [0, -20], [14, -24], [18, -15], [2, -12], [-13, -15]], '#685e61', '#444a3b');
+        polygon(c, [[-13, -22], [-3, -23], [0, -19], [0, -14], [-11, -17]], '#d1c79c');
+        polygon(c, [[1, -19], [12, -22], [15, -16], [2, -14]], '#e6d8aa');
+        line(c, [[-9, -20], [-3, -19]], '#8a8a63', 0.7); line(c, [[5, -18], [11, -19]], '#96906b', 0.7);
+        for (let i = 0; i < 3; i++) {
+          c.fillStyle = ['#907d85', '#698d89', '#a28d66'][i]; c.fillRect(21, -3 - i * 5, 15, 5);
+          c.fillStyle = '#c7c59c'; c.fillRect(23, -2 - i * 5, 11, 2);
+        }
+      } else {
+        ellipse(c, 2, 3, 17, 4, '#19352840');
+        line(c, [[0, 4], [0, -65]], '#75613f', 4);
+        polygon(c, [[-31, -48], [30, -48], [38, -42], [30, -36], [-31, -36]], '#9b8a5f', '#526148');
+        text(c, 'BRIARWATCH', 1, -42, 5.5, '#e1d2a1');
+        line(c, [[0, -65], [69, -65]], '#c4ad72', 2);
+        polygon(c, [[44, -63], [67, -63], [67, -19], [56, -26], [44, -19]], '#557365', '#b8ae77');
+        line(c, [[56, -53], [56, -35]], '#d7c78f', 1.3);
+        line(c, [[49, -45], [56, -50], [63, -45]], '#d7c78f', 1.3);
+        line(c, [[50, -39], [56, -44], [62, -39]], '#d7c78f', 1.3);
+      }
+    }
+
+    _villager(c, npc) {
+      c.translate(npc.x, npc.y); c.lineWidth = 1; c.lineJoin = 'round'; c.lineCap = 'round';
+      ellipse(c, 1, 2, 13, 5, '#10292165');
+      line(c, [[-5, -9], [-5, 0], [-8, 0]], '#4c4635', 4); line(c, [[5, -9], [5, 0], [9, 0]], '#4c4635', 4);
+      if (npc.id === 'rowan') {
+        polygon(c, [[-9, -30], [-15, -6], [-7, -3], [4, -7], [13, -4], [9, -29]], '#486d58', '#294e3c');
+        polygon(c, [[-7, -28], [7, -28], [10, -13], [5, -8], [-7, -10]], '#98a58d', '#536856');
+        polygon(c, [[-11, -29], [-15, -23], [-10, -19], [-5, -23]], '#b1b69b', '#5c705a');
+        polygon(c, [[7, -29], [13, -25], [14, -20], [7, -20]], '#b1b69b', '#5c705a');
+        line(c, [[-6, -27], [7, -12]], '#8d764e', 2.5); line(c, [[-8, -13], [8, -13]], '#69563a', 2);
+        polygon(c, [[-15, -21], [-5, -22], [-4, -11], [-9, -6], [-15, -11]], '#536f59', '#c2b58a');
+        line(c, [[-10, -18], [-10, -11]], '#d5c89a', 1.2);
+        line(c, [[17, 1], [17, -41]], '#79613c', 2); polygon(c, [[14, -41], [17, -49], [20, -41], [17, -36]], '#bcc1a5', '#718572');
+        ellipse(c, 0, -34, 6.5, 7, '#c8aa80');
+        polygon(c, [[-8, -34], [-7, -41], [1, -44], [8, -39], [9, -33], [1, -36]], '#8f9e88', '#536a57');
+        line(c, [[-6, -38], [1, -41], [6, -37]], '#c3c7a6', 1); line(c, [[-3, -32], [1, -32]], '#42563e', 1);
+        polygon(c, [[-3, -29], [4, -30], [3, -26], [0, -24]], '#77644b');
+      } else if (npc.id === 'liora') {
+        polygon(c, [[-7, -28], [-15, -4], [-5, -1], [3, -4], [12, -2], [9, -27]], '#7d7189', '#4b4f53');
+        polygon(c, [[-1, -26], [-5, -3], [4, -4], [5, -27]], '#a398a7');
+        line(c, [[-12, -5], [-5, -2], [3, -5], [10, -3]], '#d1c096', 1.3);
+        line(c, [[-8, -16], [9, -17]], '#c6b37e', 1.6);
+        line(c, [[-9, -25], [-14, -16]], '#b0a4ae', 5); line(c, [[8, -25], [12, -18]], '#b0a4ae', 5);
+        ellipse(c, 0, -33, 6, 7, '#ceb698');
+        polygon(c, [[-8, -30], [-9, -38], [-4, -43], [5, -41], [9, -35], [8, -23], [4, -27], [4, -36], [-3, -37], [-5, -27]], '#c5c9bc', '#858e81');
+        line(c, [[-3, -32], [0, -32]], '#52604e', 1); ellipse(c, 5, -39, 1.5, 1.5, '#dacc99');
+        line(c, [[-18, 1], [-18, -37]], '#7b6650', 2); ellipse(c, -18, -38, 4, 5, '#b6bdc9', '#ded7bc');
+        polygon(c, [[9, -22], [17, -24], [21, -17], [12, -15]], '#d6cba8', '#867b66');
+      } else {
+        polygon(c, [[-9, -26], [-12, -11], [-7, -6], [8, -6], [12, -12], [8, -26]], '#9c7653', '#55543a');
+        polygon(c, [[-5, -23], [5, -23], [8, -5], [-8, -5]], '#c1b28a', '#8b7e5b');
+        line(c, [[-7, -17], [7, -17]], '#6f6346', 1.8); c.fillStyle = '#927b56'; c.fillRect(-4, -13, 8, 5);
+        line(c, [[-8, -25], [-13, -15]], '#ad845d', 5); line(c, [[9, -24], [14, -15]], '#ad845d', 5);
+        ellipse(c, 0, -33, 7, 7, '#bf9a73', '#726345');
+        polygon(c, [[-8, -31], [-9, -38], [-4, -42], [4, -40], [8, -34], [4, -34], [1, -38], [-5, -36], [-5, -30]], '#765c42');
+        ellipse(c, 0, -39, 11, 2.5, '#a68e5f', '#726a47');
+        polygon(c, [[-6, -40], [-5, -45], [5, -44], [7, -39]], '#b3a176', '#7a754d');
+        line(c, [[-3, -33], [-1, -33]], '#50533b', 1); line(c, [[3, -33], [5, -33]], '#50533b', 1);
+        ellipse(c, -12, -9, 4, 5, '#8a7350', '#b4a171');
+        polygon(c, [[12, -14], [11, -21], [14, -24], [17, -21], [17, -15]], '#89b0a4', '#c4c9a2');
+      }
+    }
+
+    _npcMarker(npc, game) {
+      const states = typeof game.questState === 'function' ? QUESTS.filter(quest => quest.npcId === npc.id).map(quest => game.questState(quest.id).status) : [];
+      if (states.includes('ready')) return { symbol: '?', color: '#d6e4af' };
+      if (states.includes('available')) return { symbol: '!', color: '#ead294' };
+      return { symbol: npc.id === 'rowan' ? '·' : '◇', color: npc.id === 'liora' ? '#c4bed9' : '#d3c596' };
+    }
+
+    _npcLabel(c, npc, game) {
+      const distance = Math.hypot(npc.x - game.player.x, npc.y - game.player.y);
+      if (distance > 200) return;
+      const marker = this._npcMarker(npc, game);
+      c.save(); c.lineWidth = 0.8;
+      ellipse(c, npc.x, npc.y - 69, 9, 10, '#19392ee8', marker.color);
+      text(c, marker.symbol, npc.x, npc.y - 69, 13, marker.color);
+      text(c, npc.name, npc.x, npc.y - 52, 9, '#e0dab6');
+      if (distance <= 90 && !game.dead && !game.inCombat) {
+        const hint = Math.hypot(game.player.x - bindstone.x, game.player.y - bindstone.y) > 80 ? '[ E ]  TALK' : 'CLICK TO TALK';
+        text(c, hint, npc.x, npc.y + 17, 6.5, '#d2d8b2');
+      } else if (distance < 130) text(c, npc.role, npc.x, npc.y + 17, 6.5, '#bdc9a8');
+      c.restore();
     }
 
     _lodge(c, x, y, player) {
@@ -336,10 +628,14 @@
       polygon(c, [[0, -48 + float], [9, -33 + float], [0, -24 + float]], '#d8e7bd');
       line(c, [[-3, -27 + float], [4, -24 + float], [-3, -19 + float]], '#eaf0c8', 1);
       text(c, 'Bindstone', 0, 22, 11, '#d9e1bb', true);
-      if (Math.hypot(player.x - WORLD.spawn.x, player.y - WORLD.spawn.y) < 110) text(c, '[ E ]  REST & RESTORE', 0, 38, 6.5, '#bdcda8');
+      if (Math.hypot(player.x - bindstone.x, player.y - bindstone.y) <= 80 && Math.hypot(player.x - WORLD.spawn.x, player.y - WORLD.spawn.y) <= 110) text(c, '[ E ]  REST & RESTORE', 0, -62, 6.5, '#bdcda8');
     }
 
-    _camp(c, camp, time) {
+    _camp(c, camp, time, actors) {
+      const occluded = actors.some(({ entity }) => entity.y < camp.y - 25 && (camp.type === 'goblin'
+        ? entity.y > camp.y - 78 && entity.x > camp.x - 10 && entity.x < camp.x + 95
+        : entity.y > camp.y - 118 && Math.abs(entity.x - camp.x) < 80));
+      if (occluded) c.globalAlpha = 0.4;
       c.translate(camp.x, camp.y);
       if (camp.type === 'goblin') {
         ellipse(c, 48, -19, 52, 11, '#172b2440');
@@ -383,17 +679,18 @@
 
     _actor(c, kind, entity, game, time) {
       const x = entity.x, y = entity.y;
+      const motionTime = this.reducedMotion ? 0 : time;
       c.translate(x, y); c.lineJoin = 'round'; c.lineCap = 'round';
       ellipse(c, 1, 2, kind === 'pet' ? 16 : 12, kind === 'pet' ? 6 : 4.8, '#10292170');
       if (kind === 'mob' && entity.named) {
         c.lineWidth = 1;
         ellipse(c, 0, 1, 18, 8, '#c5a56318', '#d0ae6f70');
-        for (let i = 0; i < 3; i++) ellipse(c, Math.sin(time * 0.6 + i * 2) * 20, -12 + Math.cos(time + i) * 10, 0.8, 0.8, '#ddc78a');
+        for (let i = 0; !this.reducedMotion && i < 3; i++) ellipse(c, Math.sin(time * 0.6 + i * 2) * 20, -12 + Math.cos(time + i) * 10, 0.8, 0.8, '#ddc78a');
       }
-      const bob = Math.sin(time * (kind === 'pet' && entity.type === 'Air' ? 3 : 2.1) + (entity.index || 0)) * 0.6;
+      const bob = this.reducedMotion ? 0 : Math.sin(time * (kind === 'pet' && entity.type === 'Air' ? 3 : 2.1) + (entity.index || 0)) * 0.6;
       c.save(); c.translate(0, bob);
       if (kind === 'player') this._magician(c, game, time);
-      else if (kind === 'pet') this._elemental(c, entity, time);
+      else if (kind === 'pet') this._elemental(c, entity, motionTime);
       else {
         if (entity.named) c.scale(1.13, 1.13);
         if (entity.returning) c.globalAlpha = 0.55;
@@ -412,22 +709,49 @@
         }
         if (entity.dotUntil > time) {
           for (let i = 0; i < 3; i++) {
-            const phase = (time * 1.1 + i / 3) % 1;
-            ellipse(c, Math.sin(i * 2 + time) * 10, -7 - phase * 28, 2 * (1 - phase) + 0.5, 4 * (1 - phase) + 1, `rgba(239,169,85,${1 - phase})`);
+            const phase = (motionTime * 1.1 + i / 3) % 1;
+            ellipse(c, Math.sin(i * 2 + motionTime) * 10, -7 - phase * 28, 2 * (1 - phase) + 0.5, 4 * (1 - phase) + 1, `rgba(239,169,85,${1 - phase})`);
           }
         }
-        if (entity.named || game.selectedId === entity.id || entity.aggro) {
-          text(c, entity.name, 0, entity.named ? -58 : -48, entity.named ? 9 : 8, entity.named ? '#e2c78e' : '#e0d5b9');
+        if (entity.slowUntil > time) {
+          c.save(); c.lineWidth = 1; ellipse(c, 0, 1, 15, 7, '#a4d6e413', '#b1ddea8c');
+          c.translate(-20, -17);
+          for (let i = 0; i < 3; i++) { c.rotate(Math.PI / 3); line(c, [[-4, 0], [4, 0]], '#c7e7e9', 1); }
+          c.restore();
         }
-        if (entity.hp < entity.maxHp || game.selectedId === entity.id || entity.aggro) this._health(c, entity.hp / entity.maxHp, -39, entity.named ? 35 : 28, '#c68a6b');
-        if (entity.aggro && !entity.returning && game.selectedId !== entity.id) text(c, '!', 16, -35, 10, '#ecc38b');
+      }
+    }
+
+    _actorLabel(c, kind, entity, game, time) {
+      // Labels sit above all scenery, even while their actor walks behind it.
+      c.save(); c.translate(entity.x, entity.y);
+      if (kind === 'mob') {
+        const intent = activeIntent(entity, time) ? entity.intent : null;
+        const healthY = entity.named ? -58 : -46;
+        if (entity.named || game.selectedId === entity.id || entity.aggro || intent) {
+          text(c, entity.name, 0, healthY - (intent ? 36 : 14), entity.named ? 9 : 8, entity.named ? '#e2c78e' : '#e0d5b9');
+        }
+        if (entity.hp < entity.maxHp || game.selectedId === entity.id || entity.aggro) this._health(c, entity.hp / entity.maxHp, healthY, entity.named ? 35 : 28, '#c68a6b');
+        if (intent) {
+          const progress = clamp((time - intent.started) / Math.max(0.01, intent.done - intent.started), 0, 1);
+          const color = intentColors[intent.kind] || intentColors.hex;
+          text(c, intent.name, 0, healthY - 23, 7.5, color);
+          this._health(c, progress, healthY - 12, 43, color);
+        }
+        if (entity.aggro && !entity.returning && entity.targetId) {
+          const playerFocus = entity.targetId === 'player', color = playerFocus ? '#edaf92' : '#b6d6a4';
+          text(c, playerFocus ? 'YOU' : 'PET', 25, healthY + 7, 5.5, color);
+          polygon(c, [[22, healthY + 13], [28, healthY + 13], [25, healthY + 17]], color);
+        }
       } else if (kind === 'pet') {
         this._health(c, entity.hp / entity.maxHp, -44, 28, '#a6ba82');
         if (entity.targetId) polygon(c, [[-3, -50], [0, -46], [3, -50]], '#cdddac');
       }
+      c.restore();
     }
 
     _magician(c, game, time) {
+      const motionTime = this.reducedMotion ? 0 : time;
       if (game.dead) c.globalAlpha = 0.55;
       const sit = game.meditate ? 5 : 0;
       c.translate(0, sit);
@@ -453,15 +777,15 @@
       if (game.shieldUntil > time) {
         c.lineWidth = 1.2;
         ellipse(c, 0, -20, 23, 29, '#badade0b', '#bddadd99');
-        c.beginPath(); c.ellipse(0, -20, 23, 29, 0, time * 0.5, time * 0.5 + 1.2); c.strokeStyle = '#e5edce'; c.stroke();
+        c.beginPath(); c.ellipse(0, -20, 23, 29, 0, motionTime * 0.5, motionTime * 0.5 + 1.2); c.strokeStyle = '#e5edce'; c.stroke();
       }
       if (game.cast) {
-        const colors = ['#ced4a2', '#f0c38a', '#e7a777', '#b4d3a5', '#c7e0b3', '#cae8e0', '#c6e0e8', '#dbe4b3'];
+        const colors = ['#ced4a2', '#f0c38a', '#e7a777', '#b4d3a5', '#c7e0b3', '#cae8e0', '#c6e0e8', '#dbe4b3', '#a9dce9', '#efb77f'];
         const glow = c.createRadialGradient(17, -36, 0, 17, -36, 16);
         glow.addColorStop(0, colors[game.cast.i]); glow.addColorStop(1, '#e4d1a000');
         c.fillStyle = glow; c.fillRect(1, -52, 32, 32);
         for (let i = 0; i < 3; i++) {
-          const a = time * 3 + i * TAU / 3;
+          const a = motionTime * 3 + i * TAU / 3;
           ellipse(c, 17 + Math.cos(a) * 11, -36 + Math.sin(a) * 8, 1.2, 1.2, colors[game.cast.i]);
         }
       }
@@ -540,7 +864,7 @@
         if (!this._visible(effect.x, effect.y, 40)) continue;
         c.save(); c.globalAlpha = clamp(effect.life * 2, 0, 1);
         const numeric = /^[+−\-]?\d/.test(effect.text);
-        text(c, effect.text, effect.x, effect.y - 25 - (1.25 - effect.life) * 22, numeric ? 13 : 10, effect.color || '#e4d6ae', numeric);
+        text(c, effect.text, effect.x, effect.y - 25 - (this.reducedMotion ? 0 : (1.25 - effect.life) * 22), numeric ? 13 : 10, effect.color || '#e4d6ae', numeric);
         c.restore();
       }
     }
@@ -554,8 +878,17 @@
       c.lineWidth = labels ? 1.5 : 0.7;
       c.strokeStyle = '#e1d3a34d'; c.strokeRect(this.camera.x * sx, this.camera.y * sy, Math.min(WORLD.w, this.width / this.zoom) * sx, Math.min(WORLD.h, this.height / this.zoom) * sy);
       const spawn = { x: WORLD.spawn.x * sx, y: WORLD.spawn.y * sy };
-      polygon(c, [[spawn.x, spawn.y - 5], [spawn.x + 3, spawn.y], [spawn.x, spawn.y + 4], [spawn.x - 3, spawn.y]], '#d8e5b8', '#263f30');
-      if (labels) text(c, 'Willowmere · Bindstone', spawn.x + 14, spawn.y - 15, 11, '#e1e2bd', true);
+      const stone = { x: bindstone.x * sx, y: bindstone.y * sy };
+      polygon(c, [[stone.x, stone.y - 5], [stone.x + 3, stone.y], [stone.x, stone.y + 4], [stone.x - 3, stone.y]], '#d8e5b8', '#263f30');
+      if (labels) {
+        text(c, 'Willowmere · Village', spawn.x + 14, spawn.y - 36, 11, '#e1e2bd', true);
+        for (const npc of NPCS) {
+          const nx = npc.x * sx, ny = npc.y * sy, marker = this._npcMarker(npc, game);
+          polygon(c, [[nx, ny - 5], [nx + 4, ny], [nx, ny + 5], [nx - 4, ny]], '#2e4c37', marker.color);
+          if (marker.symbol === '!' || marker.symbol === '?') text(c, marker.symbol, nx, ny, 8, marker.color);
+          text(c, npc.name.split(' ').at(-1), nx, ny + 12, 8, '#d5d8b5');
+        }
+      }
       for (const camp of CAMPS) {
         const x = camp.x * sx, y = camp.y * sy, known = (game.discovered || []).includes(camp.id);
         ellipse(c, x, y, labels ? 5 : 3, labels ? 5 : 3, known ? '#bf9b69' : '#3a4934', known ? '#e5c996' : '#92a17b');

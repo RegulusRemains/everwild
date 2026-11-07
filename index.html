@@ -14,12 +14,13 @@
     <a class="brand" href="#" aria-label="Everwild home"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 3 11 22h8L8 37h13v8h6v-8h13L29 22h8Z"/><path class="trunk" d="M24 16v24M17 29l7 5 7-5"/></svg><span>EVERWILD<small>A WORLD WORTH WANDERING</small></span></a>
     <nav aria-label="Game menus">
       <button type="button" data-dialog="guide">Field guide <kbd>?</kbd></button>
+      <button type="button" data-dialog="journal">Journal <kbd>J</kbd></button>
       <button type="button" data-dialog="spellbook">Spellbook</button>
       <button type="button" data-dialog="inventory">Pack <kbd>I</kbd></button>
       <button type="button" data-dialog="save">Save</button>
       <button type="button" id="pause" aria-label="Pause game">Ⅱ</button>
     </nav>
-    <span class="build-label">PLAYABLE ALPHA <span id="version">0.2</span></span>
+    <span class="build-label">THE EASTERN ROAD <span id="version">0.3</span></span>
   </header>
   <main id="shell">
     <section class="adventure" aria-label="Game world">
@@ -35,8 +36,9 @@
           <div class="area-heading"><span class="eyebrow">THE WAKING WOODS</span><h1 id="area-name">Willowmere Frontier</h1><p id="area-note">A quiet refuge at the edge of the unknown</p></div>
           <button id="map-toggle" class="map-button panel-glass" aria-label="Open world map"><canvas id="minimap" width="176" height="124" aria-hidden="true"></canvas><span>FRONTIER MAP <kbd>M</kbd></span></button>
         </div>
-        <div id="target-card" class="target-card panel-glass" hidden><div><span id="target-con" class="eyebrow"></span><strong id="target-name"></strong></div><span id="target-level"></span><div class="meter health"><i id="target-hp"></i></div><small id="target-state"></small></div>
-        <div class="objective panel-glass"><span class="eyebrow">YOUR FIRST FOOTSTEPS</span><strong id="objective-title">An ally in the wild</strong><p id="objective-text">Summon an Earth Elemental with <kbd>1</kbd>.</p></div>
+        <div id="target-card" class="target-card panel-glass" hidden><div><span id="target-con" class="eyebrow"></span><strong id="target-name"></strong></div><span id="target-level"></span><div class="meter health"><i id="target-hp"></i></div><small id="target-state"></small><div id="threat-info" hidden><div class="threat-line"><span id="threat-label"></span><span id="threat-value"></span></div><div class="meter threat"><i id="threat-bar"></i></div></div><div id="enemy-intent" hidden><strong id="enemy-intent-name"></strong><div class="meter warning"><i id="enemy-intent-bar"></i></div><small id="enemy-intent-hint">Step out · Arcane Root interrupts</small></div></div>
+        <div class="objective panel-glass"><div class="objective-heading"><span class="eyebrow">YOUR EXPEDITION</span><button data-dialog="journal" title="Open quest journal [J]" aria-label="Open quest journal">J ↗</button></div><strong id="objective-title">The road calls</strong><p id="objective-text">Speak with Warden Rowan beside the village road.</p><div class="meter quest-meter"><i id="objective-progress"></i></div></div>
+        <div id="interaction-hint" hidden></div>
         <div class="scene-bottom"><span id="world-state"><i></i> Sanctuary</span><span id="save-status">Autosave ready</span></div>
         <div id="toast" role="status" aria-live="polite" hidden></div>
         <div id="paused-overlay" class="veil" hidden><div><span class="eyebrow">TAKE YOUR TIME</span><h2>The wilds can wait.</h2><p>Your adventure is paused.</p><button class="primary" id="resume">Return to the frontier</button></div></div>
@@ -46,15 +48,15 @@
       <div class="action-deck">
         <div class="cast-row"><span id="cast-status">Ready for the road</span><div class="cast-meter"><i id="cast-progress"></i></div><span id="cast-time"></span></div>
         <div id="actionbar" class="actionbar" aria-label="Spells"></div>
-        <div class="command-row"><div class="commands"><button id="attack"><kbd>F</kbd> Pet attack</button><button id="follow"><kbd>G</kbd> Follow</button><button id="rest"><kbd>R</kbd> Meditate</button><button id="interact"><kbd>E</kbd> Bindstone</button></div><span class="movement-hint"><kbd>WASD</kbd> move <span>·</span> <kbd>Space</kbd> target <span>·</span> <kbd>Esc</kbd> pause</span></div>
+        <div class="command-row"><div class="commands"><button id="attack"><kbd>F</kbd> Attack</button><button id="follow"><kbd>G</kbd> Follow</button><button id="guard"><kbd>C</kbd> Guard</button><button id="taunt"><kbd>Q</kbd> Taunt</button><button id="rest"><kbd>R</kbd> Meditate</button><button id="interact"><kbd>E</kbd> Interact</button></div><div class="quick-supplies"><button id="health-tonic" title="Drink a health tonic [Z]"><kbd>Z</kbd><span>Health</span><b id="health-count">2</b></button><button id="mana-tonic" title="Drink a mana tonic [X]"><kbd>X</kbd><span>Mana</span><b id="mana-count">1</b></button><span id="supply-cooldown"></span></div></div>
       </div>
     </section>
     <aside class="sidebar" aria-label="Adventure information">
       <div class="chapter-label"><span>CHAPTER I</span><i></i></div>
       <h2>Beyond the<br>lantern light.</h2>
-      <p class="intro">The old road runs east. Somewhere beneath the trees, the forgotten are stirring.</p>
+      <p class="intro">Willowmere’s wardens are stretched thin. Along the eastern road, a small kindness may uncover a much older trouble.</p>
       <section class="side-section companion"><div class="section-title"><h3>Your companion</h3><span id="pet-type">UNSUMMONED</span></div><div class="companion-content"><div id="pet-sigil" class="pet-sigil">◇</div><div><strong id="pet-name">A little less alone</strong><p id="pet-info">Call an elemental to your side.</p></div></div><div class="meter pet-health"><i id="petbar"></i></div><p class="hint" id="pet-order">Earth endures. Air strikes quickly.</p></section>
-      <section class="side-section"><div class="section-title"><h3>The journey</h3><span id="kill-count">0 victories</span></div><div class="journey-stats"><div><span class="coin-icon">◈</span><strong id="gold">0</strong><small>copper</small></div><div><strong id="discovery-count">0 / 4</strong><small>camps found</small></div></div><p id="debt" class="hint"></p><button class="wide-subtle" data-dialog="inventory">Open your pack <span id="pack-count">0 items →</span></button></section>
+      <section class="side-section"><div class="section-title"><h3>The journey</h3><span id="kill-count">0 victories</span></div><div class="journey-stats"><div><span class="coin-icon">◈</span><strong id="gold">0</strong><small>copper</small></div><div><strong id="discovery-count">0 / 4</strong><small>camps found</small></div></div><p id="debt" class="hint"></p><p id="next-spell" class="next-spell"></p><button class="wide-subtle" data-dialog="journal">Quest journal <span id="quest-count">0 / 4 complete →</span></button><button class="wide-subtle" data-dialog="inventory">Open your pack <span id="pack-count">0 items →</span></button></section>
       <section class="side-section journal-section"><div class="section-title"><h3>Field journal</h3><span class="live-dot">LIVE</span></div><div id="log" role="log" aria-label="Recent game events" aria-live="off"></div></section>
       <div class="side-footer"><span class="compass-mark">✦</span><p>Choose your fights.<br>Know the road home.</p><button data-dialog="guide">Learn the essentials →</button></div>
     </aside>

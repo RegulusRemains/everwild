@@ -1,6 +1,6 @@
 # Everwild
 
-**Version 0.2.0 — initial playable prototype**
+**Version 0.3.0 — the first expedition**
 
 Everwild is a solo fantasy RPG about exploring a dangerous frontier with a summoned companion. Fight through Willowmere's forest and crypt camps, collect equipment, and grow an earth or air pet into the center of your combat strategy.
 
@@ -34,9 +34,13 @@ npm start -- --port 4174
 
 ## Your first expedition
 
-Start near the Willowmere bindstone, summon an **Earth Pet** with **1**, then approach the nearest goblin camp. Select a foe, send your pet in with **F**, and support it with damage, control, and healing spells. Return to the bindstone to recover and improve your spell ranks as you grow stronger.
+Start at Willowmere’s bindstone and speak to **Warden Rowan** for **Patrol the Eastern Road**. Summon an **Earth Pet** with **1**, follow the road east, and select the western goblin scout at Briarwatch. Send the elemental in with **F** and support it with Fire Bolt, control, and healing. The patrol counts four Briarwatch victories made after you accept it.
 
-Four camps provide a progression through the frontier. Named enemies return after their respawn timer and can award equipment. Equip useful loot in your pack, then prepare for the next camp. Dying sends you back to your bindstone with experience debt while preserving your level and equipment.
+Return to Rowan to claim copper, experience, and an **Apprentice’s Willow Focus**. Equip the focus in your pack. Rowan’s next task asks to examine **Grik’s Lucky Charm**; a charm you already found counts, and you keep it after the conversation. The remaining tasks take you to **Elementalist Liora**, Bramblemaw at Mossfang Camp, and the Bonewarden in Willowmere Crypt. The map also shows Othrek’s Vigil for a later challenge.
+
+**Quartermaster Mara** sells health and mana tonics for travel. They share a 20-second cooldown. The bindstone restores your own health and mana for free when you return safely, so copper can go toward spell ranks or supplies for a longer journey.
+
+Watch enemy attack warnings. Leave marked ground before a slam or hex resolves, recall your pet when it stands in danger, or finish **Arcane Root** to interrupt an enemy’s special attack. Root also stops movement, but a rooted enemy can still strike a nearby opponent. Named foes have distinct equipment drops; repeat copies are salvaged into copper.
 
 ## Controls
 
@@ -44,24 +48,31 @@ Four camps provide a progression through the frontier. Named enemies return afte
 | --- | --- |
 | Move | **WASD**, **arrow keys**, or click the ground |
 | Select a target | Click an enemy; **Tab** cycles targets; **Space** selects a nearby target |
-| Cast spells | **1–8**, or the spell bar |
+| Cast a bar slot | **1–8**, or the spell bar |
 | Send pet to attack your target | **F** |
-| Recall pet to follow | **G** |
+| Recall pet to passive Follow | **G** |
+| Set pet to Guard | **C** |
+| Make the pet taunt its assigned enemy | **Q** |
+| Drink a health or mana tonic | **Z** / **X** |
 | Toggle meditation | **R** |
-| Interact with a nearby bindstone | **E** |
+| Interact with a nearby villager or bindstone | **E** |
+| Open or close the quest journal | **J** |
 | Open or close your pack | **I** |
+| Open or close the spellbook | **B** |
 | Open or close the map | **M** |
 | Pause or resume | **Esc** |
 
-The spell bar contains **Earth Pet**, **Fire Bolt**, **Burning Mark**, **Arcane Root**, **Pet Mend**, **Air Pet**, **Magic Shield**, and **Minor Heal**. Moving interrupts a spell being cast. Meditation restores resources but leaves you vulnerable, so recover somewhere safe.
+The starting bar contains **Earth Pet**, **Fire Bolt**, **Burning Mark**, **Arcane Root**, **Pet Mend**, **Air Pet**, **Magic Shield**, and **Minor Heal**. **Frost Lance** unlocks at level 3 and **Ember Nova** at level 5. Use the spellbook to assign any unlocked spell to one of eight slots. Number keys always cast the spell currently assigned to that slot.
+
+Moving interrupts your cast without spending its mana. Meditation restores resources but ends when you move or take damage. Pet **Guard** can defend you automatically; **Follow** recalls the elemental and keeps it from attacking. **Taunt** has a 12-second cooldown and affects the elemental’s assigned enemy when it is within reach, even if you have selected a different enemy.
 
 ## Saving progress
 
 Progress autosaves in this browser's local storage. Saves belong to the browser profile and the address where you play; the direct file, a local server, and a hosted version can have separate saves. This is not cloud synchronization. Clearing site data or using a private window can remove progress. If storage is blocked, use a normal browser window with site storage enabled.
 
-The **Save** menu includes **Export character** and **Import character** for backups and transferring progress. Importing requires a confirmation before replacing the current character. The original v0.1 save format is migrated automatically. A new character also requires confirmation.
+The **Save** menu includes **Export character** and **Import character** for backups and transferring progress. Importing requires a confirmation before replacing the current character. Saves from v0.1 and v0.2 migrate automatically; existing levels, equipment, and spell ranks are retained. A new character also requires confirmation.
 
-Your character's progression, equipment, position, and death state persist. Encounters restart and you must summon a new elemental after loading. A saved position within a newly spawned guard's aggro radius returns you to the bindstone for a safe start, with a journal message explaining why.
+Your character’s progression, equipment, position, death state, quests, supplies, and spell-bar choices persist. An active tonic cooldown also survives reload. Encounters restart and you must summon a new elemental after loading. A saved position too close to a newly spawned guard returns you to the bindstone for a safe start, with a journal message explaining why.
 
 ## Development
 
@@ -76,9 +87,10 @@ No compilation is required. `npm start` serves the source files; changes appear 
 - `src/engine.js` implements the world, combat, progression, and save data.
 - `src/render.js` draws the game world.
 - `src/app.js` connects browser input, interface, and persistence to the engine.
-- `tests/engine.test.cjs` checks gameplay rules using Node's built-in test runner.
+- `tests/engine.test.cjs` checks the original combat and persistence rules using Node's built-in test runner.
+- `tests/expedition.test.cjs` checks quest progression, supplies, new spells, pet commands, and the opening patrol.
 
-GitHub Actions runs the engine tests, builds a downloadable **everwild-playable** artifact, and runs a separate Chromium smoke test on pushes and pull requests. The browser test covers startup, menus, summoning, movement, save/reload, and the compact layout. Playwright is installed only in the browser test job; the game remains dependency-free. CI does not publish the game.
+GitHub Actions runs the engine tests, builds a downloadable **everwild-playable** artifact, and runs a separate Chromium smoke test on pushes and pull requests. The browser test covers startup, dialogue and quest actions, pack and spell assignments, keyboard controls, save/reload, and the compact layout. It uses explicit scenario setup for later progression checks rather than representing a complete playthrough. Screenshots are written under `test-results/browser-smoke/`. Playwright is installed only in the browser test job; the game remains dependency-free. CI does not publish the game.
 
 To run the optional browser check locally:
 

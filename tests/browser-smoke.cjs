@@ -8,8 +8,10 @@ const { spawn } = require('node:child_process');
 const { once } = require('node:events');
 const net = require('node:net');
 const path = require('node:path');
+const fs = require('node:fs/promises');
 
 const root = path.resolve(__dirname, '..');
+const screenshots = path.join(root, 'test-results', 'browser-smoke');
 
 function loadPlaywright() {
   try {
@@ -59,12 +61,14 @@ async function main() {
   const { chromium } = loadPlaywright();
   let server;
   let browser;
+  let page;
   try {
+    await fs.mkdir(screenshots, { recursive: true });
     browser = await chromium.launch({ headless: true });
     const started = await startServer();
     server = started.server;
     const errors = [];
-    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+    page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
     page.on('pageerror', error => errors.push(error.message));
     page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
     const response = await page.goto(started.url);
@@ -80,24 +84,188 @@ async function main() {
     await page.locator('#dialog-close').click();
     assert.equal(await page.locator('#menu-dialog').evaluate(dialog => dialog.open), false);
 
-    // Use the player's actual controls: summon, move, then persist and reload.
+    // Use the player's actual controls for the opening companion and movement.
     await page.locator('#game').focus();
     await page.keyboard.press('1');
     await page.waitForFunction(() => Boolean(window.everwild.game.pet), undefined, { timeout: 10000 });
     await page.waitForFunction(() => /earth/i.test(document.getElementById('pet-type').textContent));
-    assert.match(await page.locator('#pet-type').textContent(), /earth/i);
     const before = await page.evaluate(() => ({ x: window.everwild.game.player.x, y: window.everwild.game.player.y }));
     await page.keyboard.down('d');
     await page.waitForTimeout(500);
     await page.keyboard.up('d');
     const after = await page.evaluate(() => ({ x: window.everwild.game.player.x, y: window.everwild.game.player.y }));
     assert.ok(Math.hypot(after.x - before.x, after.y - before.y) > 10, 'WASD must move the character');
+
+    // Scenario setup places the character beside Rowan; acceptance itself is UI-driven.
+    await page.evaluate(() => {
+      const game = window.everwild.game;
+      const rowan = window.Everwild.NPCS.find(npc => npc.id === 'rowan');
+      Object.assign(game.player, { x: rowan.x, y: rowan.y });
+      game.cancelMovement();
+    });
+    await page.keyboard.press('e');
+    await page.waitForFunction(() => document.getElementById('menu-dialog').open);
+    assert.match(await page.locator('#dialog-title').textContent(), /Rowan/);
+    await page.locator('[data-action="accept-quest"][data-quest="scout-road"]').click();
+    assert.equal(await page.evaluate(() => window.everwild.game.questState('scout-road').status), 'active');
+    await page.locator('#dialog-close').click();
+
+    // Explicit high-level scenario: four real hotkey casts exercise quest counting.
+    // This is a functional smoke check, not a claim to have played the full progression.
+    await page.evaluate(() => { window.everwild.game.player.level = 20; });
+    const sentries = await page.evaluate(() => window.everwild.game.mobs.filter(mob => mob.campId === 'briar').map(mob => mob.id));
+    for (const id of sentries) {
+      await page.evaluate(targetId => {
+        const game = window.everwild.game;
+        const mob = game.mobs.find(enemy => enemy.id === targetId);
+        Object.assign(game.player, {
+          x: mob.x - (mob.y > 400 ? 0 : 100),
+          y: mob.y + (mob.y > 400 ? 190 : -200),
+          mp: game.player.maxMp,
+        });
+        game.cancelMovement();
+        game.commandPet('follow');
+        game.setTarget(targetId);
+      }, id);
+      await page.locator('#game').focus();
+      await page.keyboard.press('2');
+      await page.waitForFunction(targetId => !window.everwild.game.mobs.some(mob => mob.id === targetId && mob.alive), id, { timeout: 7000 });
+    }
+    assert.equal(await page.evaluate(() => window.everwild.game.questState('scout-road').status), 'ready');
+    await page.evaluate(() => {
+      const game = window.everwild.game;
+      const rowan = window.Everwild.NPCS.find(npc => npc.id === 'rowan');
+      Object.assign(game.player, { x: rowan.x, y: rowan.y });
+      game.cancelMovement();
+    });
+    await page.keyboard.press('e');
+    const copperBeforeReward = await page.evaluate(() => window.everwild.game.player.gold);
+    await page.locator('[data-action="turn-in"][data-quest="scout-road"]').click();
+    assert.equal(await page.evaluate(() => window.everwild.game.questState('scout-road').status), 'completed');
+    assert.equal(await page.evaluate(() => window.everwild.game.player.inventory.includes('apprentice-focus')), true);
+    assert.equal(await page.evaluate(() => window.everwild.game.player.gold), copperBeforeReward + 30);
+    assert.equal(await page.locator('[data-action="turn-in"][data-quest="scout-road"]').count(), 0, 'The paid quest cannot be claimed again in the dialogue');
+    await page.screenshot({ path: path.join(screenshots, 'npc-dialog.png'), fullPage: true });
+    await page.locator('#dialog-close').click();
+
+    // Equip the quest reward through the pack and assign an unlocked spell to key 2.
+    await page.keyboard.press('i');
+    await page.locator('[data-action="equip"][data-item="apprentice-focus"]').click();
+    assert.equal(await page.evaluate(() => window.everwild.game.player.equipment.focus), 'apprentice-focus');
+    await page.locator('#dialog-close').click();
+    await page.locator('nav [data-dialog="spellbook"]').click();
+    await page.locator('select[data-spell-index="8"]').selectOption('1');
+    assert.equal(await page.evaluate(() => window.everwild.game.player.hotbar[1]), 8);
+    await page.locator('#dialog-close').click();
+    await page.waitForFunction(() => document.getElementById('spell1').dataset.spellIndex === '8');
+    assert.match(await page.locator('#spell1').textContent(), /Frost Lance/);
+    await page.evaluate(() => {
+      const game = window.everwild.game;
+      const target = game.mobs.find(mob => mob.campId === 'mossfang' && mob.index === 0);
+      Object.assign(game.player, { x: target.x - 120, y: target.y - 200, mp: game.player.maxMp });
+      game.cancelMovement();
+      game.setTarget(target.id);
+    });
+    await page.keyboard.press('2');
+    await page.waitForFunction(() => window.everwild.game.cast?.i === 8);
+    await page.keyboard.down('a');
+    await page.waitForTimeout(120);
+    await page.keyboard.up('a');
+    assert.equal(await page.evaluate(() => window.everwild.game.cast), null, 'Movement must interrupt the reassigned spell');
+
+    // Keyboard commands control the same existing companion, including taunt.
+    // The positions below create a short encounter without inventing combat results.
+    await page.evaluate(() => {
+      const game = window.everwild.game;
+      const target = game.mobs.find(mob => mob.campId === 'mossfang' && mob.index === 0);
+      Object.assign(game.player, { x: target.x - 125, y: target.y, hp: game.player.maxHp });
+      Object.assign(game.pet, { x: target.x - 75, y: target.y });
+      game.cancelMovement();
+      game.setTarget(target.id);
+    });
+    await page.locator('#game').focus();
+    await page.keyboard.press('c');
+    assert.equal(await page.evaluate(() => window.everwild.game.pet.mode), 'guard');
+    await page.keyboard.press('f');
+    assert.ok(await page.evaluate(() => window.everwild.game.pet.targetId));
+    await page.keyboard.press('q');
+    const tauntReadyAt = await page.evaluate(() => {
+      const game = window.everwild.game;
+      const target = game.mobs.find(mob => mob.id === game.pet.targetId);
+      if (target.targetId !== game.pet.id || target.threatPet <= target.threatPlayer) throw new Error('Taunt must switch the enemy to the pet');
+      return game.pet.tauntReadyAt;
+    });
+    assert.ok(tauntReadyAt > await page.evaluate(() => window.everwild.game.clock));
+    await page.keyboard.press('q');
+    assert.equal(await page.evaluate(() => window.everwild.game.pet.tauntReadyAt), tauntReadyAt, 'Repeated Q cannot reset the cooldown');
+    await page.keyboard.press('g');
+    assert.equal(await page.evaluate(() => window.everwild.game.pet.mode), 'follow');
+    assert.equal(await page.evaluate(() => window.everwild.game.pet.targetId), null);
+
+    // Buy through Mara's dialogue, then use the actual tonic shortcuts.
+    await page.evaluate(() => {
+      const game = window.everwild.game;
+      const mara = window.Everwild.NPCS.find(npc => npc.id === 'mara');
+      Object.assign(game.player, { x: mara.x, y: mara.y });
+      game.cancelMovement();
+      game.update(0.1);
+    });
+    await page.keyboard.press('e');
+    await page.waitForFunction(() => document.getElementById('menu-dialog').open);
+    assert.match(await page.locator('#dialog-title').textContent(), /Mara/);
+    const beforePurchase = await page.evaluate(() => ({ gold: window.everwild.game.player.gold, count: window.everwild.game.player.supplies['health-tonic'] }));
+    await page.locator('[data-action="buy-supply"][data-item="health-tonic"]').click();
+    const afterPurchase = await page.evaluate(() => ({ gold: window.everwild.game.player.gold, count: window.everwild.game.player.supplies['health-tonic'] }));
+    assert.equal(afterPurchase.gold, beforePurchase.gold - 20);
+    assert.equal(afterPurchase.count, beforePurchase.count + 1);
+    await page.locator('#dialog-close').click();
+
+    // Return to sanctuary before checking shared supply cooldown and menu keys.
+    await page.evaluate(() => {
+      const game = window.everwild.game;
+      Object.assign(game.player, { x: 260, y: 250, hp: 30, mp: 20 });
+      game.cancelMovement();
+      game.commandPet('follow');
+      game.update(0.1);
+    });
+    const supplyCounts = await page.evaluate(() => ({ ...window.everwild.game.player.supplies }));
+    await page.keyboard.press('z');
+    assert.equal(await page.evaluate(() => window.everwild.game.player.supplies['health-tonic']), supplyCounts['health-tonic'] - 1);
+    await page.keyboard.press('x');
+    assert.equal(await page.evaluate(() => window.everwild.game.player.supplies['mana-tonic']), supplyCounts['mana-tonic'], 'The shared tonic cooldown must reject the second hotkey');
+    await page.evaluate(() => {
+      const game = window.everwild.game;
+      for (let i = 0; i < 4; i++) game.update(5);
+      game.update(0.1);
+    });
+    await page.keyboard.press('x');
+    assert.equal(await page.evaluate(() => window.everwild.game.player.supplies['mana-tonic']), supplyCounts['mana-tonic'] - 1);
+
+    for (const [key, title] of [['j', /Eastern Road|journal/i], ['m', /frontier|map/i], ['b', /spellbook/i]]) {
+      await page.keyboard.press(key);
+      assert.equal(await page.locator('#menu-dialog').evaluate(dialog => dialog.open), true);
+      assert.match(await page.locator('#dialog-title').textContent(), title);
+      await page.keyboard.press('Escape');
+      assert.equal(await page.locator('#menu-dialog').evaluate(dialog => dialog.open), false);
+    }
+    await page.keyboard.press('Escape');
+    assert.equal(await page.evaluate(() => window.everwild.paused), true);
+    await page.keyboard.press('Escape');
+    assert.equal(await page.evaluate(() => window.everwild.paused), false);
+
     await page.evaluate(() => window.everwild.save());
-    const saved = await page.evaluate(() => ({ level: window.everwild.game.player.level, gold: window.everwild.game.player.gold }));
+    const saved = await page.evaluate(() => {
+      const player = window.everwild.game.player;
+      return { level: player.level, gold: player.gold, equipment: player.equipment, quests: player.quests, hotbar: player.hotbar, supplies: player.supplies };
+    });
     await page.reload();
     await page.waitForFunction(() => Boolean(window.everwild?.game));
-    const loaded = await page.evaluate(() => ({ level: window.everwild.game.player.level, gold: window.everwild.game.player.gold }));
-    assert.deepEqual(loaded, saved);
+    const loaded = await page.evaluate(() => {
+      const player = window.everwild.game.player;
+      return { level: player.level, gold: player.gold, equipment: player.equipment, quests: player.quests, hotbar: player.hotbar, supplies: player.supplies };
+    });
+    assert.deepEqual(loaded, saved, 'Quest, equipment, supply, and spell-bar progress must survive a browser reload');
+    await page.screenshot({ path: path.join(screenshots, 'desktop.png'), fullPage: true });
 
     for (const menu of ['inventory', 'spellbook', 'save']) {
       await page.locator(`nav [data-dialog="${menu}"]`).click();
@@ -116,8 +284,16 @@ async function main() {
     }));
     assert.ok(dimensions.content <= dimensions.viewport + 1, 'Mobile layout must not overflow horizontally');
     assert.ok(dimensions.game > 200, 'The game canvas must remain visible on mobile');
+    await page.locator('nav [data-dialog="journal"]').click();
+    assert.equal(await page.locator('#menu-dialog').evaluate(dialog => dialog.open), true);
+    await page.locator('#dialog-close').click();
+    await page.screenshot({ path: path.join(screenshots, 'mobile.png'), fullPage: true });
     assert.deepEqual(errors, [], 'The browser must not report runtime or console errors');
-    console.log('Browser smoke passed: startup, menus, summoning, movement, save/reload, and compact layout.');
+    console.log('Browser smoke passed: controls, NPC dialogue, quest rewards, equipment, spell assignment, pet guard/taunt, tonic purchase/cooldown, save/reload, and mobile layout.');
+    console.log(`Screenshots: ${screenshots}`);
+  } catch (error) {
+    if (page) await page.screenshot({ path: path.join(screenshots, 'failure.png'), fullPage: true }).catch(() => {});
+    throw error;
   } finally {
     if (browser) await browser.close();
     if (server && server.exitCode === null) {
