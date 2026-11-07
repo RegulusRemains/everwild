@@ -35,7 +35,6 @@
   let lastFrame = performance.now();
   let uiElapsed = 1;
   let saveElapsed = 0;
-  let lastLog = -1;
   let lastDead = game.dead;
   let toastUntil = 0;
   let pendingImport = null;
@@ -46,15 +45,36 @@
   let lastVisualId = 0, discoveryUntil = 0;
   const discoveryQueue = [];
   let audioContext = null, soundEnabled = false, lastImpactSound = -Infinity;
+  let hudScalePreference = 'auto';
   try {
     renderer.pixelArt = localStorage.getItem('everwild_pixel_art') !== 'false';
     soundEnabled = localStorage.getItem('everwild_sound') === 'true';
+    const zoom = Number(localStorage.getItem('everwild_view_zoom'));
+    renderer.zoomFactor = Number.isFinite(zoom) && zoom >= 0.75 && zoom <= 1.5 ? zoom : 1;
+    const scale = localStorage.getItem('everwild_hud_scale');
+    if (scale === 'auto' || ['0.85','1','1.25','1.5'].includes(scale)) hudScalePreference = scale;
   } catch (_) {}
   function syncPresentationButtons() {
-    $('sound').textContent = soundEnabled ? 'Sound on' : 'Sound off';
-    $('sound').setAttribute('aria-pressed', String(soundEnabled));
-    $('art-style').setAttribute('aria-pressed', String(renderer.pixelArt));
-    $('art-style').textContent = renderer.pixelArt ? 'Pixel art' : 'Smooth art';
+    if ($('sound')) {
+      $('sound').textContent = soundEnabled ? 'Sound on' : 'Sound off';
+      $('sound').setAttribute('aria-pressed', String(soundEnabled));
+    }
+    if ($('art-style')) {
+      $('art-style').setAttribute('aria-pressed', String(renderer.pixelArt));
+      $('art-style').textContent = renderer.pixelArt ? 'Pixel art' : 'Smooth art';
+    }
+    if ($('fullscreen-button')) {
+      $('fullscreen-button').textContent = document.fullscreenElement ? 'Exit fullscreen' : 'Fullscreen';
+      $('fullscreen-button').disabled = !document.fullscreenEnabled;
+    }
+  }
+  async function toggleFullscreen() {
+    if (!document.fullscreenEnabled) { toast('Fullscreen is unavailable in this browser.'); return; }
+    try {
+      if (document.fullscreenElement) await document.exitFullscreen();
+      else await document.documentElement.requestFullscreen();
+      resize(); syncPresentationButtons();
+    } catch (_) { toast('Fullscreen could not be started.'); }
   }
   function unlockAudio() {
     if (!soundEnabled) return;
@@ -96,19 +116,36 @@
       if (item) {
         const panel = $('discovery');
         panel.classList.toggle('rare', found.rare);
-        panel.innerHTML = arcanaIcon(itemArt[found.id], 'discovery-art') + '<small>' + (found.rare ? 'A RARE DISCOVERY' : 'SOMETHING WORTH KEEPING') + '</small><strong>' + escape(item.name) + '</strong><span>Open your pack [I] to inspect and equip</span>';
+        panel.innerHTML = arcanaIcon(itemArt[found.id], 'discovery-art') + '<small>' + escape((found.rare ? 'Rare' : 'Common') + ' · ' + item.slot) + '</small><strong>' + escape(item.name) + '</strong><span>Inspect [I]</span>';
         panel.hidden = false; discoveryUntil = now + (found.rare ? 6500 : 4200);
         [392, 493.88, 587.33, ...(found.rare ? [783.99] : [])].forEach((note, i) => tone(note, i * 0.13, 0.65, 0.018));
       }
     } else if (now >= discoveryUntil) $('discovery').hidden = true;
   }
-  $('sound').addEventListener('click', () => {
-    soundEnabled = !soundEnabled; unlockAudio(); syncPresentationButtons();
-    try { localStorage.setItem('everwild_sound', String(soundEnabled)); } catch (_) {}
+  document.addEventListener('click', event => {
+    const setting = event.target.closest('button[data-setting]')?.dataset.setting;
+    if (setting === 'sound') {
+      soundEnabled = !soundEnabled; unlockAudio(); syncPresentationButtons();
+      try { localStorage.setItem('everwild_sound', String(soundEnabled)); } catch (_) {}
+    } else if (setting === 'art') {
+      renderer.pixelArt = !renderer.pixelArt; syncPresentationButtons();
+      try { localStorage.setItem('everwild_pixel_art', String(renderer.pixelArt)); } catch (_) {}
+    } else if (setting === 'fullscreen') { closeMenu(); pause(false); toggleFullscreen(); }
   });
-  $('art-style').addEventListener('click', () => {
-    renderer.pixelArt = !renderer.pixelArt; syncPresentationButtons();
-    try { localStorage.setItem('everwild_pixel_art', String(renderer.pixelArt)); } catch (_) {}
+  document.addEventListener('change', event => {
+    const setting = event.target.dataset.setting;
+    if (setting === 'hud-scale') {
+      const value = event.target.value;
+      if (value === 'auto' || ['0.85','1','1.25','1.5'].includes(value)) {
+        hudScalePreference = value;
+        try { localStorage.setItem('everwild_hud_scale', value); } catch (_) {}
+        resize();
+      }
+    } else if (setting === 'zoom') {
+      renderer.zoomFactor = Math.max(0.75, Math.min(1.5, Number(event.target.value) || 1));
+      try { localStorage.setItem('everwild_view_zoom', String(renderer.zoomFactor)); } catch (_) {}
+      resize();
+    }
   });
   document.addEventListener('pointerdown', unlockAudio);
   document.addEventListener('keydown', unlockAudio);
@@ -160,11 +197,11 @@
     try {
       localStorage.setItem(SAVE_KEY, JSON.stringify(game.serialize()));
       storageAvailable = true;
-      $('save-status').textContent = 'Progress saved';
+      if ($('save-status')) $('save-status').textContent = 'Progress saved';
       return true;
     } catch (_) {
       storageAvailable = false;
-      $('save-status').textContent = 'Storage blocked · export your save';
+      if ($('save-status')) $('save-status').textContent = 'Storage blocked · export your save';
       return false;
     }
   }
@@ -173,7 +210,7 @@
     if (!message) return;
     $('toast').textContent = message;
     $('toast').hidden = false;
-    toastUntil = performance.now() + 4500;
+    toastUntil = performance.now() + 3200;
   }
 
   function clearInput() {
@@ -184,17 +221,18 @@
 
   function resize() {
     const bounds = canvas.getBoundingClientRect();
+    const automatic = bounds.width <= 600 ? 1 : Math.max(0.85, Math.min(1.5, bounds.height / 1000));
+    const scale = hudScalePreference === 'auto' ? automatic : Number(hudScalePreference);
+    document.documentElement.style.setProperty('--ui-scale', String(scale));
     renderer.resize(bounds.width, bounds.height, Math.min(window.devicePixelRatio || 1, 2));
     renderer.draw(game);
-    renderer.drawMap($('minimap'), game);
   }
 
   function pause(value) {
     manualPause = typeof value === 'boolean' ? value : !manualPause;
     clearInput();
     $('paused-overlay').hidden = !manualPause || game.dead;
-    $('pause').textContent = manualPause ? '▷' : 'Ⅱ';
-    $('pause').setAttribute('aria-label', manualPause ? 'Resume game' : 'Pause game');
+    $('pause').setAttribute('aria-label', manualPause ? 'Resume or open game menu [Esc]' : 'Game menu [Esc]');
     if (manualPause) save();
   }
 
@@ -226,7 +264,7 @@
       button.title = `${spell.name} [${slot + 1}] — ${game.spellProfile(index).summary}. ${spell.description} ${spell.cast}s cast, ${spell.cost} mana.`;
       button.setAttribute('aria-label', button.title);
       button.dataset.spellIndex = String(index);
-      button.innerHTML = `<span class="spell-top"><span class="spell-icon">${arcanaIcon(spellArt[index])}</span><kbd>${slot + 1}</kbd></span><b>${escape(spell.name)}</b><small>${spell.cost} mana · ${spell.cast}s</small><span class="rank-dot">${game.player.spellRanks[index] > 1 ? 'ⅡⅢ'[game.player.spellRanks[index] - 2] : ''}</span>`;
+      button.innerHTML = `${arcanaIcon(spellArt[index])}<kbd>${slot + 1}</kbd><span class="rank-dot">${game.player.spellRanks[index] > 1 ? 'ⅡⅢ'[game.player.spellRanks[index] - 2] : ''}</span>`;
     });
   }
 
@@ -249,147 +287,65 @@
   }
 
   function updateUI() {
-    const player = game.player;
-    const pet = game.pet;
+    const player = game.player, pet = game.pet, selected = game.selected;
     refreshHotbar();
-    setText('level', `Level ${player.level} · Magician`);
+    setText('level', `Lv. ${player.level}`);
     setText('hptext', `${Math.ceil(player.hp)} / ${player.maxHp}`);
     setText('mptext', `${Math.ceil(player.mp)} / ${player.maxMp}`);
-    setText('xptext', player.level === 20 ? 'Maximum level' : `${player.xp} / ${game.xpNeeded()}`);
-    meter('hpbar', player.hp, player.maxHp);
-    meter('mpbar', player.mp, player.maxMp);
-    meter('xpbar', player.xp, game.xpNeeded());
-    setText('gold', player.gold.toLocaleString());
-    setText('kill-count', `${player.kills} ${player.kills === 1 ? 'victory' : 'victories'}`);
-    setText('discovery-count', `${game.discovered.length} / ${CAMPS.length}`);
-    setText('pack-count', `${player.inventory.length} items →`);
-    setText('debt', player.debt ? `${player.debt} XP debt · future victories repay it` : 'Your spirit is unburdened.');
-    setText('pet-type', pet ? pet.type.toUpperCase() : 'UNSUMMONED');
-    setText('pet-name', pet ? `${pet.type} Elemental` : 'A little less alone');
-    setText('pet-info', pet ? `${Math.ceil(pet.hp)} / ${pet.maxHp} health` : 'Call an elemental to your side.');
-    setText('pet-sigil', pet ? (pet.type === 'Earth' ? '◈' : '≋') : '◇');
-    meter('petbar', pet ? pet.hp : 0, pet ? pet.maxHp : 1);
-    setText('pet-combat-stats', pet ? `${pet.damage} damage per strike · ${pet.type === 'Earth' ? 'sturdy tank' : 'swift striker'}${game.hasEquipped('ring-of-bound-earth') ? ' · Stonebound −20% damage taken' : ''}` : '');
-    const petTarget = pet && game.mobs.find(mob => mob.id === pet.targetId && mob.alive);
-    setText('pet-order', petTarget ? `Attacking ${petTarget.name} · ${Math.hypot(pet.x-petTarget.x,pet.y-petTarget.y)>35 ? 'closing in' : 'next strike in ' + Math.max(0,pet.attackAt-game.clock).toFixed(1) + 's'} · Q to taunt` : pet ? (pet.mode === 'guard' ? 'Guarding you · defends when you are attacked' : 'Following passively · F attacks, C guards') : 'Earth endures. Air strikes quickly.');
-    const completeQuests = QUESTS.filter(quest => game.questState(quest.id).status === 'completed').length;
-    setText('quest-count', `${completeQuests} / ${QUESTS.length} complete →`);
-    const nextSpell = SPELLS.find(spell => spell.unlockLevel > player.level);
-    const unassigned = SPELLS.find((spell, index) => spell.unlockLevel > 1 && game.isSpellUnlocked(index) && !player.hotbar.includes(index));
-    setText('next-spell', unassigned ? `${unassigned.name} is unlocked. Assign it in your spellbook.` : nextSpell ? `${nextSpell.name} awakens at level ${nextSpell.unlockLevel}.` : 'All ten spells unlocked · shape your own spell bar.');
-    const selected = game.selected;
-    updateTacticalTip(selected);
+    meter('hpbar', player.hp, player.maxHp); meter('mpbar', player.mp, player.maxMp);
+    $('pet-frame').hidden = !pet;
+    const petTarget = pet && game.mobs.find(mob => mob.id === pet.targetId && mob.alive && !mob.returning);
+    if (pet) {
+      setText('pet-type', pet.type);
+      setText('pet-order', petTarget ? (Math.hypot(pet.x-petTarget.x,pet.y-petTarget.y)>35 ? 'Approaching' : 'Attacking') : pet.mode === 'guard' ? 'Guard' : 'Follow');
+      meter('petbar', pet.hp, pet.maxHp);
+      $('pet-frame').title = `${pet.type} elemental · ${Math.ceil(pet.hp)} / ${pet.maxHp} HP · ${pet.damage} damage per strike${petTarget ? ' · ' + petTarget.name : ''}`;
+    }
     $('target-card').hidden = !selected;
     if (selected) {
       const diff = selected.level - player.level;
-      const con = diff >= 3 ? 'DANGEROUS' : diff >= 1 ? 'CHALLENGING' : diff <= -3 ? 'TRIVIAL' : 'EVEN MATCH';
-      setText('target-name', selected.name);
-      setText('target-level', `Lv. ${selected.level}`);
-      setText('target-con', selected.named ? '✦ NAMED · ' + con : con);
-      $('target-con').style.color = diff >= 3 ? '#e5a28a' : selected.named ? '#c9afdf' : '#bcbf8d';
+      setText('target-name', selected.name); setText('target-level', `Lv. ${selected.level}`);
+      setText('target-con', selected.named ? '◆' : diff >= 3 ? '!' : '');
+      $('target-con').style.color = diff >= 3 ? '#e5a28a' : '#c9afdf';
+      $('target-name').title = `${selected.named ? 'Named · ' : ''}${diff >= 3 ? 'Dangerous' : diff >= 1 ? 'Challenging' : 'Even or lower level'} · ${Math.ceil(selected.hp)} / ${selected.maxHp} HP`;
       meter('target-hp', selected.hp, selected.maxHp);
-      setText('target-state', `${Math.ceil(selected.hp)} / ${selected.maxHp} HP · ${selected.returning ? 'Returning home' : selected.rootUntil > game.clock ? 'Rooted' : selected.aggro ? 'In combat' : 'Unaware'}`);
-      $('threat-info').hidden = !selected.aggro || selected.returning;
-      const yourThreat = selected.threatPlayer / Math.max(1, selected.threatPlayer + selected.threatPet) * 100;
-      const onYou = selected.targetId === 'player';
-      setText('threat-label', onYou ? 'Attention: YOU' : selected.targetId ? 'Attention: your elemental' : 'Closing in');
-      setText('threat-value', `${Math.round(yourThreat)}% yours`);
-      meter('threat-bar', yourThreat, 100);
-      $('threat-bar').classList.toggle('danger', onYou);
+      setText('target-percent', `${Math.ceil(selected.hp / selected.maxHp * 100)}%`);
+      setText('threat-label', selected.returning ? 'Returning' : selected.rootUntil > game.clock ? 'Rooted' : selected.aggro ? selected.targetId === 'player' ? 'On you' : selected.targetId ? 'On pet' : '' : '');
       $('enemy-intent').hidden = !selected.intent;
       if (selected.intent) {
-        setText('enemy-intent-name', `${selected.intent.name} · ${Math.max(0, selected.intent.done - game.clock).toFixed(1)}s`);
-        setText('enemy-intent-hint', selected.intent.kind === 'heal' ? 'Arcane Root interrupts healing' : 'Step out · Arcane Root interrupts');
-        meter('enemy-intent-bar', game.clock - selected.intent.started, selected.intent.done - selected.intent.started);
+        setText('enemy-intent-name', `${selected.intent.name} · ${Math.max(0,selected.intent.done-game.clock).toFixed(1)}s`);
+        meter('enemy-intent-bar', game.clock-selected.intent.started, selected.intent.done-selected.intent.started);
       }
     }
-    const nearHome = Math.hypot(player.x - WORLD.spawn.x, player.y - WORLD.spawn.y) < 150;
-    const camp = CAMPS.find(candidate => Math.hypot(player.x - candidate.x, player.y - candidate.y) < 235);
-    setText('area-name', camp ? camp.name : 'Willowmere Frontier');
-    setText('area-note', nearHome ? 'A quiet refuge at the edge of the unknown' : camp ? `Level ${camp.level} territory · tread carefully` : 'Follow the eastern road into the wilds');
-    const stateText = game.dead ? 'Spirit unbound' : game.inCombat ? 'In combat' : game.meditate ? 'Meditating' : nearHome ? 'Sanctuary' : 'Exploring';
-    $('world-state').innerHTML = `<i style="background:${game.inCombat ? '#d49b77' : '#8fbd9d'}"></i> ${stateText}`;
-    updateObjective();
-    const remaining = game.cast ? Math.max(0, game.cast.done - game.clock) : 0;
-    setText('cast-status', game.cast ? `Casting ${SPELLS[game.cast.i].name}` : game.meditate ? 'Meditating · recovering mana' : game.dead ? 'Return to the bindstone' : 'Ready for the road');
-    meter('cast-progress', game.cast ? game.clock - game.cast.started : 0, game.cast ? game.cast.done - game.cast.started : 1);
-    setText('cast-time', game.cast ? remaining.toFixed(1) + 's' : '');
+    $('cast-readout').hidden = !game.cast && !game.meditate;
+    setText('cast-status', game.cast ? SPELLS[game.cast.i].name : game.meditate ? 'Meditating' : '');
+    meter('cast-progress', game.cast ? game.clock-game.cast.started : 0, game.cast ? game.cast.done-game.cast.started : 1);
+    setText('cast-time', game.cast ? Math.max(0,game.cast.done-game.clock).toFixed(1)+'s' : '');
     for (let slot = 0; slot < 8; slot++) {
-      const index = player.hotbar[slot];
-      const button = $('spell' + slot);
+      const index = player.hotbar[slot], button = $('spell'+slot);
       button.disabled = game.dead || player.mp < SPELLS[index].cost || isPaused();
-      button.classList.toggle('casting', Boolean(game.cast && game.cast.i === index));
+      button.classList.toggle('casting', Boolean(game.cast && game.cast.i===index));
+      button.classList.toggle('unaffordable', player.mp < SPELLS[index].cost);
     }
-    $('rest').innerHTML = `<kbd>R</kbd> ${game.meditate ? 'Stand up' : 'Meditate'}`;
+    $('rest').innerHTML = `<kbd>R</kbd><span>${game.meditate ? 'Stand' : 'Rest'}</span>`;
     $('rest').classList.toggle('active', game.meditate);
-    for (const id of ['attack', 'follow', 'guard', 'rest', 'interact']) $(id).disabled = game.dead || isPaused();
-    $('guard').classList.toggle('active', Boolean(pet && pet.mode === 'guard'));
-    const tauntRemaining = pet ? Math.max(0, (pet.tauntReadyAt || 0) - game.clock) : 0;
-    const tauntInRange = Boolean(petTarget && Math.hypot(pet.x-petTarget.x,pet.y-petTarget.y) <= 85);
-    const tauntReason = !pet ? 'Summon an elemental before taunting.' : !petTarget ? 'Select an enemy and order your elemental to attack [F].' : tauntRemaining > 0 ? `Taunt ready in ${Math.ceil(tauntRemaining)} seconds.` : !tauntInRange ? 'Your elemental is approaching. Taunt requires it to be within 85 paces of its target.' : 'Taunt [Q]: draw this enemy’s attention to your elemental.';
-    $('taunt').disabled = !pet || game.dead || isPaused() || tauntRemaining > 0 || !tauntInRange;
-    $('taunt').title = tauntReason;
-    $('taunt').setAttribute('aria-label', tauntReason);
-    $('taunt').innerHTML = `<kbd>Q</kbd> ${tauntRemaining > 0 ? Math.ceil(tauntRemaining) + 's' : petTarget && !tauntInRange ? 'Closing' : 'Taunt'}`;
-    const supplyRemaining = Math.max(0, game.supplyReadyAt - game.clock);
-    setText('health-count', player.supplies['health-tonic'] || 0);
-    setText('mana-count', player.supplies['mana-tonic'] || 0);
-    setText('supply-cooldown', supplyRemaining > 0 ? Math.ceil(supplyRemaining) + 's recovery' : '');
-    for (const id of ['health-tonic', 'mana-tonic']) $(id).disabled = game.dead || isPaused() || supplyRemaining > 0 || !player.supplies[id];
-    const nearbyNpc = game.nearestNpc();
-    $('interaction-hint').hidden = game.dead || game.inCombat || (!nearbyNpc && !pendingNpc);
-    setText('interaction-hint', pendingNpc ? `Walking to ${NPCS.find(npc => npc.id === pendingNpc)?.name || 'villager'}…` : nearbyNpc ? `${nearbyNpc.name} · click to talk` : '');
-    $('death-overlay').hidden = !game.dead;
-    $('paused-overlay').hidden = !manualPause || game.dead;
-    const newest = game.logs.length ? game.logs[game.logs.length - 1].id : 0;
-    if (newest !== lastLog) {
-      lastLog = newest;
-      $('log').innerHTML = game.logs.slice(-24).reverse().map(entry => `<div class="${escape(entry.type)}">${escape(entry.text)}</div>`).join('');
-    }
-    renderer.drawMap($('minimap'), game);
-  }
-
-  function updateTacticalTip(selected) {
-    const p = game.player, pet = game.pet;
-    const slotKey = index => { const slot = p.hotbar.indexOf(index); return slot >= 0 ? '[' + (slot + 1) + ']' : 'in your spellbook [B]'; };
-    const threats = game.mobs.filter(mob => mob.aggro && !mob.returning && mob.alive);
-    const intent = threats.find(mob => mob.intent)?.intent;
-    let tip = '', urgent = false;
-    if (game.dead) tip = 'Your belongings are safe. Return to the bindstone; future victories repay experience debt.';
-    else if (intent) { tip = intent.kind === 'heal' ? `Healing ritual: Arcane Root ${slotKey(3)} interrupts it.` : `Leave the marked ground or interrupt with Arcane Root ${slotKey(3)}. Recall an endangered pet with [G].`; urgent = true; }
-    else if (threats.length > 1) { tip = 'Several enemies are engaged. Control one with Root, heal your pet, or retreat to Willowmere.'; urgent = true; }
-    else if (pet && pet.hp < pet.maxHp * 0.55) { tip = `Your elemental is hurt. Pet Mend ${slotKey(4)} restores up to ${game.spellProfile(4).heal} health.`; urgent = true; }
-    else if (selected?.targetId === 'player' && selected.aggro) { tip = `The enemy is on you. Send your pet [F], then taunt [Q] in range. Magic Shield ${slotKey(6)} reduces incoming damage.`; urgent = true; }
-    else if (p.mp < 35) tip = 'Mana is low. Drink a mana tonic [X], or find safety and meditate [R]. The bindstone restores your party free.';
-    else if (p.inventory.some(id => !p.equipment[ITEMS[id].slot])) tip = 'A new find can strengthen you. Open your pack [I], compare its properties, and equip it.';
-    else if (!pet) tip = `Summon an Earth Pet ${slotKey(0)} before entering a camp. Earth endures; air trades durability for faster damage.`;
-    else if (selected && !selected.aggro) tip = pet?.targetId === selected.id ? 'Your elemental is approaching. Let it engage before adding damage; Taunt [Q] becomes available within 85 paces.' : 'Send your elemental [F] and let it reach the enemy before adding damage. Pull a lone guard first.';
-    else if (game.inCombat) tip = `Burning Mark ${slotKey(2)} deals efficient damage over time. Save mana for Pet Mend and Root; use [G] to recall.`;
-    else if (game.activeQuests.some(quest => quest.status === 'ready')) tip = 'Your assignment is ready. Return to the quest giver for experience, copper, and the next lead.';
-    else if (game.questState('crypt-proof').status === 'completed') tip = 'The eastern road is safer. Revisit named camps for relics, refine your spell ranks, or prepare for Othrek’s Vigil.';
-    else tip = 'Choose a lone guard. Return to the bindstone between hunts, study ranks at levels 2 and 5, and carry tonics for named foes.';
-    setText('tactical-tip', tip);
-    $('tactical-tip').classList.toggle('urgent', urgent);
-  }
-
-  function updateObjective() {
-    const quest = QUESTS.find(value => game.questState(value.id).status === 'ready') ||
-      QUESTS.find(value => game.questState(value.id).status === 'active') ||
-      QUESTS.find(value => game.questState(value.id).status === 'available');
-    if (!quest) {
-      setText('objective-title', 'The Eastern Road · complete');
-      setText('objective-text', 'Your first expedition is complete. Refine your equipment and spells, then prepare for Othrek’s Vigil when you are ready.');
-      meter('objective-progress', 1, 1);
-      return;
-    }
-    const state = game.questState(quest.id);
-    const npc = NPCS.find(value => value.id === quest.npcId);
-    setText('objective-title', quest.title);
-    if (state.status === 'available') setText('objective-text', `Speak with ${npc.name} in Willowmere to take this assignment.`);
-    else if (state.status === 'ready') setText('objective-text', `Ready to report. Return to ${npc.name} for your reward.`);
-    else if (!game.pet && game.player.kills === 0) setText('objective-text', 'Summon an Earth Elemental [1], then follow the road east to Briarwatch.');
-    else setText('objective-text', `${quest.objectiveText} · ${state.progress} / ${state.required}`);
-    meter('objective-progress', state.progress, state.required);
+    for (const id of ['attack','follow','guard','rest','interact']) $(id).disabled = game.dead || isPaused();
+    for (const id of ['attack','follow','guard']) $(id).disabled ||= !pet;
+    $('guard').classList.toggle('active', Boolean(pet && pet.mode==='guard'));
+    const tauntRemaining = pet ? Math.max(0,(pet.tauntReadyAt||0)-game.clock) : 0;
+    const inRange = Boolean(petTarget && Math.hypot(pet.x-petTarget.x,pet.y-petTarget.y)<=85);
+    const reason = !pet ? 'Summon an elemental before taunting.' : !petTarget ? 'Select an enemy, then send your elemental [F].' : tauntRemaining>0 ? `Taunt ready in ${Math.ceil(tauntRemaining)}s.` : !inRange ? 'Your pet is approaching. Taunt needs 85-paces range.' : 'Taunt [Q]: draw attention to your elemental.';
+    $('taunt').disabled = !inRange || game.dead || isPaused() || tauntRemaining>0;
+    $('taunt').title = reason; $('taunt').setAttribute('aria-label',reason);
+    $('taunt').innerHTML = `<kbd>Q</kbd><span>${tauntRemaining>0 ? Math.ceil(tauntRemaining)+'s' : 'Taunt'}</span>`;
+    const remaining = Math.max(0,game.supplyReadyAt-game.clock);
+    setText('health-count',player.supplies['health-tonic']||0); setText('mana-count',player.supplies['mana-tonic']||0);
+    setText('supply-cooldown',remaining>0 ? Math.ceil(remaining)+'s' : '');
+    for (const id of ['health-tonic','mana-tonic']) $(id).disabled = game.dead || isPaused() || remaining>0 || !player.supplies[id];
+    const npc=game.nearestNpc(), stone=Math.hypot(player.x-WORLD.bindstone.x,player.y-WORLD.bindstone.y)<=80 && Math.hypot(player.x-WORLD.spawn.x,player.y-WORLD.spawn.y)<=110;
+    $('interaction-hint').hidden = game.dead || game.inCombat || (!npc && !stone && !pendingNpc) || Boolean(game.cast);
+    setText('interaction-hint',pendingNpc ? 'Approaching…' : stone ? 'E · Restore at bindstone' : npc ? `E · ${npc.name}` : '');
+    $('death-overlay').hidden = !game.dead; $('paused-overlay').hidden = !manualPause || game.dead;
   }
 
   function menuTabs(active) {
@@ -475,7 +431,16 @@
     activeMenu = name;
     const content = $('dialog-content');
     const player = game.player;
-    if (name.startsWith('npc:')) {
+    if (name === 'system') {
+      setText('dialog-title', 'Everwild');
+      content.innerHTML = `<button class="primary" data-action="resume-game">Resume</button><div class="menu-grid">` + [['inventory','Inventory','I'],['character','Character','V'],['spellbook','Spellbook','B'],['journal','Journal','J'],['map','Map','M'],['log','Combat log',''],['guide','Field guide','?'],['save','Save / export','']].map(([menu,label,key])=>`<button data-action="menu" data-menu="${menu}">${label}<kbd>${key}</kbd></button>`).join('') + `</div><section class="settings"><div class="settings-row"><span>Display</span><button id="fullscreen-button" data-setting="fullscreen">Fullscreen</button></div><div class="settings-row"><label for="hud-scale">HUD size</label><select id="hud-scale" data-setting="hud-scale">` + [['auto','Automatic'],['0.85','Compact'],['1','100%'],['1.25','125%'],['1.5','150%']].map(([value,label])=>`<option value="${value}" ${hudScalePreference===value?'selected':''}>${label}</option>`).join('') + `</select></div><div class="settings-row"><label for="view-zoom">Camera zoom</label><input id="view-zoom" data-setting="zoom" type="range" min="0.75" max="1.5" step="0.05" value="${renderer.zoomFactor||1}"></div><div class="settings-row"><span>Artwork</span><button id="art-style" data-setting="art" aria-pressed="${renderer.pixelArt}"></button></div><div class="settings-row"><span>Effects</span><button id="sound" data-setting="sound" aria-pressed="${soundEnabled}"></button></div></section><div class="system-footer"><span>Willowmere · ${VERSION}</span><span id="save-status">${storageAvailable?'Autosave enabled':'Storage unavailable · export your save'}</span></div>`;
+    } else if (name === 'character') {
+      setText('dialog-title', 'The Wayfarer');
+      content.innerHTML = `<span class="eyebrow">LEVEL ${player.level} MAGICIAN</span><div class="character-stats">` + [['Health',player.maxHp],['Mana',player.maxMp],['Spell power','+'+player.power],['Copper',player.gold],['Victories',player.kills],['Camps',game.discovered.length+' / '+CAMPS.length]].map(([label,value])=>`<div><small>${label}</small><strong>${value}</strong></div>`).join('') + `</div><p class="character-note">${player.level===20?'Maximum level':player.xp+' / '+game.xpNeeded()+' experience toward the next level'}${player.debt?' · '+player.debt+' experience debt':''}</p><div class="meter experience"><i style="width:${Math.min(100,player.xp/game.xpNeeded()*100)}%"></i></div><p class="character-note">${game.pet?game.pet.type+' elemental · '+Math.ceil(game.pet.hp)+' / '+game.pet.maxHp+' health · '+game.pet.damage+' damage per strike':'No companion summoned.'}</p><div class="menu-actions"><button data-action="menu" data-menu="inventory">Equipment</button><button data-action="menu" data-menu="spellbook">Spells</button></div>`;
+    } else if (name === 'log') {
+      setText('dialog-title', 'Combat log');
+      content.innerHTML = '<div class="log-list">'+game.logs.slice(-60).reverse().map(entry=>`<div class="${escape(entry.type)}">${escape(entry.text)}</div>`).join('')+'</div>';
+    } else if (name.startsWith('npc:')) {
       const npc = NPCS.find(value => value.id === currentNpcId);
       setText('dialog-title', npc.name);
       const assignments = QUESTS.filter(quest => quest.npcId === npc.id && game.questState(quest.id).status !== 'locked');
@@ -555,6 +520,7 @@
       setText('dialog-title', 'Import this character?');
       content.innerHTML = `<p>This will replace the active character with a level ${incoming.player.level} Magician carrying ${incoming.player.gold} copper and ${incoming.player.inventory.length} items.</p><div class="menu-actions"><button data-action="export">Export current character</button><button class="primary" data-action="import-confirm">Import and replace</button><button data-action="menu" data-menu="save">Cancel</button></div>`;
     } else return;
+    syncPresentationButtons();
     if (!dialog.open) dialog.showModal();
     content.scrollTop = 0;
     if (name === 'map') renderer.drawMap($('world-map'), game, true);
@@ -593,7 +559,6 @@
     game = new Game({ save: data });
     pendingImport = null;
     lastDead = game.dead;
-    lastLog = -1;
     manualPause = false;
     pause(false);
     save();
@@ -606,7 +571,8 @@
     const button = event.target.closest('button[data-action]');
     if (!button) return;
     const action = button.dataset.action;
-    if (action === 'filter-items') {
+    if (action === 'resume-game') { closeMenu(); pause(false); }
+    else if (action === 'filter-items') {
       if (['all', 'charm', 'focus', 'ring', 'garb'].includes(button.dataset.filter)) inventoryFilter = button.dataset.filter;
       refreshMenu();
     } else if (action === 'menu') openMenu(button.dataset.menu);
@@ -664,10 +630,8 @@
   });
 
   document.querySelectorAll('[data-dialog]').forEach(button => button.addEventListener('click', () => openMenu(button.dataset.dialog)));
-  $('map-toggle').addEventListener('click', () => openMenu('map'));
   $('dialog-close').addEventListener('click', closeMenu);
   dialog.addEventListener('cancel', event => { event.preventDefault(); closeMenu(); });
-  $('pause').addEventListener('click', () => { pause(); updateUI(); });
   $('resume').addEventListener('click', () => { pause(false); canvas.focus({ preventScroll: true }); });
   $('revive').addEventListener('click', () => { game.revive(); pause(false); save(); updateUI(); canvas.focus({ preventScroll: true }); });
   $('attack').addEventListener('click', () => act(() => game.commandPet('attack')));
@@ -694,18 +658,20 @@
   }
 
   document.addEventListener('keydown', event => {
+    if (event.altKey && event.key === 'Enter') { event.preventDefault(); toggleFullscreen(); return; }
     if (event.altKey || event.ctrlKey || event.metaKey || ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) return;
     const key = event.key.toLowerCase();
     if (key === 'escape') {
       event.preventDefault();
       if (event.repeat) return;
       if (dialog.open) closeMenu();
-      else { pause(); updateUI(); }
+      else if (manualPause) { pause(false); updateUI(); }
+      else openMenu('system');
       return;
     }
-    if (!event.repeat && ['i', 'm', 'j', 'b', '?'].includes(key)) {
+    if (!event.repeat && ['i', 'm', 'j', 'b', 'v', '?'].includes(key)) {
       event.preventDefault();
-      openMenu(({ i: 'inventory', m: 'map', j: 'journal', b: 'spellbook', '?': 'guide' })[key]);
+      openMenu(({ i: 'inventory', m: 'map', j: 'journal', b: 'spellbook', v: 'character', '?': 'guide' })[key]);
       return;
     }
     if (isPaused()) return;
@@ -738,6 +704,9 @@
   window.addEventListener('pagehide', save);
   window.addEventListener('beforeunload', save);
   window.addEventListener('resize', resize);
+  document.addEventListener('fullscreenchange', resize);
+  window.visualViewport?.addEventListener('resize', resize);
+  new ResizeObserver(resize).observe($('scene'));
 
   canvas.addEventListener('pointerdown', event => {
     if (isPaused() || game.dead || event.button > 0) return;
@@ -781,8 +750,8 @@
     requestAnimationFrame(frame);
   }
 
-  window.everwild = Object.freeze({ get game() { return game; }, renderer, openMenu, save, get paused() { return isPaused(); } });
-  setText('version', VERSION);
+  window.everwild = Object.freeze({ get game() { return game; }, renderer, openMenu, save, pause, get paused() { return isPaused(); } });
+  for (const [id,short] of [['attack','⚔'],['follow','↶'],['guard','◇'],['taunt','!'],['rest','◌'],['interact','↗']]) $(id).dataset.short=short;
   resize();
   updateUI();
   if (loadWarning) { game.log(loadWarning, 'warning'); toast(loadWarning); }

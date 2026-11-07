@@ -1,9 +1,10 @@
 /* Everwild — layered woodland illustration with a low-resolution world pass. */
 (function (root) {
   'use strict';
-  const { WORLD, CAMPS, NPCS = [], QUESTS = [] } = root.Everwild;
+  const { WORLD, CAMPS, NPCS = [], QUESTS = [], ITEMS = {} } = root.Everwild;
   const bindstone = WORLD.bindstone || { x: WORLD.spawn.x - 58, y: WORLD.spawn.y - 36 };
   const TAU = Math.PI * 2;
+  const lootNames = new Set(Object.values(ITEMS).map(item => item.name));
   const artBoxes = {"environment": [[9, 17, 298, 288], [379, 8, 196, 300], [634, 7, 300, 302], [959, 12, 290, 295], [13, 339, 290, 264], [329, 344, 282, 255], [639, 355, 290, 233], [953, 350, 289, 239], [14, 655, 286, 256], [329, 661, 281, 234], [639, 642, 289, 269], [949, 639, 298, 275], [18, 954, 285, 281], [333, 943, 264, 292], [638, 957, 274, 275], [964, 942, 271, 291]], "walk": [[38, 11, 201, 230], [294, 11, 201, 230], [550, 11, 201, 230], [806, 11, 201, 230], [19, 261, 219, 234], [275, 261, 219, 234], [531, 261, 219, 234], [787, 261, 219, 234], [22, 517, 212, 244], [278, 517, 212, 244], [534, 517, 212, 244], [790, 517, 212, 244], [32, 788, 201, 236], [288, 788, 201, 236], [544, 788, 201, 236], [800, 788, 201, 236], [25, 1024, 193, 243], [281, 1024, 193, 243], [537, 1024, 193, 243], [793, 1024, 193, 243], [23, 1282, 215, 240], [279, 1282, 215, 240], [535, 1282, 215, 240], [791, 1282, 215, 240]], "action": [[10, 22, 239, 222], [266, 22, 239, 222], [522, 22, 239, 222], [778, 22, 239, 222], [16, 283, 230, 209], [272, 283, 230, 209], [528, 283, 230, 209], [784, 283, 230, 209], [9, 523, 237, 226], [265, 523, 237, 226], [521, 523, 237, 226], [777, 523, 237, 226], [20, 775, 229, 249], [276, 775, 229, 249], [532, 775, 229, 249], [788, 775, 229, 249], [8, 1024, 246, 256], [264, 1024, 246, 256], [520, 1024, 246, 256], [776, 1024, 246, 256], [0, 1280, 256, 232], [256, 1280, 256, 232], [512, 1280, 256, 232], [768, 1280, 256, 232]]};
   const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
   const intentColors = { slam: '#dfad70', hex: '#e29581', heal: '#bcb6d2' };
@@ -134,7 +135,10 @@
       this.width = Math.max(1, Math.round(Number(width) || 1));
       this.height = Math.max(1, Math.round(Number(height) || 1));
       this.dpr = clamp(Number(dpr) || 1, 1, 3);
-      this.zoom = this.width < 600 ? 1.15 : 1.3;
+      // Keep the same vertical game scale across resolutions, while ensuring
+      // ultrawide viewports never reveal an unpainted strip outside the map.
+      const preferred = Math.max(0.95, Math.min(3.25, this.height / 820)) * (this.zoomFactor || 1);
+      this.zoom = Math.max(preferred, this.width / WORLD.w, this.height / WORLD.h);
       this.canvas.width = Math.round(this.width * this.dpr);
       this.canvas.height = Math.round(this.height * this.dpr);
     }
@@ -385,10 +389,6 @@
       this._intents(c, game, time);
       for (const actor of actors) if (actor.kind === 'mob' || actor.kind === 'pet') this._actorLabel(c, actor.kind, actor.entity, game, time);
       for (const npc of NPCS) if (this._visible(npc.x, npc.y)) this._npcLabel(c, npc, game);
-      for (const camp of CAMPS) if (this._visible(camp.x, camp.y) && !game.mobs.some(mob => mob.campId === camp.id && mob.aggro && !mob.returning)) {
-        text(c, camp.name, camp.x, camp.y - 190, 15, '#e0d6b5', true);
-        text(c, `LEVEL ${camp.level}–${camp.level + 1}`, camp.x, camp.y - 173, 7, '#b6c69d');
-      }
       this._effects(c, game, time);
       for (let i = 0; !this.reducedMotion && i < 32; i++) {
         const x = (i * 269 + Math.sin(time * 0.22 + i) * 19 + 80) % WORLD.w;
@@ -713,16 +713,12 @@
 
     _npcLabel(c, npc, game) {
       const distance = Math.hypot(npc.x - game.player.x, npc.y - game.player.y);
-      if (distance > 200) return;
+      if (distance > 90) return;
       const marker = this._npcMarker(npc, game);
       c.save(); c.lineWidth = 0.8;
       ellipse(c, npc.x, npc.y - 69, 9, 10, '#19392ee8', marker.color);
       text(c, marker.symbol, npc.x, npc.y - 69, 13, marker.color);
       text(c, npc.name, npc.x, npc.y - 52, 9, '#e0dab6');
-      if (distance <= 90 && !game.dead && !game.inCombat) {
-        const hint = Math.hypot(game.player.x - bindstone.x, game.player.y - bindstone.y) > 80 ? '[ E ]  TALK' : 'CLICK TO TALK';
-        text(c, hint, npc.x, npc.y + 17, 6.5, '#d2d8b2');
-      } else if (distance < 130) text(c, npc.role, npc.x, npc.y + 17, 6.5, '#bdc9a8');
       c.restore();
     }
 
@@ -758,8 +754,8 @@
         glow.addColorStop(0, '#9bdfd22e'); glow.addColorStop(1, '#9bdfd200');
         c.fillStyle = glow; c.fillRect(x - 45, y - 75, 90, 90);
         this._art(c, 7, x, y, 66);
-        text(c, 'Bindstone', x, y + 22, 11, '#d9e1bb', true);
-        if (Math.hypot(player.x - x, player.y - y) <= 80) text(c, '[ E ] REST & RESTORE', x, y - 78, 6.5, '#bdcda8');
+
+
         return;
       }
       c.translate(x, y);
@@ -771,8 +767,8 @@
       polygon(c, [[0, -48 + float], [0, -4 + float], [-8, -10 + float], [-11, -27 + float]], '#699a8d');
       polygon(c, [[0, -48 + float], [9, -33 + float], [0, -24 + float]], '#d8e7bd');
       line(c, [[-3, -27 + float], [4, -24 + float], [-3, -19 + float]], '#eaf0c8', 1);
-      text(c, 'Bindstone', 0, 22, 11, '#d9e1bb', true);
-      if (Math.hypot(player.x - bindstone.x, player.y - bindstone.y) <= 80 && Math.hypot(player.x - WORLD.spawn.x, player.y - WORLD.spawn.y) <= 110) text(c, '[ E ]  REST & RESTORE', 0, -62, 6.5, '#bdcda8');
+
+
     }
 
     _camp(c, camp, time, actors) {
@@ -947,9 +943,6 @@
       if (kind === 'mob') {
         const intent = activeIntent(entity, time) ? entity.intent : null;
         const healthY = entity.named ? -58 : -46;
-        if (entity.named || game.selectedId === entity.id || entity.aggro || intent) {
-          text(c, entity.name, 0, healthY - (intent ? 36 : 14), entity.named ? 9 : 8, entity.named ? '#e2c78e' : '#e0d5b9');
-        }
         if (entity.hp < entity.maxHp || game.selectedId === entity.id || entity.aggro) this._health(c, entity.hp / entity.maxHp, healthY, entity.named ? 35 : 28, '#c68a6b');
         if (intent) {
           const progress = clamp((time - intent.started) / Math.max(0.01, intent.done - intent.started), 0, 1);
@@ -959,7 +952,7 @@
         }
         if (entity.aggro && !entity.returning && entity.targetId) {
           const playerFocus = entity.targetId === 'player', color = playerFocus ? '#edaf92' : '#b6d6a4';
-          text(c, playerFocus ? 'YOU' : 'PET', 25, healthY + 7, 5.5, color);
+
           polygon(c, [[22, healthY + 13], [28, healthY + 13], [25, healthY + 17]], color);
         }
       } else if (kind === 'pet') {
@@ -1080,6 +1073,7 @@
 
     _effects(c, game, time) {
       for (const effect of game.effects || []) {
+        if (lootNames.has(effect.text)) continue;
         if (!this._visible(effect.x, effect.y, 40)) continue;
         c.save(); c.globalAlpha = clamp(effect.life * 2, 0, 1);
         const numeric = /^[+−\-]?\d/.test(effect.text);

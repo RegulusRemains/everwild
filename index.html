@@ -10,67 +10,57 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <header class="masthead">
-    <a class="brand" href="#" aria-label="Everwild home"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 3 11 22h8L8 37h13v8h6v-8h13L29 22h8Z"/><path class="trunk" d="M24 16v24M17 29l7 5 7-5"/></svg><span>EVERWILD<small>A WORLD WORTH WANDERING</small></span></a>
-    <nav aria-label="Game menus">
-      <button type="button" data-dialog="guide">Field guide <kbd>?</kbd></button>
-      <button type="button" data-dialog="journal">Journal <kbd>J</kbd></button>
-      <button type="button" data-dialog="spellbook">Spellbook</button>
-      <button type="button" data-dialog="inventory">Pack <kbd>I</kbd></button>
-      <button type="button" data-dialog="save">Save</button>
-      <button type="button" id="art-style" aria-pressed="true" title="Toggle lightly pixelated world art">Pixel art</button>
-      <button type="button" id="sound" aria-pressed="false" title="Toggle sound effects">Sound off</button>
-      <button type="button" id="pause" aria-label="Pause game">Ⅱ</button>
-    </nav>
-    <span class="build-label">THE EASTERN ROAD <span id="version">0.6</span></span>
-  </header>
-  <main id="shell">
-    <section class="adventure" aria-label="Game world">
-      <div id="scene" class="scene">
-        <div id="discovery" class="discovery" hidden role="status" aria-live="polite"></div>
-        <canvas id="game" tabindex="0" aria-label="Willowmere game world. Use WASD or arrows to move. Press Space to target a nearby enemy."></canvas>
-        <div class="scene-top">
-          <div class="vitals panel-glass">
-            <div class="character-title"><div class="portrait">✧</div><div><span class="eyebrow">THE WAYFARER</span><strong id="level">Level 1 · Magician</strong></div></div>
-            <div class="vital-row"><span>Health</span><span id="hptext"></span></div><div class="meter health"><i id="hpbar"></i></div>
-            <div class="vital-row"><span>Mana</span><span id="mptext"></span></div><div class="meter mana"><i id="mpbar"></i></div>
-            <div class="vital-row small"><span>Experience</span><span id="xptext"></span></div><div class="meter experience"><i id="xpbar"></i></div>
-          </div>
-          <div class="area-heading"><span class="eyebrow">THE WAKING WOODS</span><h1 id="area-name">Willowmere Frontier</h1><p id="area-note">A quiet refuge at the edge of the unknown</p></div>
-          <button id="map-toggle" class="map-button panel-glass" aria-label="Open world map"><canvas id="minimap" width="176" height="124" aria-hidden="true"></canvas><span>FRONTIER MAP <kbd>M</kbd></span></button>
-        </div>
-        <div id="target-card" class="target-card panel-glass" hidden><div><span id="target-con" class="eyebrow"></span><strong id="target-name"></strong></div><span id="target-level"></span><div class="meter health"><i id="target-hp"></i></div><small id="target-state"></small><div id="threat-info" hidden><div class="threat-line"><span id="threat-label"></span><span id="threat-value"></span></div><div class="meter threat"><i id="threat-bar"></i></div></div><div id="enemy-intent" hidden><strong id="enemy-intent-name"></strong><div class="meter warning"><i id="enemy-intent-bar"></i></div><small id="enemy-intent-hint">Step out · Arcane Root interrupts</small></div></div>
-        <div class="objective panel-glass"><div class="objective-heading"><span class="eyebrow">YOUR EXPEDITION</span><button data-dialog="journal" title="Open quest journal [J]" aria-label="Open quest journal">J ↗</button></div><strong id="objective-title">The road calls</strong><p id="objective-text">Speak with Warden Rowan beside the village road.</p><div class="meter quest-meter"><i id="objective-progress"></i></div></div>
-        <div id="interaction-hint" hidden></div>
-        <div class="scene-bottom"><span id="world-state"><i></i> Sanctuary</span><span id="save-status">Autosave ready</span></div>
+  <main id="shell" aria-label="Everwild game">
+    <section id="scene" class="scene" aria-label="Game world">
+      <canvas id="game" tabindex="0" aria-label="Willowmere game world. WASD or arrows move. Space selects an enemy. I opens inventory; Escape opens the game menu."></canvas>
+      <div class="hud" aria-label="Game HUD">
+        <section class="vitals hud-frame" aria-label="Character health and mana">
+          <button class="character-tag" data-dialog="character" title="Character [V]"><span class="character-sigil" aria-hidden="true">✧</span><span>Wayfarer</span><span id="level">Lv. 1</span></button>
+          <div class="resource health-resource"><span>HP</span><div class="meter health"><i id="hpbar"></i><span id="hptext"></span></div></div>
+          <div class="resource mana-resource"><span>MP</span><div class="meter mana"><i id="mpbar"></i><span id="mptext"></span></div></div>
+        </section>
+        <section id="pet-frame" class="pet-frame hud-frame" aria-label="Companion" hidden>
+          <div class="pet-line"><span id="pet-type">Earth</span><span id="pet-order">Guard</span></div>
+          <div class="meter pet-health"><i id="petbar"></i></div>
+        </section>
+        <section id="target-card" class="target-card" aria-label="Selected target" hidden>
+          <div class="target-heading"><span id="target-con" aria-hidden="true"></span><strong id="target-name"></strong><span id="target-level"></span></div>
+          <div class="meter health"><i id="target-hp"></i></div>
+          <div class="target-foot"><span id="target-percent"></span><span id="threat-label"></span></div>
+          <div id="enemy-intent" hidden><div class="intent-line"><strong id="enemy-intent-name"></strong></div><div class="meter warning"><i id="enemy-intent-bar"></i></div></div>
+        </section>
+        <nav class="hud-nav" aria-label="Game shortcuts"><button type="button" class="icon-button" data-dialog="inventory" aria-label="Inventory [I]" title="Inventory [I]"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M7 9h18l2 19H5L7 9Z"/><path d="M11 9V6a5 5 0 0 1 10 0v3M11 17h10M12 23h8"/></svg><kbd>I</kbd></button><button type="button" class="icon-button" data-dialog="spellbook" aria-label="Spellbook [B]" title="Spellbook [B]"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="m16 3 3 8 9 5-9 3-3 10-4-10-9-3 9-5 4-8Z"/><path d="m5 3 1 3 3 1M26 25l1 3 3 1"/></svg><kbd>B</kbd></button><button type="button" class="icon-button" data-dialog="journal" aria-label="Journal [J]" title="Journal [J]"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5 5h10c3 0 4 2 4 4v19c-1-2-3-3-6-3H5V5Zm22 0h-5c-2 0-3 2-3 4M27 5v20h-4M9 11h5M9 16h5"/></svg><kbd>J</kbd></button><button type="button" class="icon-button" data-dialog="map" id="map-toggle" aria-label="Map [M]" title="Map [M]"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="m3 7 9-3 9 4 8-3v22l-8 3-9-4-9 3V7Zm9-3v22M21 8v22"/><path d="m6 17 3-3 7 5 8-5"/></svg><kbd>M</kbd></button><button type="button" class="icon-button" data-dialog="system" id="pause" aria-label="Game menu [Esc]" title="Game menu [Esc]"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5 8h22M5 16h22M5 24h22"/></svg><kbd>Esc</kbd></button></nav>
+        <div id="interaction-hint" class="interaction-hint" hidden></div>
         <div id="toast" role="status" aria-live="polite" hidden></div>
-        <div id="paused-overlay" class="veil" hidden><div><span class="eyebrow">TAKE YOUR TIME</span><h2>The wilds can wait.</h2><p>Your adventure is paused.</p><button class="primary" id="resume">Return to the frontier</button></div></div>
-        <div id="death-overlay" class="veil" hidden><div><span class="eyebrow">A THREAD UNBROKEN</span><h2>You have fallen.</h2><p>You keep your belongings and levels. Your next victories will repay a small experience debt.</p><button class="primary" id="revive">Return to the bindstone</button></div></div>
-        <noscript><div class="veil"><p>Everwild needs JavaScript enabled to play.</p></div></noscript>
+        <div id="discovery" class="discovery" role="status" aria-live="polite" hidden></div>
+        <section class="action-deck" aria-label="Actions">
+          <div id="cast-readout" class="cast-row" hidden><div class="cast-label"><span id="cast-status"></span><span id="cast-time"></span></div><div class="cast-meter"><i id="cast-progress"></i></div></div>
+          <div class="utility-row">
+            <div class="commands" aria-label="Companion and recovery commands">
+              <button id="attack" title="Pet attack [F]"><kbd>F</kbd><span>Attack</span></button>
+              <button id="follow" title="Pet follow [G]"><kbd>G</kbd><span>Follow</span></button>
+              <button id="guard" title="Pet guard [C]"><kbd>C</kbd><span>Guard</span></button>
+              <button id="taunt" title="Pet taunt [Q]"><kbd>Q</kbd><span>Taunt</span></button>
+              <button id="rest" title="Meditate [R]"><kbd>R</kbd><span>Rest</span></button>
+              <button id="interact" title="Interact [E]"><kbd>E</kbd><span>Interact</span></button>
+            </div>
+            <div class="quick-supplies" aria-label="Tonics">
+              <button id="health-tonic" title="Health tonic [Z]" aria-label="Health tonic [Z]"><span class="atlas-icon extra-arcana health-art" aria-hidden="true"></span><kbd>Z</kbd><b id="health-count">2</b></button>
+              <button id="mana-tonic" title="Mana tonic [X]" aria-label="Mana tonic [X]"><span class="atlas-icon extra-arcana mana-art" aria-hidden="true"></span><kbd>X</kbd><b id="mana-count">1</b></button><span id="supply-cooldown"></span>
+            </div>
+          </div>
+          <div id="actionbar" class="actionbar" aria-label="Spells"></div>
+        </section>
       </div>
-      <div class="action-deck">
-        <p id="tactical-tip" class="tactical-tip" role="note">Speak with Warden Rowan, then summon an Earth Pet before following the road.</p>
-        <div class="cast-row"><span id="cast-status">Ready for the road</span><div class="cast-meter"><i id="cast-progress"></i></div><span id="cast-time"></span></div>
-        <div id="actionbar" class="actionbar" aria-label="Spells"></div>
-        <div class="command-row"><div class="commands"><button id="attack"><kbd>F</kbd> Attack</button><button id="follow"><kbd>G</kbd> Follow</button><button id="guard"><kbd>C</kbd> Guard</button><button id="taunt"><kbd>Q</kbd> Taunt</button><button id="rest"><kbd>R</kbd> Meditate</button><button id="interact"><kbd>E</kbd> Interact</button></div><div class="quick-supplies"><button id="health-tonic" title="Drink a health tonic [Z]"><span class="atlas-icon extra-arcana health-art" aria-hidden="true"></span><kbd>Z</kbd><span>Health</span><b id="health-count">2</b></button><button id="mana-tonic" title="Drink a mana tonic [X]"><span class="atlas-icon extra-arcana mana-art" aria-hidden="true"></span><kbd>X</kbd><span>Mana</span><b id="mana-count">1</b></button><span id="supply-cooldown"></span></div></div>
-      </div>
+      <div id="paused-overlay" class="veil" hidden><div><span class="eyebrow">PAUSED</span><h2>The wilds can wait.</h2><button class="primary" id="resume">Resume</button></div></div>
+      <div id="death-overlay" class="veil" hidden><div><span class="eyebrow">YOU HAVE FALLEN</span><h2>A thread unbroken.</h2><p>Your belongings and level are safe. Future victories repay experience debt.</p><button class="primary" id="revive">Return to the bindstone</button></div></div>
+      <noscript><div class="veil"><p>Everwild needs JavaScript enabled to play.</p></div></noscript>
     </section>
-    <aside class="sidebar" aria-label="Adventure information">
-      <div class="chapter-label"><span>CHAPTER I</span><i></i></div>
-      <h2>Beyond the<br>lantern light.</h2>
-      <p class="intro">Willowmere’s wardens are stretched thin. Along the eastern road, a small kindness may uncover a much older trouble.</p>
-      <section class="side-section companion"><div class="section-title"><h3>Your companion</h3><span id="pet-type">UNSUMMONED</span></div><div class="companion-content"><div id="pet-sigil" class="pet-sigil">◇</div><div><strong id="pet-name">A little less alone</strong><p id="pet-info">Call an elemental to your side.</p></div></div><div class="meter pet-health"><i id="petbar"></i></div><p class="pet-combat-stats" id="pet-combat-stats"></p><p class="hint" id="pet-order">Earth endures. Air strikes quickly.</p></section>
-      <section class="side-section"><div class="section-title"><h3>The journey</h3><span id="kill-count">0 victories</span></div><div class="journey-stats"><div><span class="coin-icon">◈</span><strong id="gold">0</strong><small>copper</small></div><div><strong id="discovery-count">0 / 4</strong><small>camps found</small></div></div><p id="debt" class="hint"></p><p id="next-spell" class="next-spell"></p><button class="wide-subtle" data-dialog="journal">Quest journal <span id="quest-count">0 / 4 complete →</span></button><button class="wide-subtle" data-dialog="inventory">Open your pack <span id="pack-count">0 items →</span></button></section>
-      <section class="side-section journal-section"><div class="section-title"><h3>Field journal</h3><span class="live-dot">LIVE</span></div><div id="log" role="log" aria-label="Recent game events" aria-live="off"></div></section>
-      <div class="side-footer"><span class="compass-mark">✦</span><p>Choose your fights.<br>Know the road home.</p><button data-dialog="guide">Learn the essentials →</button></div>
-    </aside>
   </main>
-  <footer class="page-footer"><span>WILLOWMERE FRONTIER</span><p>Solo exploration · Elemental companionship · A little danger</p><a href="https://github.com/RegulusRemains/everwild" target="_blank" rel="noreferrer">View the project ↗</a></footer>
-  <dialog id="menu-dialog" aria-labelledby="dialog-title"><div class="dialog-top"><div><span id="dialog-eyebrow" class="eyebrow">EVERWILD</span><h2 id="dialog-title"></h2></div><button id="dialog-close" aria-label="Close menu">✕</button></div><div id="dialog-content"></div><div class="dialog-footer">The world pauses while a menu is open.<span><kbd>Esc</kbd> return</span></div></dialog>
+  <dialog id="menu-dialog" aria-labelledby="dialog-title"><div class="dialog-top"><div><span id="dialog-eyebrow" class="eyebrow">EVERWILD</span><h2 id="dialog-title"></h2></div><button id="dialog-close" aria-label="Close menu">✕</button></div><div id="dialog-content"></div><div class="dialog-footer"><span>World paused</span><span><kbd>Esc</kbd> return</span></div></dialog>
   <input id="import-file" type="file" accept="application/json,.json" hidden>
   <script src="src/engine.js"></script>
   <script src="src/render.js"></script>
   <script src="src/app.js"></script>
 </body>
 </html>
-

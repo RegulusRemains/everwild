@@ -7,7 +7,7 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '0.6.0';
+  const VERSION = '0.7.0';
   const WORLD = Object.freeze({ w: 1900, h: 1350, spawn: Object.freeze({ x: 260, y: 250 }), bindstone: Object.freeze({ x: 202, y: 214 }) });
   const CAMPS = Object.freeze([
     { id: 'briar', name: 'Briarwatch', x: 710, y: 350, type: 'goblin', n: 4, level: 1, delay: 45, namedName: 'Grik the Hoarder', rareItemId: 'griks-lucky-charm', description: 'A ragged goblin lookout watches the old trade road.', roleHint: 'Pull the western scout alone. Move out of Grik’s marked ground slam.' },

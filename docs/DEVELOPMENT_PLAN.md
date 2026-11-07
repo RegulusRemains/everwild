@@ -29,7 +29,7 @@ Work across art, interface, gameplay, spells, equipment, sound, and onboarding. 
 - Four-frame ordinary-actor walking, casting, and attacking are integrated. Named enemies keep their unique sprite with attack leaning. Fallen actors collapse and fade; full directional animation and authored death frames remain later refinements.
 - Summoning rituals, shield aura, pet-mend connection, frost crystals, burning particles, melee arcs, and final-pass telegraphs communicate combat state. Canopy fading covers the wider illustrated trees.
 - Six fresh-character runs cover Earth and Air companions and seeds 42, 73, 2026. They use normal movement, targeting, casting, commands, consumables, gear, quests, and one save/reload; no character or mob state is injected. See EXPEDITION_BALANCE.json and scripts/expedition-run.cjs.
-- Contextual tactical guidance and companion target/damage/next-strike information are visible in play. Both fresh and staged scenes are inspected in desktop/mobile Chromium, including reduced motion.
+- The v0.5 tactical guidance and detailed companion readouts were superseded by the minimal v0.7 HUD; those details now live in menus and tooltips. Both fresh and staged scenes are inspected in desktop/mobile Chromium, including reduced motion.
 - 52 simulation tests pass. Browser smoke covers actual controls, menus, assignments, equipment, tonics, saves, and phone layouts; visual review covers all four camps and combat effects.
 
 ## v0.6 checkpoint: useful clothing and a complete first expedition
@@ -58,3 +58,11 @@ Choose the highest-impact unfinished part of the goal, implement it in the playa
 
 Clothing currently affects mechanics and inventory art, not the character outfit sprite. 
 The animation set uses mirrored right/left facing rather than eight authored directions. Named enemies use their unique sprite with attack leaning; death collapse/fade is rendered from the actor rather than a separate death-frame atlas. Audio is synthesized rather than a composed soundscape. The seeded journey verifies reproducible supported routes, not human comprehension, exploration time, or every possible combat choice. Online play and new regions remain outside this first-expedition goal.
+
+## v0.7 checkpoint: game viewport and minimal HUD
+
+- Replaced the webpage header, sidebars, footer, objective tracker, minimap, and permanent coaching with a viewport-filling game canvas.
+- Kept only compact vitals, summoned companion status, top-edge target, icon hotbar, and contextual interaction/cast feedback. Removed repeated camp/enemy/world labels and item-name combat text.
+- Moved progression, currency, detailed pet stats, quests, map, combat log, guide, and saves into paused game windows.
+- Added automatic resolution-based HUD sizing, manual sizing, camera zoom, and native fullscreen. Resizing recalculates canvas resolution, camera, and pointer coordinates.
+- Browser regression checks cover 1280×720 through 3840×2160, 5120×1440 ultrawide, portrait phone, landscape phone, and narrow 320px screens.

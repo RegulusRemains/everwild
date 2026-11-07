@@ -54,7 +54,7 @@ const { chromium } = require(path.join(process.env.CODEX_PRIMARY_RUNTIME_NODE_MO
       window.everwild.renderer.draw(game);
     });
     // Freeze via the actual pause control, then hide only its visual veil for scene review.
-    await page.locator('#pause').click();await page.locator('#paused-overlay').evaluate(el=>el.style.visibility='hidden');
+    await page.evaluate(()=>window.everwild.pause(true));await page.locator('#paused-overlay').evaluate(el=>el.style.visibility='hidden');
     await page.screenshot({path:path.join(output,'combat-casting-desktop.png'),fullPage:true});
     await page.setViewportSize({width:390,height:844});await page.waitForTimeout(100);
     await page.screenshot({path:path.join(output,'combat-casting-mobile.png'),fullPage:true});
@@ -89,7 +89,7 @@ const { chromium } = require(path.join(process.env.CODEX_PRIMARY_RUNTIME_NODE_MO
     await completion.addInitScript(save=>localStorage.setItem('everwild_save',JSON.stringify(save)),journey.save);
     await completion.goto('http://127.0.0.1:'+port);await completion.waitForFunction(()=>Boolean(window.everwild));
     assert.equal(await completion.evaluate(()=>window.everwild.renderer.artReady),true);
-    await completion.waitForFunction(()=>document.getElementById('objective-title').textContent.includes('complete'));
+    await completion.waitForFunction(()=>window.everwild.game.questState('crypt-proof').status==='completed');
     await completion.evaluate(()=>window.everwild.openMenu('journal'));
     assert.equal(await completion.locator('.completion-card').count(),1);
     await completion.screenshot({path:path.join(output,'completed-journal-mobile.png'),fullPage:true});

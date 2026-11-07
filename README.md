@@ -1,6 +1,6 @@
 # Everwild
 
-**Version 0.6.0 — a first expedition worth remembering**
+**Version 0.7.0 — a full-window game interface**
 
 Everwild is a solo fantasy RPG about exploring a dangerous frontier with a summoned companion. Fight through Willowmere's forest and crypt camps, collect equipment, and grow an earth or air pet into the center of your combat strategy.
 
@@ -18,7 +18,7 @@ The first expedition now has a closing journal card and villagers who react to y
 
 The world now includes illustrated camp tents, shaman totems, crypt entrances, ritual altars, ground textures, rocks, plants, and four distinct named enemies. Ordinary actors have four-frame walk and action cycles. Named enemies retain their unique artwork and lean into attacks; defeated creatures collapse and fade independently of live spawn slots. Reduced-motion settings disable these transforms and frame cycles.
 
-Summoning circles, a persistent shield, pet-mend connections, frost crystals, melee arcs, and final-pass attack warnings make combat easier to read. The action deck offers contextual tactical guidance and the companion panel shows damage, target, and time to its next strike.
+Summoning circles, a persistent shield, pet-mend connections, frost crystals, melee arcs, and final-pass attack warnings make combat easier to read. The HUD keeps health, mana, companion status, a compact top-edge target, and icon spell slots visible. Character details, quests, map, combat log, and instructions live in menus. The game fills the window at desktop, 4K, ultrawide, and phone sizes; Esc offers HUD sizing, camera zoom, and fullscreen (also Alt+Enter).
 
 Combat tuning is based on a reproducible fresh-character run: ordinary fights take about 6–9 seconds and named fights about 13–18 seconds using supported pet tactics, healing, interrupts, gear, and consumables. Both Earth and Air builds complete the entire quest chain across three seeded runs, including a deliberate unprotected death, revival with retained progression, and save/reload before the crypt. These are simulation measurements, not a measure of how long a human expedition takes. Run `npm run test:journey` or inspect [the results](docs/EXPEDITION_BALANCE.json).
 

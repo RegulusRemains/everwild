@@ -82,25 +82,29 @@ async function main() {
     assert.equal(await page.locator('#actionbar button').count(), 8);
 
     // Presentation toggles preserve a crisp UI and persist across reloads.
+    await page.locator('#pause').click();
     assert.equal(await page.locator('#art-style').getAttribute('aria-pressed'), 'true');
     await page.locator('#art-style').click();
     assert.equal(await page.evaluate(() => window.everwild.renderer.pixelArt), false);
     await page.reload();
     await page.waitForFunction(() => Boolean(window.everwild?.game));
+    await page.locator('#pause').click();
     assert.equal(await page.locator('#art-style').getAttribute('aria-pressed'), 'false');
     await page.locator('#art-style').click();
     await page.locator('#sound').click();
     assert.equal(await page.locator('#sound').getAttribute('aria-pressed'), 'true');
     await page.locator('#sound').click();
+    await page.locator('#dialog-close').click();
     await page.evaluate(() => window.everwild.game._loot('griks-lucky-charm'));
     await page.waitForFunction(() => !document.getElementById('discovery').hidden);
-    assert.match(await page.locator('#discovery').textContent(), /RARE DISCOVERY/);
+    assert.match(await page.locator('#discovery').textContent(), /Rare/);
     // Reload clears transient discoveries but retains character progression.
     await page.reload();
     await page.waitForFunction(() => Boolean(window.everwild?.game));
 
     // Menus must pause the simulation and return focus to the game safely.
-    await page.locator('nav [data-dialog="guide"]').click();
+    await page.locator('#pause').click();
+    await page.locator('[data-action="menu"][data-menu="guide"]').click();
     assert.equal(await page.locator('#menu-dialog').evaluate(dialog => dialog.open), true);
     assert.equal(await page.evaluate(() => window.everwild.paused), true);
     await page.locator('#dialog-close').click();
@@ -184,7 +188,7 @@ async function main() {
     assert.equal(await page.evaluate(() => window.everwild.game.player.hotbar[1]), 8);
     await page.locator('#dialog-close').click();
     await page.waitForFunction(() => document.getElementById('spell1').dataset.spellIndex === '8');
-    assert.match(await page.locator('#spell1').textContent(), /Frost Lance/);
+    assert.match(await page.locator('#spell1').getAttribute('aria-label'), /Frost Lance/);
     await page.evaluate(() => {
       const game = window.everwild.game;
       const target = game.mobs.find(mob => mob.campId === 'mossfang' && mob.index === 0);
@@ -302,7 +306,8 @@ async function main() {
     await page.screenshot({ path: path.join(screenshots, 'desktop.png'), fullPage: true });
 
     for (const menu of ['inventory', 'spellbook', 'save']) {
-      await page.locator(`nav [data-dialog="${menu}"]`).click();
+      if (menu === 'save') { await page.locator('#pause').click(); await page.locator('[data-action="menu"][data-menu="save"]').click(); }
+      else await page.locator(`nav [data-dialog="${menu}"]`).click();
       assert.equal(await page.locator('#menu-dialog').evaluate(dialog => dialog.open), true);
       assert.ok((await page.locator('#dialog-content').textContent()).trim().length > 0);
       if (menu === 'inventory') {
@@ -329,7 +334,7 @@ async function main() {
     }));
     assert.ok(dimensions.content <= dimensions.viewport + 1, 'Mobile layout must not overflow horizontally');
     assert.ok(dimensions.game > 200, 'The game canvas must remain visible on mobile');
-    await page.locator('nav [data-dialog="journal"]').click();
+    await page.keyboard.press('j');
     assert.equal(await page.locator('#menu-dialog').evaluate(dialog => dialog.open), true);
     await page.locator('#dialog-close').click();
     await page.screenshot({ path: path.join(screenshots, 'mobile.png'), fullPage: true });
@@ -340,6 +345,7 @@ async function main() {
       await page.screenshot({ path: path.join(screenshots, 'mobile-' + menu + '.png'), fullPage: true });
       await page.locator('#dialog-close').click();
     }
+    await require('./hud-review.cjs').runHudChecks(page, screenshots);
     assert.deepEqual(errors, [], 'The browser must not report runtime or console errors');
     console.log('Browser smoke passed: controls, NPC dialogue, quest rewards, equipment, spell assignment, pet guard/taunt, tonic purchase/cooldown, save/reload, and mobile layout.');
     console.log(`Screenshots: ${screenshots}`);
