@@ -7,7 +7,7 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '0.9.1';
+  const VERSION = '0.10.0';
   const WORLD = Object.freeze({ w: 4200, h: 2600, spawn: Object.freeze({ x: 260, y: 250 }), bindstone: Object.freeze({ x: 202, y: 214 }) });
   const BIOMES = Object.freeze([
     { id:'willowmere', name:'Willowmere Woodland', x:0, y:0, w:1850, h:2600, color:'#46633e', level:1 },
@@ -647,6 +647,7 @@
       this.player.mp -= spell.cost;
       const profile = this.spellProfile(pending.i, rank);
       this._spellVisualIndex=pending.i;
+      this.player.castReleaseUntil=this.clock+.22;
       switch (pending.i) {
         case 0: case 5: this._summon(pending.i === 0 ? 'Earth' : 'Air', rank); break;
         case 1: {
@@ -1093,6 +1094,7 @@
       if (gap <= stop || gap === 0) return false;
       const amount = Math.min(speed * dt, gap - stop);
       if (Math.abs(target.x - entity.x) > 1) entity.facing = target.x > entity.x ? 1 : -1;
+      entity.walkDistance=(entity.walkDistance||0)+amount;
       entity.walkUntil = this.clock + 0.1;
       entity.x += (target.x - entity.x) / gap * amount;
       entity.y += (target.y - entity.y) / gap * amount;
@@ -1128,11 +1130,13 @@
         this.moveTarget = null;
         this._interruptCast();
         this.meditate = false;
+        const oldX=this.player.x,oldY=this.player.y;
         const speed = 175 * dt;
         if (input.dx) this.player.facing = input.dx > 0 ? 1 : -1;
         this.player.walkUntil = this.clock + 0.1;
         this.player.x = clamp(this.player.x + input.dx / inputLength * speed, 24, WORLD.w - 24);
         this.player.y = clamp(this.player.y + input.dy / inputLength * speed, 24, WORLD.h - 24);
+        this.player.walkDistance=(this.player.walkDistance||0)+Math.hypot(this.player.x-oldX,this.player.y-oldY);
         this._moving = true;
       } else if (this.moveTarget) {
         this._interruptCast();

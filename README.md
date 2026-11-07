@@ -1,6 +1,6 @@
 # Everwild
 
-**Version 0.9.1 — choose your path**
+**Version 0.10.0 — motion and impact**
 
 Everwild is a solo fantasy RPG about exploring a dangerous frontier as a Magician, Necromancer, or Druid with a summoned companion. Explore five habitats and eight camps, from Willowmere’s forest and crypt to golden downs, marshland, frozen ruins, and volcanic barrens. Collect equipment and grow an earth or air pet into the center of your combat strategy.
 
@@ -18,7 +18,7 @@ Start at character selection, create a named adventurer, or return to an existin
 
 The default desktop camera now shows roughly 520 world units vertically, bringing characters and combat closer. **Esc → Camera zoom** adjusts it. Enemies no longer reset when they cross a camp radius: kite across the frontier with roots, slows, and damage over time. They abandon pursuit after losing both you and your companion by over 1000 paces for 10 seconds without an active damage-over-time effect. Willowmere remains a safe refuge. Pets can remain engaged up to 900 paces from you. Outside combat they lag behind your recent path, react after you move away, catch up when distant, and settle nearby rather than occupying a fixed offset.
 
-Biome borders follow warped, blended regional shapes. Groves, clearings, mixed ground, pools, grass, fallen logs, fungi, reeds, ice outcrops, boulders, vents, and charred stumps break up the old uniform scatter. New spell buildup, luminous projectile trails, impact bursts, and class colors accompany layered audio with bass, filtered noise, stereo positioning, short reverb, and bounded dynamics. Sound starts after your first interaction unless previously muted; **Esc → Effects / Effects volume** controls it.
+Biome borders follow warped, blended regional shapes. Groves, clearings, mixed ground, pools, grass, fallen logs, fungi, reeds, ice outcrops, boulders, vents, and charred stumps break up the old uniform scatter. All three classes now have four-frame walking cycles and gather/channel/release casting sequences. Walking follows distance traveled, with surface-specific footsteps; interrupted casts return to movement. New spell buildup, luminous projectile trails, impact bursts, and class colors accompany designed one-shot sounds: fire roars, crystalline cracks, grave pulses, wood snaps, and material impacts. Sustained bodies replace the old rapidly fading oscillator chirps; cached variants, stereo positioning, short reflections, compression, and an output ceiling keep the mix consistent. Sound starts after your first interaction unless previously muted; **Esc → Effects / Effects volume** controls it; **Test effects** plays the current class’s release and impact sounds.
 
 ## Beyond the old road
 

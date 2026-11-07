@@ -55,8 +55,9 @@
   let inventoryFilter = 'all';
   let lastVisualId = 0, discoveryUntil = 0;
   const discoveryQueue = [];
-  let soundscape=null,volumePreference=.65;
-  let audioContext = null, soundEnabled = true, lastImpactSound = -Infinity;
+  let lastFootstepDistance=0;
+  let soundscape=null,volumePreference=.8;
+  let audioContext = null, soundEnabled = true, lastImpactSound = -Infinity,lastHostileImpactSound=-Infinity;
   let hudScalePreference = 'auto';
   try {
     renderer.pixelArt = localStorage.getItem('everwild_pixel_art') !== 'false';
@@ -100,15 +101,19 @@
   }
   function tone(frequency, delay, duration, volume, endFrequency, type = 'sine') {
     if (!soundEnabled || !audioContext || audioContext.state !== 'running') return;
-    soundscape?.tone(frequency,delay,duration,volume*2.5,endFrequency||frequency,type);
+    soundscape?.tone(frequency,delay,duration,volume*4,endFrequency||frequency,type);
   }
 
   function presentationFeedback(now) {
+    if(!game.cast||isPaused())soundscape?.stopCharge();
+    const walked=game.player.walkDistance||0;if(walked<lastFootstepDistance)lastFootstepDistance=walked;
+    if(!isPaused()&&game.player.walkUntil>game.clock&&soundEnabled&&audioContext?.state==='running'&&walked-lastFootstepDistance>=46){lastFootstepDistance=walked;soundscape?.play({kind:'step',surface:window.Everwild.biomeAt(game.player.x,game.player.y).id});}
     for (const visual of game.visuals) {
       if (visual.id <= lastVisualId) continue;
       lastVisualId = visual.id;
       if(soundEnabled&&audioContext?.state==='running'){
-        if(visual.kind!=='impact'||now-lastImpactSound>65){soundscape?.play(visual,Math.max(-.75,Math.min(.75,(visual.x-game.player.x)/500)));if(visual.kind==='impact')lastImpactSound=now;}
+        const hostile=visual.kind==='impact'&&visual.source==='enemy',last=hostile?lastHostileImpactSound:lastImpactSound;
+        if(visual.kind!=='impact'||now-last>65){soundscape?.play(visual,Math.max(-.75,Math.min(.75,(visual.x-game.player.x)/500)));if(visual.kind==='impact'){if(hostile)lastHostileImpactSound=now;else lastImpactSound=now;}}
       }
       if(visual.kind==='discovery')discoveryQueue.push({id:visual.itemId,rare:visual.rare});
     }
@@ -128,6 +133,9 @@
     if (setting === 'sound') {
       soundEnabled = !soundEnabled; if(soundEnabled)unlockAudio();soundscape?.setVolume(soundEnabled?volumePreference:0);syncPresentationButtons();
       try { localStorage.setItem('everwild_sound', String(soundEnabled)); } catch (_) {}
+    } else if(setting==='sound-preview'){
+      if(!soundEnabled){toast('Enable effects to hear the preview.');return;}unlockAudio();
+      audioContext?.resume().then(()=>{soundscape.play({kind:'bolt',school:game.player.classId,spellIndex:1});soundscape.play({kind:'impact',school:game.player.classId,spellIndex:1,source:'player'},0,.32);});
     } else if (setting === 'art') {
       renderer.pixelArt = !renderer.pixelArt; syncPresentationButtons();
       try { localStorage.setItem('everwild_pixel_art', String(renderer.pixelArt)); } catch (_) {}
@@ -459,7 +467,7 @@
       content.innerHTML=`<div class="character-creation"><div class="class-showcase"><span class="class-portrait portrait-${cls.id}"></span><h3>${cls.name}</h3><span class="eyebrow">${cls.role}</span><p>${escape(cls.description)}</p><small>${cls.hp} health · ${cls.mp} mana<br>${cls.primaryPet} / ${cls.secondaryPet}</small></div><div><div class="class-choices">`+Object.values(CLASSES).map(c=>`<button data-action="choose-class" data-class="${c.id}" aria-pressed="${c.id===selectedClassId}" class="${c.id===selectedClassId?'selected':''}"><strong>${c.name}</strong><small>${c.role}</small></button>`).join('')+`</div><label class="name-label" for="new-character-name">Character name</label><input id="new-character-name" maxlength="24" autocomplete="off" placeholder="Your name" value="${escape(creationName)}"><p class="character-note">New characters begin in Willowmere. Your other characters stay saved.</p><div class="menu-actions"><button class="primary" data-action="create-character">Begin adventure</button>${characters.length?'<button data-action="menu" data-menu="characters">Back to characters</button>':''}</div></div></div>`;
     } else if (name === 'system') {
       setText('dialog-title', 'Everwild');
-      content.innerHTML = `<button class="primary" data-action="resume-game">Resume</button><div class="menu-grid">` + [['characters','Characters',''],['inventory','Inventory','I'],['character','Character','V'],['spellbook','Spellbook','B'],['journal','Journal','J'],['map','Map','M'],['log','Combat log',''],['guide','Field guide','?'],['save','Save / export','']].map(([menu,label,key])=>`<button data-action="menu" data-menu="${menu}">${label}<kbd>${key}</kbd></button>`).join('') + `</div><section class="settings"><div class="settings-row"><span>Display</span><button id="fullscreen-button" data-setting="fullscreen">Fullscreen</button></div><div class="settings-row"><label for="hud-scale">HUD size</label><select id="hud-scale" data-setting="hud-scale">` + [['auto','Automatic'],['0.85','Compact'],['1','100%'],['1.25','125%'],['1.5','150%']].map(([value,label])=>`<option value="${value}" ${hudScalePreference===value?'selected':''}>${label}</option>`).join('') + `</select></div><div class="settings-row"><label for="view-zoom">Camera zoom</label><input id="view-zoom" data-setting="zoom" type="range" min="0.75" max="1.5" step="0.05" value="${renderer.zoomFactor||1}"></div><div class="settings-row"><span>Artwork</span><button id="art-style" data-setting="art" aria-pressed="${renderer.pixelArt}"></button></div><div class="settings-row"><label for="effects-volume">Effects volume</label><input id="effects-volume" data-setting="volume" type="range" min="0" max="1" step="0.05" value="${volumePreference}"></div><div class="settings-row"><span>Effects</span><button id="sound" data-setting="sound" aria-pressed="${soundEnabled}"></button></div></section><div class="system-footer"><span>Willowmere · ${VERSION}</span><span id="save-status">${storageAvailable?'Autosave enabled':'Storage unavailable · export your save'}</span></div>`;
+      content.innerHTML = `<button class="primary" data-action="resume-game">Resume</button><div class="menu-grid">` + [['characters','Characters',''],['inventory','Inventory','I'],['character','Character','V'],['spellbook','Spellbook','B'],['journal','Journal','J'],['map','Map','M'],['log','Combat log',''],['guide','Field guide','?'],['save','Save / export','']].map(([menu,label,key])=>`<button data-action="menu" data-menu="${menu}">${label}<kbd>${key}</kbd></button>`).join('') + `</div><section class="settings"><div class="settings-row"><span>Display</span><button id="fullscreen-button" data-setting="fullscreen">Fullscreen</button></div><div class="settings-row"><label for="hud-scale">HUD size</label><select id="hud-scale" data-setting="hud-scale">` + [['auto','Automatic'],['0.85','Compact'],['1','100%'],['1.25','125%'],['1.5','150%']].map(([value,label])=>`<option value="${value}" ${hudScalePreference===value?'selected':''}>${label}</option>`).join('') + `</select></div><div class="settings-row"><label for="view-zoom">Camera zoom</label><input id="view-zoom" data-setting="zoom" type="range" min="0.75" max="1.5" step="0.05" value="${renderer.zoomFactor||1}"></div><div class="settings-row"><span>Artwork</span><button id="art-style" data-setting="art" aria-pressed="${renderer.pixelArt}"></button></div><div class="settings-row"><label for="effects-volume">Effects volume</label><input id="effects-volume" data-setting="volume" type="range" min="0" max="1" step="0.05" value="${volumePreference}"></div><div class="settings-row"><span>Effects</span><button data-setting="sound-preview">Test effects</button><button id="sound" data-setting="sound" aria-pressed="${soundEnabled}"></button></div></section><div class="system-footer"><span>Willowmere · ${VERSION}</span><span id="save-status">${storageAvailable?'Autosave enabled':'Storage unavailable · export your save'}</span></div>`;
     } else if (name === 'character') {
       setText('dialog-title', 'The Wayfarer');
       content.innerHTML = `<span class="eyebrow">LEVEL ${player.level} ${game.characterClass.name.toUpperCase()}</span><div class="character-stats">` + [['Health',player.maxHp],['Mana',player.maxMp],['Spell power','+'+player.power],['Copper',player.gold],['Victories',player.kills],['Camps',game.discovered.length+' / '+CAMPS.length]].map(([label,value])=>`<div><small>${label}</small><strong>${value}</strong></div>`).join('') + `</div><p class="character-note">${player.level===20?'Maximum level':player.xp+' / '+game.xpNeeded()+' experience toward the next level'}${player.debt?' · '+player.debt+' experience debt':''}</p><div class="meter experience"><i style="width:${Math.min(100,player.xp/game.xpNeeded()*100)}%"></i></div><p class="character-note">${game.pet?(game.pet.name||game.pet.type)+' · '+Math.ceil(game.pet.hp)+' / '+game.pet.maxHp+' health · '+game.pet.damage+' damage per strike':'No companion summoned.'}</p><div class="menu-actions"><button data-action="menu" data-menu="inventory">Equipment</button><button data-action="menu" data-menu="spellbook">Spells</button></div>`;
@@ -582,7 +590,7 @@
     lastVisualId = 0; discoveryQueue.length = 0; discoveryUntil = 0;
     $('discovery').hidden = true;
     game = new Game({ save: data });
-    hotbarSignature='';keys.clear();pendingNpc=null;
+    hotbarSignature='';keys.clear();pendingNpc=null;lastFootstepDistance=0;
     pendingImport = null;
     lastDead = game.dead;
     manualPause = false;

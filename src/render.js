@@ -8,6 +8,7 @@
   const artBoxes = {"environment": [[9, 17, 298, 288], [379, 8, 196, 300], [634, 7, 300, 302], [959, 12, 290, 295], [13, 339, 290, 264], [329, 344, 282, 255], [639, 355, 290, 233], [953, 350, 289, 239], [14, 655, 286, 256], [329, 661, 281, 234], [639, 642, 289, 269], [949, 639, 298, 275], [18, 954, 285, 281], [333, 943, 264, 292], [638, 957, 274, 275], [964, 942, 271, 291]], "walk": [[38, 11, 201, 230], [294, 11, 201, 230], [550, 11, 201, 230], [806, 11, 201, 230], [19, 261, 219, 234], [275, 261, 219, 234], [531, 261, 219, 234], [787, 261, 219, 234], [22, 517, 212, 244], [278, 517, 212, 244], [534, 517, 212, 244], [790, 517, 212, 244], [32, 788, 201, 236], [288, 788, 201, 236], [544, 788, 201, 236], [800, 788, 201, 236], [25, 1024, 193, 243], [281, 1024, 193, 243], [537, 1024, 193, 243], [793, 1024, 193, 243], [23, 1282, 215, 240], [279, 1282, 215, 240], [535, 1282, 215, 240], [791, 1282, 215, 240]], "action": [[10, 22, 239, 222], [266, 22, 239, 222], [522, 22, 239, 222], [778, 22, 239, 222], [16, 283, 230, 209], [272, 283, 230, 209], [528, 283, 230, 209], [784, 283, 230, 209], [9, 523, 237, 226], [265, 523, 237, 226], [521, 523, 237, 226], [777, 523, 237, 226], [20, 775, 229, 249], [276, 775, 229, 249], [532, 775, 229, 249], [788, 775, 229, 249], [8, 1024, 246, 256], [264, 1024, 246, 256], [520, 1024, 246, 256], [776, 1024, 246, 256], [0, 1280, 256, 232], [256, 1280, 256, 232], [512, 1280, 256, 232], [768, 1280, 256, 232]]};
   artBoxes.frontier = [[13, 106, 230, 137], [269, 111, 230, 132], [548, 40, 183, 203], [781, 110, 230, 133], [13, 279, 230, 220], [269, 308, 230, 191], [525, 271, 230, 228], [781, 296, 230, 203], [13, 544, 230, 211], [269, 545, 230, 210], [525, 526, 230, 229], [781, 546, 230, 209], [13, 792, 230, 219], [269, 798, 230, 213], [525, 799, 230, 212], [781, 790, 230, 221], [21, 1058, 213, 209], [281, 1037, 206, 230], [525, 1053, 230, 214], [782, 1037, 228, 230]];
   artBoxes.journey = [[31, 14, 193, 230], [283, 14, 201, 230], [536, 14, 208, 230], [831, 70, 130, 174], [13, 277, 230, 223], [269, 292, 230, 208], [525, 292, 230, 208], [793, 270, 206, 230], [23, 526, 209, 230], [269, 605, 230, 151], [525, 582, 230, 174], [781, 592, 230, 164], [34, 782, 187, 230], [271, 812, 225, 200], [525, 799, 230, 213], [785, 880, 222, 132], [13, 1046, 230, 222], [269, 1128, 230, 140], [528, 1039, 224, 229], [782, 1102, 227, 166], [14, 1313, 228, 211], [269, 1388, 230, 136], [529, 1294, 221, 230], [781, 1305, 230, 219]];
+  artBoxes.classMotion = [[0, 75, 256, 169], [256, 75, 256, 169], [512, 75, 256, 169], [768, 75, 256, 169], [0, 339, 256, 161], [256, 339, 256, 161], [512, 339, 256, 161], [768, 339, 256, 161], [0, 602, 256, 154], [256, 602, 256, 154], [512, 602, 256, 154], [768, 602, 256, 154], [0, 843, 256, 169], [256, 843, 256, 169], [512, 843, 256, 169], [768, 843, 256, 169], [0, 1107, 256, 161], [256, 1107, 256, 161], [512, 1107, 256, 161], [768, 1107, 256, 161], [0, 1370, 256, 154], [256, 1370, 256, 154], [512, 1370, 256, 154], [768, 1370, 256, 154]];
   const frontierTypes = {wolf:0,beetle:1,wisp:2,drake:3};
   const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
   const intentColors = { slam: '#dfad70', hex: '#e29581', heal: '#bcb6d2' };
@@ -91,7 +92,7 @@
       });
       this.artReady = Promise.all([
         load('atlas', 'assets/woodland-atlas.webp'), load('environment', 'assets/environment-atlas.webp'),
-        load('journey','assets/journey-atlas.webp'), load('frontier','assets/frontier-atlas.webp'), load('frontierFloor','assets/frontier-floor.webp'), load('walk', 'assets/walk-atlas.webp'), load('action', 'assets/action-atlas.webp'), load('floor', 'assets/floor-atlas.webp')
+        load('classMotion','assets/class-motion.webp'), load('journey','assets/journey-atlas.webp'), load('frontier','assets/frontier-atlas.webp'), load('frontierFloor','assets/frontier-floor.webp'), load('walk', 'assets/walk-atlas.webp'), load('action', 'assets/action-atlas.webp'), load('floor', 'assets/floor-atlas.webp')
       ]).then(results => results.every(Boolean));
       this.camera = { x: 0, y: 0 };
       this.width = 1; this.height = 1; this.dpr = 1; this.zoom = 1.3;
@@ -127,7 +128,14 @@
     _pose(kind, entity, game, time) {
       const row = kind === 'player' ? 0 : kind === 'pet' ? (entity.type === 'Earth' ? 1 : 2) : entity.type === 'goblin' ? 3 : entity.ability === 'hex' ? 5 : 4;
       if (this.reducedMotion) return null;
-      if (kind === 'player' && game.cast) {
+      if(kind==='player'&&this.classMotionLoaded){
+        const cls=game.player.classId==='necromancer'?1:game.player.classId==='druid'?2:0;
+        if(game.cast){const progress=clamp((time-game.cast.started)/(game.cast.done-game.cast.started),0,1);const frame=progress<.2?0:progress<.45?1:progress<.9?1+Math.floor(time*5)%2:3;return{sheet:'classMotion',index:(3+cls)*4+frame};}
+        if(entity.walkUntil>time)return{sheet:'classMotion',index:cls*4+Math.floor((entity.walkDistance||0)/23)%4};
+        if(entity.castReleaseUntil>time)return{sheet:'classMotion',index:(3+cls)*4+3};
+        return null;
+      }
+      if (kind === 'player'  && game.cast) {
         const progress = clamp((time - game.cast.started) / Math.max(0.1, game.cast.done - game.cast.started), 0, 0.999);
         return { sheet: 'action', index: row * 4 + Math.min(2, Math.floor(progress * 3)) };
       }
@@ -988,7 +996,10 @@
         const face = entity.facing === -1 ? -1 : 1;
         c.scale(face, 1);
         const pose = this._pose(kind, entity, game, time);
-        if(kind==='player' && game.player.classId!=='magician' && this.journeyLoaded){
+        if(kind==='player'&&this.classMotionLoaded&&this.journeyLoaded){
+          const cls=game.player.classId==='necromancer'?1:game.player.classId==='druid'?2:0;
+          if(pose)this._sheet(c,pose.sheet,pose.index,0,0,52);else this._sheet(c,'journey',cls,0,0,52);
+        } else if(kind==='player' && game.player.classId!=='magician' && this.journeyLoaded){
           const index=game.player.classId==='necromancer'?1:2;
           if(entity.walkUntil>time&&!this.reducedMotion)c.translate(0,Math.sin(time*10)*1.5);
           this._sheet(c,'journey',index+(game.cast?4:0),0,0,52);

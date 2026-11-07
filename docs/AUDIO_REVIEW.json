@@ -1,0 +1,62 @@
+{
+  "version": "0.10.0",
+  "method": "Chromium OfflineAudioContext, stereo 48000 Hz, same effects volume 0.65, first 250 ms left-channel RMS and peak. Magician school, spell index 1, hostile impact. Compared with v0.9.1. Measures signal energy, not listening preference.",
+  "effects": [
+    {
+      "effect": "bolt",
+      "before": {
+        "kind": "bolt",
+        "peak": 0.21787549555301666,
+        "attackRms": 0.04212442651307911
+      },
+      "after": {
+        "kind": "bolt",
+        "peak": 0.5027360916137695,
+        "attackRms": 0.1634414007504413
+      },
+      "attackBodyChangeDb": 11.78
+    },
+    {
+      "effect": "impact",
+      "before": {
+        "kind": "impact",
+        "peak": 0.2572852671146393,
+        "attackRms": 0.0630452394312013
+      },
+      "after": {
+        "kind": "impact",
+        "peak": 0.3512387275695801,
+        "attackRms": 0.11755042376756057
+      },
+      "attackBodyChangeDb": 5.41
+    },
+    {
+      "effect": "nova",
+      "before": {
+        "kind": "nova",
+        "peak": 0.42992255091667175,
+        "attackRms": 0.11941048408269062
+      },
+      "after": {
+        "kind": "nova",
+        "peak": 0.485848605632782,
+        "attackRms": 0.16888513302731034
+      },
+      "attackBodyChangeDb": 3.01
+    },
+    {
+      "effect": "summon",
+      "before": {
+        "kind": "summon",
+        "peak": 0.4205274283885956,
+        "attackRms": 0.15092326355328078
+      },
+      "after": {
+        "kind": "summon",
+        "peak": 0.5125674605369568,
+        "attackRms": 0.14574863071415087
+      },
+      "attackBodyChangeDb": -0.3
+    }
+  ]
+}

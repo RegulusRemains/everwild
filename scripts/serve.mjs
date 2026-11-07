@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = await realpath(fileURLToPath(new URL('../', import.meta.url)));
 const publicFiles = new Map([
+  ['/assets/class-motion.webp', ['assets/class-motion.webp', 'image/webp']],
   ['/src/audio.js', ['src/audio.js', 'text/javascript; charset=utf-8']],
   ['/assets/journey-atlas.webp', ['assets/journey-atlas.webp', 'image/webp']],
   ['/assets/frontier-atlas.webp', ['assets/frontier-atlas.webp', 'image/webp']],
