@@ -42,6 +42,7 @@
   let pendingNpc = null;
   let currentNpcId = null;
   let hotbarSignature = '';
+  let inventoryFilter = 'all';
   let lastVisualId = 0, discoveryUntil = 0;
   const discoveryQueue = [];
   let audioContext = null, soundEnabled = false, lastImpactSound = -Infinity;
@@ -94,7 +95,7 @@
       if (item) {
         const panel = $('discovery');
         panel.classList.toggle('rare', found.rare);
-        panel.innerHTML = '<small>' + (found.rare ? 'A RARE DISCOVERY' : 'SOMETHING WORTH KEEPING') + '</small><strong>' + escape(item.name) + '</strong><span>Open your pack [I] to inspect and equip</span>';
+        panel.innerHTML = arcanaIcon(itemArt[found.id], 'discovery-art') + '<small>' + (found.rare ? 'A RARE DISCOVERY' : 'SOMETHING WORTH KEEPING') + '</small><strong>' + escape(item.name) + '</strong><span>Open your pack [I] to inspect and equip</span>';
         panel.hidden = false; discoveryUntil = now + (found.rare ? 6500 : 4200);
         [392, 493.88, 587.33, ...(found.rare ? [783.99] : [])].forEach((note, i) => tone(note, i * 0.13, 0.65, 0.018));
       }
@@ -112,6 +113,23 @@
   document.addEventListener('keydown', unlockAudio);
   syncPresentationButtons();
 
+
+  const itemArt = Object.fromEntries(Object.keys(ITEMS).map((id, index) => [id, index + 8]));
+  const spellArt = [0, 1, 2, 3, 4, 5, 6, 7, 5, 1];
+  const spellRoles = ['Companion · endurance', 'Direct damage', 'Damage over time', 'Control · interrupt', 'Companion · recovery', 'Companion · offense', 'Protection', 'Recovery', 'Damage · slow', 'Area damage'];
+  function arcanaIcon(index, extra = '') {
+    return `<span class="atlas-icon ${extra}" aria-hidden="true" style="background-position:${index % 4 * 100 / 3}% ${Math.floor(index / 4) * 100 / 3}%"></span>`;
+  }
+  function itemComparison(item) {
+    const current = ITEMS[game.player.equipment[item.slot]];
+    if (current?.id === item.id) return '<p class="comparison">Currently equipped</p>';
+    const labels = { hp: 'health', mp: 'mana', power: 'spell power' };
+    const changes = Object.keys(labels).map(key => {
+      const delta = (item.stats[key] || 0) - (current?.stats[key] || 0);
+      return delta ? `<span class="${delta > 0 ? 'gain' : 'loss'}">${delta > 0 ? '+' : '−'}${Math.abs(delta)} ${labels[key]}</span>` : '';
+    }).filter(Boolean).join(' · ') || 'Same base stats';
+    return `<div class="comparison">Compared with ${escape(current?.name || 'an empty ' + item.slot + ' slot')}<p>${changes}</p>${current?.effect ? `<p class="loss">Replaces ${escape(current.effectName)}: ${escape(current.effect)}</p>` : ''}</div>`;
+  }
 
   function validSave(value) {
     return value && typeof value === 'object' && !Array.isArray(value) &&
@@ -207,17 +225,17 @@
   }
 
   function refreshHotbar() {
-    const signature = game.player.hotbar.join(',') + ':' + game.player.spellRanks.join(',');
+    const signature = game.player.hotbar.join(',') + ':' + game.player.spellRanks.join(',') + ':' + game.player.level + ':' + Object.values(game.player.equipment).join(',');
     if (signature === hotbarSignature) return;
     hotbarSignature = signature;
     game.player.hotbar.forEach((index, slot) => {
       const spell = SPELLS[index];
       const button = $('spell' + slot);
       button.style.setProperty('--spell-color', spellColors[index]);
-      button.title = `${spell.name} [${slot + 1}] — ${spell.description} ${spell.cast}s cast, ${spell.cost} mana.`;
+      button.title = `${spell.name} [${slot + 1}] — ${game.spellProfile(index).summary}. ${spell.description} ${spell.cast}s cast, ${spell.cost} mana.`;
       button.setAttribute('aria-label', button.title);
       button.dataset.spellIndex = String(index);
-      button.innerHTML = `<span class="spell-top"><span class="spell-icon"><svg viewBox="0 0 28 28" aria-hidden="true">${iconPaths[index]}</svg></span><kbd>${slot + 1}</kbd></span><b>${escape(spell.name)}</b><small>${spell.cost} mana · ${spell.cast}s</small><span class="rank-dot">${game.player.spellRanks[index] > 1 ? 'ⅡⅢ'[game.player.spellRanks[index] - 2] : ''}</span>`;
+      button.innerHTML = `<span class="spell-top"><span class="spell-icon">${arcanaIcon(spellArt[index])}</span><kbd>${slot + 1}</kbd></span><b>${escape(spell.name)}</b><small>${spell.cost} mana · ${spell.cast}s</small><span class="rank-dot">${game.player.spellRanks[index] > 1 ? 'ⅡⅢ'[game.player.spellRanks[index] - 2] : ''}</span>`;
     });
   }
 
@@ -470,14 +488,19 @@
         '<p class="muted" style="margin-top:20px">On touch devices: tap ground to move, tap an enemy to target, then use the spell and pet buttons. Trees, water, and ruin walls are scenery in this prototype; they do not block movement.</p>';
     } else if (name === 'inventory') {
       setText('dialog-title', 'Your traveling pack');
-      content.innerHTML = `<p>${player.gold} copper · ${player.inventory.length} unique items. Equip one charm, one focus, and one ring. Duplicate loot is automatically salvaged into copper.</p><div class="equipment-row">${['charm', 'focus', 'ring'].map(slot => `<span>${slot}: ${escape(ITEMS[player.equipment[slot]]?.name || 'Empty')}</span>`).join('')}</div>` +
-        `<div class="menu-note">${player.maxHp} maximum health · ${player.maxMp} maximum mana · +${player.power || 0} spell power</div><div class="inventory-list">` +
-        (player.inventory.length ? player.inventory.map(id => {
-          const item = ITEMS[id];
-          const equipped = player.equipment[item.slot] === id;
+      const slots = ['charm', 'focus', 'ring'];
+      const visibleItems = player.inventory.filter(id => inventoryFilter === 'all' || ITEMS[id].slot === inventoryFilter);
+      visibleItems.sort((a, b) => Number(player.equipment[ITEMS[b].slot] === b) - Number(player.equipment[ITEMS[a].slot] === a) || Number(ITEMS[b].rarity === 'rare') - Number(ITEMS[a].rarity === 'rare'));
+      content.innerHTML = `<div class="pack-summary"><div><span class="eyebrow">YOUR EQUIPMENT</span><p>${player.inventory.length} discoveries · ${player.gold} copper</p></div><div>${player.maxHp} health · ${player.maxMp} mana · +${player.power || 0} spell power</div></div><div class="gear-slots">` + slots.map(slot => {
+        const item = ITEMS[player.equipment[slot]];
+        return `<div class="gear-slot ${item?.rarity || ''}">${item ? arcanaIcon(itemArt[item.id]) : '<span class="empty-slot">◇</span>'}<small>${slot.toUpperCase()}</small><strong>${escape(item?.name || 'Empty slot')}</strong>${item?.effectName ? `<span class="gear-magic">${escape(item.effectName)}</span>` : ''}</div>`;
+      }).join('') + `</div><div class="menu-tabs" aria-label="Filter equipment">` + ['all', ...slots].map(filter => `<button data-action="filter-items" data-filter="${filter}" aria-pressed="${filter === inventoryFilter}" class="${filter === inventoryFilter ? 'current' : ''}">${filter === 'all' ? 'All finds' : filter}</button>`).join('') + '</div><div class="inventory-list">' +
+        (visibleItems.length ? visibleItems.map(id => {
+          const item = ITEMS[id], equipped = player.equipment[item.slot] === id;
           const stats = Object.entries(item.stats).map(([key, value]) => `+${value} ${key === 'hp' ? 'health' : key === 'mp' ? 'mana' : 'spell power'}`).join(' · ');
-          return `<div class="item-card ${item.rarity}"><div><strong>${escape(item.name)}</strong><p>${escape(item.description)}</p><p>${stats}</p></div><button data-action="equip" data-item="${id}" ${equipped || game.dead ? 'disabled' : ''}>${equipped ? 'Equipped' : 'Equip'}</button></div>`;
-        }).join('') : '<p>Your pack is light. Your first victory will award equipment; named enemies carry rare finds.</p>') + '</div><h3>Supplies for the road</h3><div class="supply-pack">' + Object.values(SUPPLIES).map(supply => `<button data-action="use-supply" data-item="${supply.id}" ${!player.supplies[supply.id] || game.dead || game.supplyReadyAt > game.clock ? 'disabled' : ''}>${escape(supply.name)} ×${player.supplies[supply.id] || 0} · Use</button>`).join('') + '</div><p class="supplies-note">Tonics share a 20-second recovery. Buy more from Mara in Willowmere.</p><div class="menu-actions"><button data-action="menu" data-menu="spellbook">Study your spells →</button><button data-action="menu" data-menu="journal">Quest journal</button><button data-action="menu" data-menu="guide">Field guide</button></div>';
+          const camp = CAMPS.find(camp => camp.rareItemId === id);
+          return `<article class="item-card ${item.rarity}">${arcanaIcon(itemArt[id], 'item-art')}<div class="item-details"><span class="eyebrow">${item.rarity.toUpperCase()} · ${item.slot.toUpperCase()}</span><strong>${escape(item.name)}</strong><p class="item-lore">“${escape(item.description)}”</p><p class="item-stats">${stats}</p>${item.effect ? `<div class="item-magic"><strong>✦ ${escape(item.effectName)}</strong><p>${escape(item.effect)}</p></div>` : ''}${itemComparison(item)}${camp ? `<small class="item-origin">Recovered from ${escape(camp.namedName)} · ${escape(camp.name)}</small>` : ''}</div><button data-action="equip" data-item="${id}" ${equipped || game.dead ? 'disabled' : ''}>${equipped ? 'Equipped' : 'Equip'}</button></article>`;
+        }).join('') : '<p class="empty-pack">No finds in this part of your pack yet. Your first victory awards equipment; named foes carry unique magic.</p>') + '</div><h3>Supplies for the road</h3><div class="supply-pack">' + Object.values(SUPPLIES).map(supply => `<button data-action="use-supply" data-item="${supply.id}" ${!player.supplies[supply.id] || game.dead || game.supplyReadyAt > game.clock ? 'disabled' : ''}>${escape(supply.name)} ×${player.supplies[supply.id] || 0} · Use</button>`).join('') + '</div><p class="supplies-note">Tonics share a 20-second recovery. Buy more from Mara in Willowmere. Duplicate equipment is salvaged into copper.</p><div class="menu-actions"><button data-action="menu" data-menu="spellbook">Study your spells →</button><button data-action="menu" data-menu="journal">Quest journal</button></div>';
     } else if (name === 'spellbook') {
       setText('dialog-title', 'The magician’s spellbook');
       const near = Math.hypot(player.x - WORLD.spawn.x, player.y - WORLD.spawn.y) <= 110;
@@ -489,7 +512,7 @@
         const label = !unlocked ? `Unlocks at level ${spell.unlockLevel}` : rank >= 3 ? 'Mastered' : player.level < required ? `Needs level ${required}` : `Upgrade · ${game.upgradeCost(index)}c`;
         const assigned = player.hotbar.indexOf(index);
         const choices = '<option value="-1">Choose a slot…</option>' + player.hotbar.map((currentIndex, slot) => `<option value="${slot}" ${assigned === slot ? 'selected' : ''}>${slot + 1} · ${escape(SPELLS[currentIndex].name)}</option>`).join('');
-        return `<div class="spell-card ${unlocked ? '' : 'locked'}"><div><strong>${escape(spell.name)} · ${unlocked ? 'Rank ' + rank : 'Unlearned'}</strong><p>${escape(spell.description)}</p><p>${spell.cost} mana · ${spell.cast}s cast</p>${spell.unlockLevel > 1 ? `<p class="unlock-note">${unlocked ? 'Unlocked at' : 'Requires'} level ${spell.unlockLevel}</p>` : ''}</div><div class="spell-card-controls"><button data-action="upgrade" data-index="${index}" ${canBuy ? '' : 'disabled'}>${label}</button><label class="spell-bind">Action bar slot<select aria-label="Assign ${escape(spell.name)} to a hotbar slot" data-spell-index="${index}" ${!unlocked || game.dead ? 'disabled' : ''}>${choices}</select></label></div></div>`;
+        return `<div class="spell-card ${unlocked ? '' : 'locked'}">${arcanaIcon(spellArt[index], 'spellbook-art')}<div class="spell-details"><span class="eyebrow">${spellRoles[index]}</span><strong>${escape(spell.name)} · ${unlocked ? 'Rank ' + rank : 'Unlearned'}</strong><p>${escape(spell.description)}</p><p>${spell.cost} mana · ${spell.cast}s cast</p><div class="spell-numbers"><small>AT YOUR LEVEL</small><p>${escape(game.spellProfile(index).summary)}</p>${unlocked && rank < 3 ? `<small>NEXT RANK</small><p>${escape(game.spellProfile(index, rank + 1).summary)}</p>` : ''}</div>${spell.unlockLevel > 1 ? `<p class="unlock-note">${unlocked ? 'Unlocked at' : 'Requires'} level ${spell.unlockLevel}</p>` : ''}</div><div class="spell-card-controls"><button data-action="upgrade" data-index="${index}" ${canBuy ? '' : 'disabled'}>${label}</button><label class="spell-bind">Action bar slot<select aria-label="Assign ${escape(spell.name)} to a hotbar slot" data-spell-index="${index}" ${!unlocked || game.dead ? 'disabled' : ''}>${choices}</select></label></div></div>`;
       }).join('') + '</div><p class="muted" style="margin-top:15px">Spell ranks improve strength or duration. Summon a new elemental after upgrading its spell to receive the new rank’s benefits.</p>';
     } else if (name === 'map') {
       setText('dialog-title', 'The Willowmere frontier');
@@ -556,7 +579,10 @@
     const button = event.target.closest('button[data-action]');
     if (!button) return;
     const action = button.dataset.action;
-    if (action === 'menu') openMenu(button.dataset.menu);
+    if (action === 'filter-items') {
+      if (['all', 'charm', 'focus', 'ring'].includes(button.dataset.filter)) inventoryFilter = button.dataset.filter;
+      refreshMenu();
+    } else if (action === 'menu') openMenu(button.dataset.menu);
     else if (action === 'visit-npc') requestNpc(button.dataset.npc);
     else if (['accept-quest', 'turn-in', 'buy-supply', 'use-supply'].includes(action)) {
       let result;

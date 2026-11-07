@@ -1,6 +1,6 @@
 # Everwild roadmap
 
-This roadmap records development areas, not a delivery schedule.
+The active goal, acceptance criteria, and prioritized work are in [DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md). This history records development areas, not a delivery schedule.
 
 ## 0.2: playable foundation
 
@@ -15,6 +15,10 @@ Spell progression adds Frost Lance at level 3 and Ember Nova at level 5, with te
 ## 0.3.1: impact and discovery
 
 A separate world render pass adds light pixelation without reducing interface clarity. Optional synthesized impact, spell, and discovery sounds accompany hit reactions and item discovery banners. Presentation preferences persist separately from character saves. Reduced motion removes recoil and particle travel. This is an initial presentation pass; original character sprites, environmental artwork, and a fuller soundscape remain future work.
+
+## 0.4: illustrated Willowmere
+
+Integrated painterly pixel atlases replace the trees, village buildings, characters, companions, NPC portraits, and spell/item icons. Equipment slots, filters, comparison gains/losses, named drop origins, and active properties explain loot. Spell profiles share combat calculations and display current and next-rank benefits. Four relic properties add mana recovery, companion protection, longer control, and stronger shielding. Further environmental art, animation, effects, and observed balancing remain open in the active development plan.
 
 ## Next: make repeated expeditions richer
 

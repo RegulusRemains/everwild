@@ -5,6 +5,8 @@ import { fileURLToPath } from 'node:url';
 
 const root = await realpath(fileURLToPath(new URL('../', import.meta.url)));
 const publicFiles = new Map([
+  ['/assets/woodland-atlas.webp', ['assets/woodland-atlas.webp', 'image/webp']],
+  ['/assets/arcana-atlas.webp', ['assets/arcana-atlas.webp', 'image/webp']],
   ['/index.html', ['index.html', 'text/html; charset=utf-8']],
   ['/styles.css', ['styles.css', 'text/css; charset=utf-8']],
   ['/src/engine.js', ['src/engine.js', 'text/javascript; charset=utf-8']],
@@ -106,3 +108,4 @@ server.listen(options.port, options.host, () => {
   console.log(`Everwild is ready at http://${host}:${options.port}`);
   console.log('Press Ctrl+C to stop.');
 });
+

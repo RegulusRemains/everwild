@@ -7,7 +7,7 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '0.3.1';
+  const VERSION = '0.4.0';
   const WORLD = Object.freeze({ w: 1900, h: 1350, spawn: Object.freeze({ x: 260, y: 250 }), bindstone: Object.freeze({ x: 202, y: 214 }) });
   const CAMPS = Object.freeze([
     { id: 'briar', name: 'Briarwatch', x: 710, y: 350, type: 'goblin', n: 4, level: 1, delay: 45, namedName: 'Grik the Hoarder', rareItemId: 'griks-lucky-charm', description: 'A ragged goblin lookout watches the old trade road.', roleHint: 'Pull the western scout alone. Move out of Grik’s marked ground slam.' },
@@ -34,22 +34,22 @@
     { id: 'earth-pet', name: 'Earth Pet', cost: 45, cast: 3.2, key: '1', description: 'Summon a sturdy elemental. Order it to attack with F; recall it with G.' },
     { id: 'fire-bolt', name: 'Fire Bolt', cost: 19, cast: 1.7, key: '2', description: 'Strike your selected enemy with fire. Range: 330 paces.' },
     { id: 'burning-mark', name: 'Burning Mark', cost: 26, cast: 2.3, key: '3', description: 'Mark an enemy with fire that burns every two seconds for 14 seconds.' },
-    { id: 'arcane-root', name: 'Arcane Root', cost: 24, cast: 1.2, key: '4', description: 'Interrupt an enemy’s special attack and hold it in place for nine seconds. Rooted enemies can still make normal attacks nearby.' },
+    { id: 'arcane-root', name: 'Arcane Root', cost: 24, cast: 1.2, key: '4', description: 'Interrupt an enemy’s special attack and hold it in place. Duration improves with ranks and relics. Rooted enemies can still make normal attacks nearby.' },
     { id: 'pet-mend', name: 'Pet Mend', cost: 28, cast: 2.5, key: '5', description: 'Restore your elemental’s health. Range: 360 paces.' },
     { id: 'air-pet', name: 'Air Pet', cost: 48, cast: 3, key: '6', description: 'Summon a swift elemental with stronger attacks and less endurance.' },
-    { id: 'magic-shield', name: 'Magic Shield', cost: 25, cast: 1.2, key: '7', description: 'Reduce incoming damage by 45% for 24 seconds.' },
+    { id: 'magic-shield', name: 'Magic Shield', cost: 25, cast: 1.2, key: '7', description: 'Absorb incoming damage. Ranks extend the duration; Warden’s Boneguard strengthens protection.' },
     { id: 'minor-heal', name: 'Minor Heal', cost: 32, cast: 2.5, key: '8', description: 'Restore your health. Being hit does not interrupt a spell; moving does.' },
-    { id: 'frost-lance', name: 'Frost Lance', cost: 24, cast: 1.9, key: '', unlockLevel: 3, description: 'Strike an enemy with ice and slow its movement by 45% for six seconds. Range: 330 paces.' },
+    { id: 'frost-lance', name: 'Frost Lance', cost: 24, cast: 1.9, key: '', unlockLevel: 3, description: 'Strike an enemy with ice and slow its movement by 45%. Gravebinding extends the chill. Range: 330 paces.' },
     { id: 'ember-nova', name: 'Ember Nova', cost: 38, cast: 2.6, key: '', unlockLevel: 5, description: 'Burst into flame around your selected enemy, damaging foes within 100 paces. Nearby allies may join the fight.' }
   ].map(spell => Object.freeze({ unlockLevel: 1, ...spell })));
   const ITEMS = Object.freeze({
     'goblin-talisman': Object.freeze({ id: 'goblin-talisman', name: 'Goblin Talisman', slot: 'charm', rarity: 'common', description: 'A surprisingly warm knot of polished roots.', stats: Object.freeze({ hp: 12 }) }),
     'cracked-bone-wand': Object.freeze({ id: 'cracked-bone-wand', name: 'Cracked Bone Wand', slot: 'focus', rarity: 'common', description: 'A splintered focus that still remembers its magic.', stats: Object.freeze({ power: 3, mp: 8 }) }),
     'copperleaf-ring': Object.freeze({ id: 'copperleaf-ring', name: 'Copperleaf Ring', slot: 'ring', rarity: 'common', description: 'A copper band etched with tiny leaves.', stats: Object.freeze({ mp: 10 }) }),
-    'griks-lucky-charm': Object.freeze({ id: 'griks-lucky-charm', name: 'Grik’s Lucky Charm', slot: 'charm', rarity: 'rare', description: 'Grik carried this charm through a hundred narrow escapes.', stats: Object.freeze({ hp: 24, power: 2 }) }),
-    'ring-of-bound-earth': Object.freeze({ id: 'ring-of-bound-earth', name: 'Ring of Bound Earth', slot: 'ring', rarity: 'rare', description: 'A quiet pulse of elemental magic lives inside the stone.', stats: Object.freeze({ hp: 10, mp: 18 }) }),
-    'othreks-focus': Object.freeze({ id: 'othreks-focus', name: 'Othrek’s Runebone Focus', slot: 'focus', rarity: 'rare', description: 'A rune-carved relic recovered from the heart of the crypt.', stats: Object.freeze({ power: 7, mp: 16 }) }),
-    'warden-boneguard': Object.freeze({ id: 'warden-boneguard', name: 'Warden’s Boneguard', slot: 'charm', rarity: 'rare', description: 'The Bonewarden’s carved ward carries the resolve of the old crypt guardians.', stats: Object.freeze({ hp: 32, power: 4 }) }),
+    'griks-lucky-charm': Object.freeze({ id: 'griks-lucky-charm', effectName: 'Second Wind', effect: 'Restore 6 mana after each kill credited to you or your elemental.', name: 'Grik’s Lucky Charm', slot: 'charm', rarity: 'rare', description: 'Grik carried this charm through a hundred narrow escapes.', stats: Object.freeze({ hp: 24, power: 2 }) }),
+    'ring-of-bound-earth': Object.freeze({ id: 'ring-of-bound-earth', effectName: 'Stonebound', effect: 'Your elemental takes 20% less damage while this ring is equipped.', name: 'Ring of Bound Earth', slot: 'ring', rarity: 'rare', description: 'A quiet pulse of elemental magic lives inside the stone.', stats: Object.freeze({ hp: 10, mp: 18 }) }),
+    'othreks-focus': Object.freeze({ id: 'othreks-focus', effectName: 'Gravebinding', effect: 'Arcane Root and Frost Lance hold their effects for 3 additional seconds.', name: 'Othrek’s Runebone Focus', slot: 'focus', rarity: 'rare', description: 'A rune-carved relic recovered from the heart of the crypt.', stats: Object.freeze({ power: 7, mp: 16 }) }),
+    'warden-boneguard': Object.freeze({ id: 'warden-boneguard', effectName: 'Warden’s Resolve', effect: 'Magic Shield absorbs 55% of incoming damage instead of 45%.', name: 'Warden’s Boneguard', slot: 'charm', rarity: 'rare', description: 'The Bonewarden’s carved ward carries the resolve of the old crypt guardians.', stats: Object.freeze({ hp: 32, power: 4 }) }),
     'apprentice-focus': Object.freeze({ id: 'apprentice-focus', name: 'Apprentice’s Willow Focus', slot: 'focus', rarity: 'common', description: 'Rowan’s thanks for a safer road: a simple focus carved from Willowmere timber.', stats: Object.freeze({ power: 2, mp: 6 }) })
   });
   const MAX_LEVEL = 20;
@@ -220,6 +220,42 @@
       let result;
       try { result = this.random(); } catch (_) { result = 0.5; }
       return numeric(result, 0.5, 0, 0.999999999);
+    }
+
+    hasEquipped(id) {
+      return Object.values(this.player.equipment).includes(id);
+    }
+
+    spellProfile(index, rank = this.player.spellRanks[index]) {
+      if (!Number.isInteger(index) || index < 0 || index >= SPELLS.length) return null;
+      rank = whole(rank, 1, 1, 3);
+      const level = this.player.level, power = this.player.power, bonus = 1 + (rank - 1) * 0.15;
+      const binding = this.hasEquipped('othreks-focus') ? 3 : 0;
+      const profile = { rank };
+      if (index === 0 || index === 5) {
+        const earth = index === 0;
+        profile.petHp = Math.round((earth ? 95 + level * 19 : 65 + level * 14) * bonus);
+        profile.petDamage = Math.round((earth ? 10 + level * 4 : 14 + level * 5) * (1 + (rank - 1) * 0.12));
+        profile.summary = `${profile.petHp} pet health · ${profile.petDamage} damage per strike · ${earth ? '1.65' : '1.45'}s between strikes`;
+      } else if ([1, 8, 9].includes(index)) {
+        profile.damage = Math.round((index === 1 ? 24 + level * 9 + power : index === 8 ? 18 + level * 8 + power : 20 + level * 6 + power) * bonus);
+        profile.slow = 6 + binding;
+        profile.summary = `${profile.damage} damage${index === 8 ? ' · slows movement for ' + profile.slow + 's' : index === 9 ? ' per enemy within 100 paces' : ' to one enemy'}`;
+      } else if (index === 2) {
+        profile.tickDamage = Math.round((7 + level * 2 + power * 0.4) * bonus);
+        profile.summary = `${profile.tickDamage} damage every 2s for 14s · reapplying refreshes the mark`;
+      } else if (index === 3) {
+        profile.root = 9 + (rank - 1) * 2 + binding;
+        profile.summary = `${profile.root}s root · interrupts special attacks · may be resisted`;
+      } else if (index === 4 || index === 7) {
+        profile.heal = Math.round((index === 4 ? 60 + level * 10 + power : 35 + level * 9 + power) * bonus);
+        profile.summary = `Restores up to ${profile.heal} ${index === 4 ? 'pet' : 'personal'} health`;
+      } else if (index === 6) {
+        profile.shield = this.hasEquipped('warden-boneguard') ? 55 : 45;
+        profile.duration = 24 + (rank - 1) * 6;
+        profile.summary = `Absorbs ${profile.shield}% of incoming damage for ${profile.duration}s`;
+      }
+      return profile;
     }
 
     _refreshStats() {
@@ -496,19 +532,18 @@
       }
       if (this.player.mp < spell.cost) return;
       this.player.mp -= spell.cost;
-      const power = this.player.power;
-      const bonus = 1 + (rank - 1) * 0.15;
+      const profile = this.spellProfile(pending.i, rank);
       switch (pending.i) {
         case 0: case 5: this._summon(pending.i === 0 ? 'Earth' : 'Air', rank); break;
         case 1:
           this._visual('bolt', target, { fromX: this.player.x, fromY: this.player.y, radius: 14, color: '#f3a05e', life: 0.5 });
-          this._damageMob(target, Math.round((24 + this.player.level * 9 + power) * bonus), 'player');
+          this._damageMob(target, profile.damage, 'player');
           this.log('Fire Bolt strikes ' + target.name + '.', 'combat');
           break;
         case 2:
           target.dotUntil = this.clock + 14;
           target.dotAt = this.clock + 2;
-          target.dotDamage = Math.round((7 + this.player.level * 2 + power * 0.4) * bonus);
+          target.dotDamage = profile.tickDamage;
           this._engage(target, 'player', 8, true);
           this._visual('bolt', target, { fromX: this.player.x, fromY: this.player.y, radius: 24, color: '#d88b7a', life: 0.65 });
           this._effect(target, 'Burning', '#efa17a');
@@ -521,7 +556,7 @@
             this._effect(target, 'Resisted', '#e99a84');
             this.log(target.name + ' resists Arcane Root.', 'warning');
           } else {
-            target.rootUntil = this.clock + 9 + (rank - 1) * 2;
+            target.rootUntil = this.clock + profile.root;
             if (target.intent) {
               this.log('Arcane Root interrupts ' + target.name + '’s ' + target.intent.name + '!', 'success');
               target.intent = null;
@@ -535,36 +570,36 @@
           break;
         }
         case 4: {
-          const restored = this._heal(this.pet, Math.round((60 + this.player.level * 10 + power) * bonus));
+          const restored = this._heal(this.pet, profile.heal);
           this._visual('heal', this.pet, { fromX: this.player.x, fromY: this.player.y, radius: 35, color: '#aecf9e' });
           this._healingThreat(restored * 0.2);
           this.log('Pet Mend restores ' + restored + ' health to your elemental.', 'success');
           break;
         }
         case 6:
-          this.shieldUntil = this.clock + 24 + (rank - 1) * 6;
+          this.shieldUntil = this.clock + profile.duration;
           this._visual('heal', this.player, { radius: 38, color: '#abd8ed', life: 0.9 });
           this._effect(this.player, 'Shield', '#abd8ed');
           this.log('A magic shield surrounds you.', 'success');
           break;
         case 7: {
-          const restored = this._heal(this.player, Math.round((35 + this.player.level * 9 + power) * bonus));
+          const restored = this._heal(this.player, profile.heal);
           this._visual('heal', this.player, { radius: 32, color: '#aecf9e' });
           this._healingThreat(restored * 0.25);
           this.log('Minor Heal restores ' + restored + ' health.', 'success');
           break;
         }
         case 8:
-          target.slowUntil = this.clock + 6;
+          target.slowUntil = this.clock + profile.slow;
           this._visual('bolt', target, { fromX: this.player.x, fromY: this.player.y, radius: 17, color: '#a7d9e7', life: 0.55 });
-          this._damageMob(target, Math.round((18 + this.player.level * 8 + power) * bonus), 'player');
-          this.log('Frost Lance chills ' + target.name + ' for six seconds.', 'combat');
+          this._damageMob(target, profile.damage, 'player');
+          this.log('Frost Lance chills ' + target.name + ' for ' + profile.slow + ' seconds.', 'combat');
           break;
         case 9: {
           const center = { x: target.x, y: target.y };
           const victims = this.mobs.filter(mob => mob.alive && !mob.returning && distance(mob, center) <= 100);
           this._visual('nova', center, { radius: 100, color: '#edaa70', life: 0.85 });
-          const damage = Math.round((20 + this.player.level * 6 + power) * bonus);
+          const damage = profile.damage;
           for (const victim of victims) this._damageMob(victim, damage, 'player');
           this.log('Ember Nova strikes ' + victims.length + (victims.length === 1 ? ' enemy.' : ' enemies.'), 'combat');
           break;
@@ -595,11 +630,12 @@
     _summon(type, rank) {
       this._clearPetThreat();
       const earth = type === 'Earth';
-      const maxHp = Math.round((earth ? 95 + this.player.level * 19 : 65 + this.player.level * 14) * (1 + (rank - 1) * 0.15));
+      const profile = this.spellProfile(earth ? 0 : 5, rank);
+      const maxHp = profile.petHp;
       this.pet = {
         id: 'pet-' + ++this._uid, type, x: this.player.x - 32, y: this.player.y + 28,
         hp: maxHp, maxHp, targetId: null, attackAt: this.clock, mode: 'guard', tauntReadyAt: this.clock,
-        damage: Math.round((earth ? 10 + this.player.level * 4 : 14 + this.player.level * 5) * (1 + (rank - 1) * 0.12)),
+        damage: profile.petDamage,
         speed: earth ? 152 : 185
       };
       this._visual('heal', this.pet, { radius: 42, color: earth ? '#c0c599' : '#a6d3da', life: 1 });
@@ -770,6 +806,11 @@
       if (this.selectedId === mob.id) this.selectedId = null;
       if (this.pet && this.pet.targetId === mob.id) this.pet.targetId = null;
       this.player.kills++;
+      if (this.hasEquipped('griks-lucky-charm')) {
+        const restored = Math.min(6, this.player.maxMp - this.player.mp);
+        this.player.mp += restored;
+        if (restored > 0) this._effect(this.player, '+' + Math.round(restored) + ' mana · Second Wind', '#a6c6e6');
+      }
       const modifier = clamp(1 + (mob.level - this.player.level) * 0.16, 0.25, 1.8);
       const xp = Math.max(2, Math.round((15 + mob.level * 7) * modifier * (mob.named ? 1.5 : 1)));
       const copper = Math.floor(3 + this._roll() * 5 + mob.level * 1.5 + (mob.named ? 12 : 0));
@@ -845,7 +886,7 @@
       if (this.dead) return;
       this._recentCombat = this.clock;
       if (this.meditate) { this.meditate = false; this.log('Taking damage ends your meditation.', 'warning'); }
-      const damage = Math.max(1, Math.round(amount * (this.shieldUntil > this.clock ? 0.55 : 1)));
+      const damage = Math.max(1, Math.round(amount * (this.shieldUntil > this.clock ? (this.hasEquipped('warden-boneguard') ? 0.45 : 0.55) : 1)));
       this.player.hp = Math.max(0, this.player.hp - damage);
       this._impact(this.player, damage, 'enemy');
       this._effect(this.player, '−' + damage, '#ef9c90');
@@ -856,6 +897,7 @@
     _takePetDamage(amount) {
       const pet = this.pet;
       if (!pet || this.dead) return;
+      amount = Math.max(1, Math.round(amount * (this.hasEquipped('ring-of-bound-earth') ? 0.8 : 1)));
       pet.hp = Math.max(0, pet.hp - amount);
       this._impact(pet, amount, 'enemy');
       this._effect(pet, '−' + amount, '#efb691');

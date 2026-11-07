@@ -74,6 +74,10 @@ async function main() {
     const response = await page.goto(started.url);
     assert.equal(response.status(), 200);
     await page.waitForFunction(() => Boolean(window.everwild?.game));
+    assert.equal(await page.evaluate(() => window.everwild.renderer.artReady), true, 'Illustrated world art must load');
+    const atlasResponse = await page.request.get(new URL('assets/arcana-atlas.webp', started.url).href);
+    assert.equal(atlasResponse.status(), 200);
+    assert.match(atlasResponse.headers()['content-type'], /image\/webp/);
     assert.match(await page.title(), /Everwild/);
     assert.equal(await page.locator('#actionbar button').count(), 8);
 
@@ -289,6 +293,17 @@ async function main() {
       await page.locator(`nav [data-dialog="${menu}"]`).click();
       assert.equal(await page.locator('#menu-dialog').evaluate(dialog => dialog.open), true);
       assert.ok((await page.locator('#dialog-content').textContent()).trim().length > 0);
+      if (menu === 'inventory') {
+        assert.equal(await page.locator('.gear-slot').count(), 3);
+        await page.locator('[data-filter="focus"]').click();
+        const names = await page.locator('.item-card .eyebrow').allTextContents();
+        assert.ok(names.every(name => name.includes('FOCUS')));
+        await page.locator('[data-filter="all"]').click();
+      } else if (menu === 'spellbook') {
+        assert.equal(await page.locator('.spell-numbers').count(), 10);
+        assert.match(await page.locator('.spell-numbers').first().textContent(), /pet health/);
+      }
+      await page.screenshot({ path: path.join(screenshots, menu + '.png'), fullPage: true });
       await page.locator('#dialog-close').click();
     }
 
@@ -306,6 +321,13 @@ async function main() {
     assert.equal(await page.locator('#menu-dialog').evaluate(dialog => dialog.open), true);
     await page.locator('#dialog-close').click();
     await page.screenshot({ path: path.join(screenshots, 'mobile.png'), fullPage: true });
+    for (const menu of ['inventory', 'spellbook']) {
+      await page.evaluate(menu => window.everwild.openMenu(menu), menu);
+      const overflow = await page.locator('#dialog-content').evaluate(el => el.scrollWidth - el.clientWidth);
+      assert.ok(overflow <= 1, menu + ' must fit the mobile dialog');
+      await page.screenshot({ path: path.join(screenshots, 'mobile-' + menu + '.png'), fullPage: true });
+      await page.locator('#dialog-close').click();
+    }
     assert.deepEqual(errors, [], 'The browser must not report runtime or console errors');
     console.log('Browser smoke passed: controls, NPC dialogue, quest rewards, equipment, spell assignment, pet guard/taunt, tonic purchase/cooldown, save/reload, and mobile layout.');
     console.log(`Screenshots: ${screenshots}`);

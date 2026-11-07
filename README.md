@@ -1,10 +1,25 @@
 # Everwild
 
-**Version 0.3.1 — impact and discovery**
+**Version 0.4.0 — illustrated Willowmere**
 
 Everwild is a solo fantasy RPG about exploring a dangerous frontier with a summoned companion. Fight through Willowmere's forest and crypt camps, collect equipment, and grow an earth or air pet into the center of your combat strategy.
 
 The game runs entirely in your browser with HTML, CSS, and JavaScript. It has no runtime dependencies, account requirement, or server-side game state.
+
+## Illustrated Willowmere
+
+Trees, village buildings, villagers, enemies, and elemental companions now use integrated painterly pixel artwork. Spells and items share an illustrated icon atlas. The pack shows three equipped slots, filters, item lore, drop origins, and stat gains and losses when replacing gear. The spellbook shows actual current strength and next-rank benefits; previews use the same calculations as combat.
+
+Named relics now change play:
+
+| Relic | Equipped property |
+| --- | --- |
+| Grik’s Lucky Charm | Recover up to 6 mana on a kill credited to you or your pet. |
+| Ring of Bound Earth | Your existing or newly summoned pet takes 20% less damage. |
+| Othrek’s Runebone Focus | Arcane Root and Frost Lance last 3 extra seconds. |
+| Warden’s Boneguard | Magic Shield absorbs 55% of damage instead of 45%. |
+
+Replacing an item removes its property. Existing saves gain these properties from their equipped items. Artwork is still single-frame; animation, remaining camp props, effects, and balance work are tracked in the [development plan](docs/DEVELOPMENT_PLAN.md). Asset specifications are in [artwork notes](assets/ARTWORK.md).
 
 ## Impact and discovery
 

@@ -67,6 +67,13 @@
       this.worldSurface = canvas(1, 1);
       this.worldCtx = this.worldSurface.getContext('2d');
       this.pixelArt = true;
+      this.atlas = new Image();
+      this.atlasLoaded = false;
+      this.artReady = new Promise(resolve => {
+        this.atlas.onload = () => { this.atlasLoaded = this.atlas.naturalWidth > 0; resolve(this.atlasLoaded); };
+        this.atlas.onerror = () => resolve(false); // Procedural art remains a playable fallback.
+      });
+      this.atlas.src = 'assets/woodland-atlas.webp';
       this.camera = { x: 0, y: 0 };
       this.width = 1; this.height = 1; this.dpr = 1; this.zoom = 1.3;
       this.motionPreference = typeof root.matchMedia === 'function' ? root.matchMedia('(prefers-reduced-motion: reduce)') : null;
@@ -77,6 +84,15 @@
       this.terrain = this._terrain();
       this.mapTexture = this._mapTexture();
       this.resize(surface.clientWidth || surface.width || 960, surface.clientHeight || surface.height || 620);
+    }
+
+    _art(c, index, x, y, height) {
+      if (!this.atlasLoaded) return false;
+      const boxes = [[2, 7, 311, 298], [342, 0, 259, 306], [643, 4, 279, 302], [957, 7, 291, 300], [1, 330, 313, 275], [329, 326, 280, 274], [632, 332, 297, 268], [979, 324, 242, 290], [51, 634, 199, 271], [325, 633, 280, 307], [650, 629, 248, 280], [994, 675, 224, 220], [56, 941, 173, 298], [357, 940, 196, 299], [640, 948, 247, 289], [1005, 954, 181, 285]];
+      const [sx, sy, sw, sh] = boxes[index];
+      const width = height * sw / sh;
+      c.drawImage(this.atlas, sx, sy, sw, sh, Math.round(x - width / 2), Math.round(y - height), width, height);
+      return true;
     }
 
     resize(width, height, dpr = 1) {
@@ -103,10 +119,10 @@
 
     _terrain() {
       const image = canvas(WORLD.w, WORLD.h), c = image.getContext('2d'), r = random(47629);
-      c.fillStyle = '#36583b'; c.fillRect(0, 0, WORLD.w, WORLD.h);
+      c.fillStyle = '#284b3b'; c.fillRect(0, 0, WORLD.w, WORLD.h);
       for (let i = 0; i < 1500; i++) {
         ellipse(c, r() * WORLD.w, r() * WORLD.h, 8 + r() * 80, 4 + r() * 37,
-          ['#67824b13', '#203f3020', '#81945b12', '#193d2c1a'][i % 4]);
+          ['#6d88551a', '#112e3025', '#96a7760c', '#193d331a'][i % 4]);
       }
       for (const place of [WORLD.spawn, ...CAMPS]) {
         const glow = c.createRadialGradient(place.x, place.y, 15, place.x, place.y, 210);
@@ -292,7 +308,7 @@
         if (object.kind === 'tree') {
           const occludes = actors.some(({ entity: e }) => Math.abs(e.x - object.x) < 48 * object.scale + 8 && e.y < object.y + 15 && e.y > object.y - 155 * object.scale);
           c.globalAlpha = occludes ? 0.25 : 1;
-          c.drawImage(this.treeSprites[object.sprite], object.x - 64 * object.scale, object.y - 155 * object.scale, 128 * object.scale, 168 * object.scale);
+          if (!this._art(c, object.sprite % 4, object.x, object.y, 156 * object.scale)) c.drawImage(this.treeSprites[object.sprite], object.x - 64 * object.scale, object.y - 155 * object.scale, 128 * object.scale, 168 * object.scale);
         } else if (object.kind === 'lodge') this._lodge(c, object.x, object.y, p);
         else if (object.kind === 'stone') this._bindstone(c, object.x, object.y, motionTime, p);
         else if (object.kind === 'camp') this._camp(c, object.camp, motionTime, actors.filter(actor => actor.kind !== 'mob' || actor.entity.aggro || actor.entity.id === game.selectedId));
@@ -514,6 +530,11 @@
 
     _villageProp(c, prop, game) {
       const { x, y, kind } = prop;
+      if (this.atlasLoaded && (kind === 'market' || kind === 'study')) {
+        if ([game.player, game.pet].some(actor => actor && Math.abs(actor.x - x) < 55 && actor.y < y + 5 && actor.y > y - 95)) c.globalAlpha = 0.3;
+        this._art(c, kind === 'market' ? 5 : 6, x, y, kind === 'market' ? 105 : 98);
+        return;
+      }
       c.translate(x, y); c.lineWidth = 1; c.lineJoin = 'round';
       if (kind === 'market') {
         if ([game.player, game.pet].some(actor => actor && Math.abs(actor.x - x) < 52 && actor.y > y - 82 && actor.y < y + 6)) c.globalAlpha = 0.3;
@@ -559,6 +580,7 @@
     }
 
     _villager(c, npc) {
+      if (this._art(c, npc.id === 'rowan' ? 13 : npc.id === 'liora' ? 14 : 15, npc.x, npc.y, 48)) return;
       c.translate(npc.x, npc.y); c.lineWidth = 1; c.lineJoin = 'round'; c.lineCap = 'round';
       ellipse(c, 1, 2, 13, 5, '#10292165');
       line(c, [[-5, -9], [-5, 0], [-8, 0]], '#4c4635', 4); line(c, [[5, -9], [5, 0], [9, 0]], '#4c4635', 4);
@@ -624,6 +646,10 @@
     }
 
     _lodge(c, x, y, player) {
+      if (this.atlasLoaded) {
+        if (Math.abs(player.x - x) < 80 && player.y < y + 5 && player.y > y - 130) c.globalAlpha = 0.35;
+        this._art(c, 4, x, y, 140); return;
+      }
       c.translate(x, y);
       if (Math.abs(player.x - x) < 70 && player.y < y + 5 && player.y > y - 110) c.globalAlpha = 0.4;
       ellipse(c, 11, 7, 77, 18, '#152b2540');
@@ -646,6 +672,15 @@
     }
 
     _bindstone(c, x, y, time, player) {
+      if (this.atlasLoaded) {
+        const glow = c.createRadialGradient(x, y - 30, 2, x, y - 30, 45);
+        glow.addColorStop(0, '#9bdfd22e'); glow.addColorStop(1, '#9bdfd200');
+        c.fillStyle = glow; c.fillRect(x - 45, y - 75, 90, 90);
+        this._art(c, 7, x, y, 66);
+        text(c, 'Bindstone', x, y + 22, 11, '#d9e1bb', true);
+        if (Math.hypot(player.x - x, player.y - y) <= 80) text(c, '[ E ] REST & RESTORE', x, y - 78, 6.5, '#bdcda8');
+        return;
+      }
       c.translate(x, y);
       const glow = c.createRadialGradient(0, -20, 2, 0, -20, 47);
       glow.addColorStop(0, '#b9e0bc37'); glow.addColorStop(1, '#a6d5ad00'); c.fillStyle = glow; c.fillRect(-47, -67, 94, 94);
@@ -719,7 +754,11 @@
       const hit = Math.max(0, (entity.hitUntil || 0) - time) / 0.22;
       c.save(); c.translate(this.reducedMotion ? 0 : Math.sin(hit * Math.PI * 2) * 3, bob);
       if (hit > 0) c.filter = 'brightness(' + (1 + hit * 0.65) + ')';
-      if (kind === 'player') this._magician(c, game, time);
+      if (this.atlasLoaded) {
+        const index = kind === 'player' ? 8 : kind === 'pet' ? (entity.type === 'Earth' ? 9 : 10) : entity.type === 'goblin' ? 11 : 12;
+        if (kind === 'mob' && entity.returning) c.globalAlpha = 0.55;
+        this._art(c, index, 0, 0, kind === 'pet' ? 51 : entity.named ? 52 : 44);
+      } else if (kind === 'player') this._magician(c, game, time);
       else if (kind === 'pet') this._elemental(c, entity, motionTime);
       else {
         if (entity.named) c.scale(1.13, 1.13);
