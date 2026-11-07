@@ -54,7 +54,7 @@ test('the opening loop supports summoning, exploration, a solo pet kill, loot, a
   const sentry = firstSentry(game);
   game.setTarget(sentry.id);
   assert.equal(game.commandPet('attack').ok, true);
-  advance(game, 9);
+  for (let elapsed = 0; sentry.alive && elapsed < 25; elapsed += 0.1) advance(game, 0.1);
 
   assert.equal(sentry.alive, false);
   assert.equal(game.dead, false);
@@ -392,3 +392,4 @@ test('reload near fresh guards returns living characters to safety without reviv
   assert.equal(fallen.player.hp, 0);
   assert.equal(fallen.player.debt, 21);
 });
+

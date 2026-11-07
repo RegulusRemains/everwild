@@ -7,7 +7,7 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '0.4.0';
+  const VERSION = '0.5.0';
   const WORLD = Object.freeze({ w: 1900, h: 1350, spawn: Object.freeze({ x: 260, y: 250 }), bindstone: Object.freeze({ x: 202, y: 214 }) });
   const CAMPS = Object.freeze([
     { id: 'briar', name: 'Briarwatch', x: 710, y: 350, type: 'goblin', n: 4, level: 1, delay: 45, namedName: 'Grik the Hoarder', rareItemId: 'griks-lucky-charm', description: 'A ragged goblin lookout watches the old trade road.', roleHint: 'Pull the western scout alone. Move out of Grik’s marked ground slam.' },
@@ -87,6 +87,7 @@
       this.logs = [];
       this.effects = [];
       this.visuals = [];
+      this.remains = [];
       this._visualId = 0;
       this._uid = 0;
       this._logId = 0;
@@ -302,7 +303,7 @@
       slot.misses = named ? 0 : slot.misses + 1;
       slot.count++;
       const level = camp.level + (named ? 1 : 0);
-      const maxHp = Math.round((camp.type === 'goblin' ? 42 + level * 13 : 50 + level * 15) * (named ? 1.65 : 1));
+      const maxHp = Math.round((camp.type === 'goblin' ? 42 + level * 13 : 50 + level * 15) * (named ? 4.125 : 2));
       const names = camp.type === 'goblin' ? ['Goblin Scout', 'Goblin Raider', 'Goblin Shaman'] : ['Crypt Skeleton', 'Crypt Guardian', 'Crypt Acolyte'];
       const mob = {
         id: 'mob-' + ++this._uid, x: slot.x, y: slot.y, homeX: slot.x, homeY: slot.y,
@@ -312,7 +313,7 @@
         rootUntil: 0, dotUntil: 0, slowUntil: 0, returning: false,
         threatPlayer: 0, threatPet: 0, targetId: null,
         attackAt: 0, dotAt: 0, dotDamage: 0, _slot: slot,
-        damage: Math.round((4 + level * 2.2) * (named ? 1.15 : 1)),
+        damage: Math.round((4 + level * 2.2) * (named ? 1.72 : 1.5)),
         ability: null, intent: null, abilityReadyAt: 0
       };
       mob.ability = named ? (camp.id === 'mossfang' ? 'heal' : camp.id === 'vigil' ? 'hex' : 'slam')
@@ -638,7 +639,7 @@
         damage: profile.petDamage,
         speed: earth ? 152 : 185
       };
-      this._visual('heal', this.pet, { radius: 42, color: earth ? '#c0c599' : '#a6d3da', life: 1 });
+      this._visual('summon', this.pet, { radius: 42, color: earth ? '#c0c599' : '#a6d3da', life: 1.2 });
       this._effect(this.pet, type + ' elemental', '#bad6ae');
       this.log('Your ' + type.toLowerCase() + ' elemental is guarding you. Send it to attack [F], or use Follow [G] to make it passive.', 'success');
     }
@@ -793,9 +794,23 @@
       });
     }
 
+    _strike(attacker, target) {
+      attacker.strikeAt = this.clock;
+      attacker.strikeUntil = this.clock + 0.55;
+      if (Math.abs(target.x - attacker.x) > 1) attacker.facing = target.x > attacker.x ? 1 : -1;
+      this._visual('melee', target, { fromX: attacker.x, fromY: attacker.y, sourceId: attacker.id,
+        color: attacker.type === 'Air' ? '#b0e4ed' : attacker.type === 'Earth' ? '#d2c594' : '#efbd92', life: 0.35 });
+    }
+
+    _fall(entity, kind) {
+      this.remains.push({ ...entity, kind, life: 1.4, maxLife: 1.4 });
+      if (this.remains.length > 24) this.remains.shift();
+    }
+
     _kill(mob) {
       if (!mob.alive) return;
       mob.alive = false;
+      this._fall(mob, 'mob');
       mob.aggro = false;
       mob.dotUntil = 0;
       mob.rootUntil = 0;
@@ -902,6 +917,7 @@
       this._impact(pet, amount, 'enemy');
       this._effect(pet, '−' + amount, '#efb691');
       if (pet.hp <= 0) {
+        this._fall(pet, 'pet');
         this.log('Your ' + pet.type.toLowerCase() + ' elemental crumbles. Summon another or retreat.', 'danger');
         this.pet = null;
         this._clearPetThreat();
@@ -934,6 +950,7 @@
       this.meditate = false;
       this.shieldUntil = 0;
       this.cancelMovement();
+      this.remains = [];
       this._recentCombat = -100;
       for (const mob of this.mobs) {
         if (!mob.alive) continue;
@@ -949,6 +966,8 @@
       const gap = distance(entity, target);
       if (gap <= stop || gap === 0) return false;
       const amount = Math.min(speed * dt, gap - stop);
+      if (Math.abs(target.x - entity.x) > 1) entity.facing = target.x > entity.x ? 1 : -1;
+      entity.walkUntil = this.clock + 0.1;
       entity.x += (target.x - entity.x) / gap * amount;
       entity.y += (target.y - entity.y) / gap * amount;
       return amount > 0;
@@ -967,6 +986,7 @@
 
     _step(dt, input) {
       this.clock += dt;
+      this.remains = this.remains.filter(entity => { entity.life -= dt; return entity.life > 0; });
       this.effects = this.effects.filter(effect => { effect.life -= dt; return effect.life > 0; });
       this.visuals = this.visuals.filter(visual => { visual.life -= dt; return visual.life > 0; });
       this.mobs = this.mobs.filter(mob => mob.alive);
@@ -983,6 +1003,8 @@
         this._interruptCast();
         this.meditate = false;
         const speed = 175 * dt;
+        if (input.dx) this.player.facing = input.dx > 0 ? 1 : -1;
+        this.player.walkUntil = this.clock + 0.1;
         this.player.x = clamp(this.player.x + input.dx / inputLength * speed, 24, WORLD.w - 24);
         this.player.y = clamp(this.player.y + input.dy / inputLength * speed, 24, WORLD.h - 24);
         this._moving = true;
@@ -1025,6 +1047,7 @@
         this._walk(pet, target, pet.speed, dt, 29);
         if (distance(pet, target) <= 35 && this.clock >= pet.attackAt) {
           pet.attackAt = this.clock + (pet.type === 'Air' ? 1.45 : 1.65);
+          this._strike(pet, target);
           this._damageMob(target, pet.damage, 'pet');
         }
       } else {
@@ -1119,6 +1142,7 @@
       if (mob.rootUntil <= this.clock) this._walk(mob, target, (86 + mob.level * 2) * (mob.slowUntil > this.clock ? 0.55 : 1), dt, 30);
       if (distance(mob, target) <= 35 && this.clock >= mob.attackAt) {
         mob.attackAt = this.clock + 2.2;
+        this._strike(mob, target);
         if (attacksPet) this._takePetDamage(mob.damage);
         else this._takePlayerDamage(mob.damage, mob);
       }

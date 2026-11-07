@@ -5,6 +5,11 @@ import { fileURLToPath } from 'node:url';
 
 const root = await realpath(fileURLToPath(new URL('../', import.meta.url)));
 const publicFiles = new Map([
+  ['/assets/floor-atlas.webp', ['assets/floor-atlas.webp', 'image/webp']],
+  ['/assets/environment-atlas.webp', ['assets/environment-atlas.webp', 'image/webp']],
+  ['/assets/walk-atlas.webp', ['assets/walk-atlas.webp', 'image/webp']],
+  ['/assets/action-atlas.webp', ['assets/action-atlas.webp', 'image/webp']],
+  ['/assets/extra-arcana.webp', ['assets/extra-arcana.webp', 'image/webp']],
   ['/assets/woodland-atlas.webp', ['assets/woodland-atlas.webp', 'image/webp']],
   ['/assets/arcana-atlas.webp', ['assets/arcana-atlas.webp', 'image/webp']],
   ['/index.html', ['index.html', 'text/html; charset=utf-8']],

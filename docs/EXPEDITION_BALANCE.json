@@ -1,0 +1,678 @@
+{
+  "scope": "Fresh character, public actions only, no injected health/levels/positions/resources, one save/reload before the crypt. Each route returns to the village between encounters. These scripted runs do not measure human learning or exploration time.",
+  "reports": [
+    {
+      "fights": [
+        {
+          "label": "Goblin Scout",
+          "level": 1,
+          "seconds": 7.35,
+          "startingLevel": 1,
+          "startingHealth": 110,
+          "endingHealth": 110,
+          "startingMana": 120,
+          "endingMana": 68,
+          "lowestPetHp": 96
+        },
+        {
+          "label": "Goblin Raider",
+          "level": 1,
+          "seconds": 7.35,
+          "startingLevel": 1,
+          "startingHealth": 122,
+          "endingHealth": 122,
+          "startingMana": 124,
+          "endingMana": 92,
+          "lowestPetHp": 87
+        },
+        {
+          "label": "Goblin Shaman",
+          "level": 1,
+          "seconds": 8.6,
+          "startingLevel": 1,
+          "startingHealth": 122,
+          "endingHealth": 122,
+          "startingMana": 128,
+          "endingMana": 73,
+          "lowestPetHp": 79
+        },
+        {
+          "label": "Grik the Hoarder",
+          "level": 1,
+          "seconds": 14.65,
+          "startingLevel": 1,
+          "startingHealth": 122,
+          "endingHealth": 122,
+          "startingMana": 137,
+          "endingMana": 6,
+          "lowestPetHp": 58
+        },
+        {
+          "label": "Bramblemaw",
+          "level": 3,
+          "seconds": 16.4,
+          "startingLevel": 2,
+          "startingHealth": 147,
+          "endingHealth": 160,
+          "startingMana": 168,
+          "endingMana": 212,
+          "lowestPetHp": 65
+        },
+        {
+          "label": "The Bonewarden",
+          "level": 4,
+          "seconds": 16.4,
+          "startingLevel": 3,
+          "startingHealth": 170,
+          "endingHealth": 183,
+          "startingMana": 203,
+          "endingMana": 238,
+          "lowestPetHp": 79
+        }
+      ],
+      "milestones": [
+        {
+          "quest": "griks-talisman",
+          "level": 2,
+          "kills": 4,
+          "copper": 121
+        },
+        {
+          "quest": "mossfang",
+          "level": 3,
+          "kills": 5,
+          "copper": 121
+        },
+        {
+          "quest": "crypt-proof",
+          "level": 4,
+          "kills": 6,
+          "copper": 237
+        }
+      ],
+      "interruptions": 4,
+      "travelSeconds": 59.09999999999878,
+      "seed": 42,
+      "companion": "Earth",
+      "completed": true,
+      "final": {
+        "level": 4,
+        "kills": 6,
+        "gold": 237,
+        "equipment": {
+          "charm": "warden-boneguard",
+          "focus": "apprentice-focus",
+          "ring": "ring-of-bound-earth"
+        },
+        "inventory": [
+          "goblin-talisman",
+          "copperleaf-ring",
+          "griks-lucky-charm",
+          "apprentice-focus",
+          "ring-of-bound-earth",
+          "warden-boneguard"
+        ]
+      }
+    },
+    {
+      "fights": [
+        {
+          "label": "Goblin Scout",
+          "level": 1,
+          "seconds": 7.35,
+          "startingLevel": 1,
+          "startingHealth": 110,
+          "endingHealth": 110,
+          "startingMana": 120,
+          "endingMana": 68,
+          "lowestPetHp": 96
+        },
+        {
+          "label": "Goblin Raider",
+          "level": 1,
+          "seconds": 7.35,
+          "startingLevel": 1,
+          "startingHealth": 110,
+          "endingHealth": 110,
+          "startingMana": 134,
+          "endingMana": 102,
+          "lowestPetHp": 87
+        },
+        {
+          "label": "Goblin Shaman",
+          "level": 1,
+          "seconds": 8.6,
+          "startingLevel": 1,
+          "startingHealth": 110,
+          "endingHealth": 110,
+          "startingMana": 138,
+          "endingMana": 83,
+          "lowestPetHp": 79
+        },
+        {
+          "label": "Grik the Hoarder",
+          "level": 1,
+          "seconds": 14.65,
+          "startingLevel": 1,
+          "startingHealth": 110,
+          "endingHealth": 110,
+          "startingMana": 137,
+          "endingMana": 6,
+          "lowestPetHp": 58
+        },
+        {
+          "label": "Bramblemaw",
+          "level": 3,
+          "seconds": 16.4,
+          "startingLevel": 2,
+          "startingHealth": 147,
+          "endingHealth": 160,
+          "startingMana": 168,
+          "endingMana": 212,
+          "lowestPetHp": 65
+        },
+        {
+          "label": "The Bonewarden",
+          "level": 4,
+          "seconds": 16.4,
+          "startingLevel": 3,
+          "startingHealth": 170,
+          "endingHealth": 183,
+          "startingMana": 203,
+          "endingMana": 238,
+          "lowestPetHp": 79
+        }
+      ],
+      "milestones": [
+        {
+          "quest": "griks-talisman",
+          "level": 2,
+          "kills": 4,
+          "copper": 114
+        },
+        {
+          "quest": "mossfang",
+          "level": 3,
+          "kills": 5,
+          "copper": 115
+        },
+        {
+          "quest": "crypt-proof",
+          "level": 4,
+          "kills": 6,
+          "copper": 233
+        }
+      ],
+      "interruptions": 4,
+      "travelSeconds": 59.09999999999878,
+      "seed": 73,
+      "companion": "Earth",
+      "completed": true,
+      "final": {
+        "level": 4,
+        "kills": 6,
+        "gold": 233,
+        "equipment": {
+          "charm": "warden-boneguard",
+          "focus": "apprentice-focus",
+          "ring": "ring-of-bound-earth"
+        },
+        "inventory": [
+          "copperleaf-ring",
+          "griks-lucky-charm",
+          "apprentice-focus",
+          "ring-of-bound-earth",
+          "warden-boneguard"
+        ]
+      }
+    },
+    {
+      "fights": [
+        {
+          "label": "Goblin Scout",
+          "level": 1,
+          "seconds": 7.35,
+          "startingLevel": 1,
+          "startingHealth": 110,
+          "endingHealth": 110,
+          "startingMana": 120,
+          "endingMana": 68,
+          "lowestPetHp": 96
+        },
+        {
+          "label": "Goblin Raider",
+          "level": 1,
+          "seconds": 7.35,
+          "startingLevel": 1,
+          "startingHealth": 122,
+          "endingHealth": 122,
+          "startingMana": 124,
+          "endingMana": 92,
+          "lowestPetHp": 87
+        },
+        {
+          "label": "Goblin Shaman",
+          "level": 1,
+          "seconds": 8.6,
+          "startingLevel": 1,
+          "startingHealth": 122,
+          "endingHealth": 122,
+          "startingMana": 128,
+          "endingMana": 73,
+          "lowestPetHp": 79
+        },
+        {
+          "label": "Grik the Hoarder",
+          "level": 1,
+          "seconds": 14.65,
+          "startingLevel": 1,
+          "startingHealth": 122,
+          "endingHealth": 122,
+          "startingMana": 127,
+          "endingMana": 76,
+          "lowestPetHp": 58
+        },
+        {
+          "label": "Bramblemaw",
+          "level": 3,
+          "seconds": 16.4,
+          "startingLevel": 2,
+          "startingHealth": 147,
+          "endingHealth": 160,
+          "startingMana": 158,
+          "endingMana": 202,
+          "lowestPetHp": 65
+        },
+        {
+          "label": "The Bonewarden",
+          "level": 4,
+          "seconds": 18.45,
+          "startingLevel": 3,
+          "startingHealth": 170,
+          "endingHealth": 183,
+          "startingMana": 203,
+          "endingMana": 210,
+          "lowestPetHp": 82
+        }
+      ],
+      "milestones": [
+        {
+          "quest": "griks-talisman",
+          "level": 2,
+          "kills": 4,
+          "copper": 107
+        },
+        {
+          "quest": "mossfang",
+          "level": 3,
+          "kills": 5,
+          "copper": 104
+        },
+        {
+          "quest": "crypt-proof",
+          "level": 4,
+          "kills": 6,
+          "copper": 219
+        }
+      ],
+      "interruptions": 5,
+      "travelSeconds": 59.09999999999878,
+      "seed": 2026,
+      "companion": "Earth",
+      "completed": true,
+      "final": {
+        "level": 4,
+        "kills": 6,
+        "gold": 219,
+        "equipment": {
+          "charm": "warden-boneguard",
+          "focus": "apprentice-focus",
+          "ring": "ring-of-bound-earth"
+        },
+        "inventory": [
+          "goblin-talisman",
+          "griks-lucky-charm",
+          "apprentice-focus",
+          "ring-of-bound-earth",
+          "warden-boneguard"
+        ]
+      }
+    },
+    {
+      "fights": [
+        {
+          "label": "Goblin Scout",
+          "level": 1,
+          "seconds": 7.35,
+          "startingLevel": 1,
+          "startingHealth": 110,
+          "endingHealth": 110,
+          "startingMana": 117,
+          "endingMana": 84,
+          "lowestPetHp": 61
+        },
+        {
+          "label": "Goblin Raider",
+          "level": 1,
+          "seconds": 7.35,
+          "startingLevel": 1,
+          "startingHealth": 122,
+          "endingHealth": 122,
+          "startingMana": 121,
+          "endingMana": 89,
+          "lowestPetHp": 52
+        },
+        {
+          "label": "Goblin Shaman",
+          "level": 1,
+          "seconds": 6.85,
+          "startingLevel": 1,
+          "startingHealth": 122,
+          "endingHealth": 122,
+          "startingMana": 125,
+          "endingMana": 91,
+          "lowestPetHp": 61
+        },
+        {
+          "label": "Grik the Hoarder",
+          "level": 1,
+          "seconds": 12.9,
+          "startingLevel": 1,
+          "startingHealth": 122,
+          "endingHealth": 122,
+          "startingMana": 124,
+          "endingMana": 9,
+          "lowestPetHp": 37
+        },
+        {
+          "label": "Bramblemaw",
+          "level": 3,
+          "seconds": 12.9,
+          "startingLevel": 2,
+          "startingHealth": 147,
+          "endingHealth": 160,
+          "startingMana": 155,
+          "endingMana": 202,
+          "lowestPetHp": 41
+        },
+        {
+          "label": "The Bonewarden",
+          "level": 4,
+          "seconds": 14.65,
+          "startingLevel": 3,
+          "startingHealth": 170,
+          "endingHealth": 183,
+          "startingMana": 200,
+          "endingMana": 238,
+          "lowestPetHp": 51
+        }
+      ],
+      "milestones": [
+        {
+          "quest": "griks-talisman",
+          "level": 2,
+          "kills": 4,
+          "copper": 119
+        },
+        {
+          "quest": "mossfang",
+          "level": 3,
+          "kills": 5,
+          "copper": 120
+        },
+        {
+          "quest": "crypt-proof",
+          "level": 4,
+          "kills": 6,
+          "copper": 237
+        }
+      ],
+      "interruptions": 4,
+      "travelSeconds": 59.09999999999878,
+      "seed": 42,
+      "companion": "Air",
+      "completed": true,
+      "final": {
+        "level": 4,
+        "kills": 6,
+        "gold": 237,
+        "equipment": {
+          "charm": "warden-boneguard",
+          "focus": "apprentice-focus",
+          "ring": "ring-of-bound-earth"
+        },
+        "inventory": [
+          "goblin-talisman",
+          "griks-lucky-charm",
+          "apprentice-focus",
+          "ring-of-bound-earth",
+          "warden-boneguard"
+        ]
+      }
+    },
+    {
+      "fights": [
+        {
+          "label": "Goblin Scout",
+          "level": 1,
+          "seconds": 7.35,
+          "startingLevel": 1,
+          "startingHealth": 110,
+          "endingHealth": 110,
+          "startingMana": 117,
+          "endingMana": 84,
+          "lowestPetHp": 61
+        },
+        {
+          "label": "Goblin Raider",
+          "level": 1,
+          "seconds": 7.35,
+          "startingLevel": 1,
+          "startingHealth": 110,
+          "endingHealth": 110,
+          "startingMana": 131,
+          "endingMana": 99,
+          "lowestPetHp": 52
+        },
+        {
+          "label": "Goblin Shaman",
+          "level": 1,
+          "seconds": 6.85,
+          "startingLevel": 1,
+          "startingHealth": 110,
+          "endingHealth": 110,
+          "startingMana": 135,
+          "endingMana": 101,
+          "lowestPetHp": 61
+        },
+        {
+          "label": "Grik the Hoarder",
+          "level": 1,
+          "seconds": 12.9,
+          "startingLevel": 1,
+          "startingHealth": 110,
+          "endingHealth": 110,
+          "startingMana": 134,
+          "endingMana": 19,
+          "lowestPetHp": 37
+        },
+        {
+          "label": "Bramblemaw",
+          "level": 3,
+          "seconds": 12.9,
+          "startingLevel": 2,
+          "startingHealth": 147,
+          "endingHealth": 160,
+          "startingMana": 165,
+          "endingMana": 212,
+          "lowestPetHp": 41
+        },
+        {
+          "label": "The Bonewarden",
+          "level": 4,
+          "seconds": 14.65,
+          "startingLevel": 3,
+          "startingHealth": 170,
+          "endingHealth": 183,
+          "startingMana": 200,
+          "endingMana": 238,
+          "lowestPetHp": 51
+        }
+      ],
+      "milestones": [
+        {
+          "quest": "griks-talisman",
+          "level": 2,
+          "kills": 4,
+          "copper": 119
+        },
+        {
+          "quest": "mossfang",
+          "level": 3,
+          "kills": 5,
+          "copper": 120
+        },
+        {
+          "quest": "crypt-proof",
+          "level": 4,
+          "kills": 6,
+          "copper": 238
+        }
+      ],
+      "interruptions": 4,
+      "travelSeconds": 59.09999999999878,
+      "seed": 73,
+      "companion": "Air",
+      "completed": true,
+      "final": {
+        "level": 4,
+        "kills": 6,
+        "gold": 238,
+        "equipment": {
+          "charm": "warden-boneguard",
+          "focus": "apprentice-focus",
+          "ring": "ring-of-bound-earth"
+        },
+        "inventory": [
+          "copperleaf-ring",
+          "griks-lucky-charm",
+          "apprentice-focus",
+          "ring-of-bound-earth",
+          "warden-boneguard"
+        ]
+      }
+    },
+    {
+      "fights": [
+        {
+          "label": "Goblin Scout",
+          "level": 1,
+          "seconds": 7.35,
+          "startingLevel": 1,
+          "startingHealth": 110,
+          "endingHealth": 110,
+          "startingMana": 117,
+          "endingMana": 84,
+          "lowestPetHp": 61
+        },
+        {
+          "label": "Goblin Raider",
+          "level": 1,
+          "seconds": 7.35,
+          "startingLevel": 1,
+          "startingHealth": 122,
+          "endingHealth": 122,
+          "startingMana": 121,
+          "endingMana": 89,
+          "lowestPetHp": 52
+        },
+        {
+          "label": "Goblin Shaman",
+          "level": 1,
+          "seconds": 6.85,
+          "startingLevel": 1,
+          "startingHealth": 122,
+          "endingHealth": 122,
+          "startingMana": 125,
+          "endingMana": 91,
+          "lowestPetHp": 61
+        },
+        {
+          "label": "Grik the Hoarder",
+          "level": 1,
+          "seconds": 12.9,
+          "startingLevel": 1,
+          "startingHealth": 122,
+          "endingHealth": 122,
+          "startingMana": 124,
+          "endingMana": 9,
+          "lowestPetHp": 37
+        },
+        {
+          "label": "Bramblemaw",
+          "level": 3,
+          "seconds": 12.9,
+          "startingLevel": 2,
+          "startingHealth": 147,
+          "endingHealth": 160,
+          "startingMana": 155,
+          "endingMana": 202,
+          "lowestPetHp": 41
+        },
+        {
+          "label": "The Bonewarden",
+          "level": 4,
+          "seconds": 18.95,
+          "startingLevel": 3,
+          "startingHealth": 170,
+          "endingHealth": 183,
+          "startingMana": 200,
+          "endingMana": 238,
+          "lowestPetHp": 8
+        }
+      ],
+      "milestones": [
+        {
+          "quest": "griks-talisman",
+          "level": 2,
+          "kills": 4,
+          "copper": 111
+        },
+        {
+          "quest": "mossfang",
+          "level": 3,
+          "kills": 5,
+          "copper": 112
+        },
+        {
+          "quest": "crypt-proof",
+          "level": 4,
+          "kills": 6,
+          "copper": 229
+        }
+      ],
+      "interruptions": 5,
+      "travelSeconds": 59.09999999999878,
+      "seed": 2026,
+      "companion": "Air",
+      "completed": true,
+      "final": {
+        "level": 4,
+        "kills": 6,
+        "gold": 229,
+        "equipment": {
+          "charm": "warden-boneguard",
+          "focus": "apprentice-focus",
+          "ring": "ring-of-bound-earth"
+        },
+        "inventory": [
+          "goblin-talisman",
+          "griks-lucky-charm",
+          "apprentice-focus",
+          "ring-of-bound-earth",
+          "warden-boneguard"
+        ]
+      }
+    }
+  ]
+}

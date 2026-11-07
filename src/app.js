@@ -87,7 +87,8 @@
         lastImpactSound = now;
         const enemy = visual.source === 'enemy';
         tone(enemy ? 105 : 190, 0, 0.14, enemy ? 0.065 : 0.035, enemy ? 38 : 65, 'triangle');
-      } else if (visual.kind === 'bolt') tone(380, 0, 0.22, 0.018, 100, 'triangle');
+      } else if (visual.kind === 'summon') { tone(110, 0, 0.7, 0.02, 220); tone(330, 0.18, 0.6, 0.015); }
+      else if (visual.kind === 'bolt') tone(380, 0, 0.22, 0.018, 100, 'triangle');
       else if (visual.kind === 'discovery') discoveryQueue.push({ id: visual.itemId, rare: visual.rare });
     }
     if (now >= discoveryUntil && discoveryQueue.length) {
@@ -115,9 +116,10 @@
 
 
   const itemArt = Object.fromEntries(Object.keys(ITEMS).map((id, index) => [id, index + 8]));
-  const spellArt = [0, 1, 2, 3, 4, 5, 6, 7, 5, 1];
+  const spellArt = [0, 1, 2, 3, 4, 5, 6, 7, 16, 17];
   const spellRoles = ['Companion · endurance', 'Direct damage', 'Damage over time', 'Control · interrupt', 'Companion · recovery', 'Companion · offense', 'Protection', 'Recovery', 'Damage · slow', 'Area damage'];
   function arcanaIcon(index, extra = '') {
+    if (index >= 16) return `<span class="atlas-icon extra-arcana ${extra}" aria-hidden="true" style="background-position:${(index - 16) % 2 * 100}% ${Math.floor((index - 16) / 2) * 100}%"></span>`;
     return `<span class="atlas-icon ${extra}" aria-hidden="true" style="background-position:${index % 4 * 100 / 3}% ${Math.floor(index / 4) * 100 / 3}%"></span>`;
   }
   function itemComparison(item) {
@@ -278,14 +280,16 @@
     setText('pet-info', pet ? `${Math.ceil(pet.hp)} / ${pet.maxHp} health` : 'Call an elemental to your side.');
     setText('pet-sigil', pet ? (pet.type === 'Earth' ? '◈' : '≋') : '◇');
     meter('petbar', pet ? pet.hp : 0, pet ? pet.maxHp : 1);
+    setText('pet-combat-stats', pet ? `${pet.damage} damage per strike · ${pet.type === 'Earth' ? 'sturdy tank' : 'swift striker'}${game.hasEquipped('ring-of-bound-earth') ? ' · Stonebound −20% damage taken' : ''}` : '');
     const petTarget = pet && game.mobs.find(mob => mob.id === pet.targetId && mob.alive);
-    setText('pet-order', petTarget ? `Attacking ${petTarget.name} · Q to taunt` : pet ? (pet.mode === 'guard' ? 'Guarding you · defends when you are attacked' : 'Following passively · F attacks, C guards') : 'Earth endures. Air strikes quickly.');
+    setText('pet-order', petTarget ? `Attacking ${petTarget.name} · ${Math.hypot(pet.x-petTarget.x,pet.y-petTarget.y)>35 ? 'closing in' : 'next strike in ' + Math.max(0,pet.attackAt-game.clock).toFixed(1) + 's'} · Q to taunt` : pet ? (pet.mode === 'guard' ? 'Guarding you · defends when you are attacked' : 'Following passively · F attacks, C guards') : 'Earth endures. Air strikes quickly.');
     const completeQuests = QUESTS.filter(quest => game.questState(quest.id).status === 'completed').length;
     setText('quest-count', `${completeQuests} / ${QUESTS.length} complete →`);
     const nextSpell = SPELLS.find(spell => spell.unlockLevel > player.level);
     const unassigned = SPELLS.find((spell, index) => spell.unlockLevel > 1 && game.isSpellUnlocked(index) && !player.hotbar.includes(index));
     setText('next-spell', unassigned ? `${unassigned.name} is unlocked. Assign it in your spellbook.` : nextSpell ? `${nextSpell.name} awakens at level ${nextSpell.unlockLevel}.` : 'All ten spells unlocked · shape your own spell bar.');
     const selected = game.selected;
+    updateTacticalTip(selected);
     $('target-card').hidden = !selected;
     if (selected) {
       const diff = selected.level - player.level;
@@ -350,6 +354,29 @@
       $('log').innerHTML = game.logs.slice(-24).reverse().map(entry => `<div class="${escape(entry.type)}">${escape(entry.text)}</div>`).join('');
     }
     renderer.drawMap($('minimap'), game);
+  }
+
+  function updateTacticalTip(selected) {
+    const p = game.player, pet = game.pet;
+    const slotKey = index => { const slot = p.hotbar.indexOf(index); return slot >= 0 ? '[' + (slot + 1) + ']' : 'in your spellbook [B]'; };
+    const threats = game.mobs.filter(mob => mob.aggro && !mob.returning && mob.alive);
+    const intent = threats.find(mob => mob.intent)?.intent;
+    let tip = '', urgent = false;
+    if (game.dead) tip = 'Your belongings are safe. Return to the bindstone; future victories repay experience debt.';
+    else if (intent) { tip = intent.kind === 'heal' ? `Healing ritual: Arcane Root ${slotKey(3)} interrupts it.` : `Leave the marked ground or interrupt with Arcane Root ${slotKey(3)}. Recall an endangered pet with [G].`; urgent = true; }
+    else if (threats.length > 1) { tip = 'Several enemies are engaged. Control one with Root, heal your pet, or retreat to Willowmere.'; urgent = true; }
+    else if (pet && pet.hp < pet.maxHp * 0.55) { tip = `Your elemental is hurt. Pet Mend ${slotKey(4)} restores up to ${game.spellProfile(4).heal} health.`; urgent = true; }
+    else if (selected?.targetId === 'player' && selected.aggro) { tip = `The enemy is on you. Send your pet [F], then taunt [Q] in range. Magic Shield ${slotKey(6)} reduces incoming damage.`; urgent = true; }
+    else if (p.mp < 35) tip = 'Mana is low. Drink a mana tonic [X], or find safety and meditate [R]. The bindstone restores your party free.';
+    else if (p.inventory.some(id => !p.equipment[ITEMS[id].slot])) tip = 'A new find can strengthen you. Open your pack [I], compare its properties, and equip it.';
+    else if (!pet) tip = `Summon an Earth Pet ${slotKey(0)} before entering a camp. Earth endures; air trades durability for faster damage.`;
+    else if (selected && !selected.aggro) tip = 'Send your elemental [F] and let it reach the enemy before adding damage. Pull a lone guard first.';
+    else if (game.inCombat) tip = `Burning Mark ${slotKey(2)} deals efficient damage over time. Save mana for Pet Mend and Root; use [G] to recall.`;
+    else if (game.activeQuests.some(quest => quest.status === 'ready')) tip = 'Your assignment is ready. Return to the quest giver for experience, copper, and the next lead.';
+    else if (game.questState('crypt-proof').status === 'completed') tip = 'The eastern road is safer. Revisit named camps for relics, refine your spell ranks, or prepare for Othrek’s Vigil.';
+    else tip = 'Choose a lone guard. Return to the bindstone between hunts, study ranks at levels 2 and 5, and carry tonics for named foes.';
+    setText('tactical-tip', tip);
+    $('tactical-tip').classList.toggle('urgent', urgent);
   }
 
   function updateObjective() {

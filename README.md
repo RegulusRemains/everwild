@@ -1,10 +1,18 @@
 # Everwild
 
-**Version 0.4.0 — illustrated Willowmere**
+**Version 0.5.0 — encounters come alive**
 
 Everwild is a solo fantasy RPG about exploring a dangerous frontier with a summoned companion. Fight through Willowmere's forest and crypt camps, collect equipment, and grow an earth or air pet into the center of your combat strategy.
 
 The game runs entirely in your browser with HTML, CSS, and JavaScript. It has no runtime dependencies, account requirement, or server-side game state.
+
+## Encounters come alive
+
+The world now includes illustrated camp tents, shaman totems, crypt entrances, ritual altars, ground textures, rocks, plants, and four distinct named enemies. Ordinary actors have four-frame walk and action cycles. Named enemies retain their unique artwork and lean into attacks; defeated creatures collapse and fade independently of live spawn slots. Reduced-motion settings disable these transforms and frame cycles.
+
+Summoning circles, a persistent shield, pet-mend connections, frost crystals, melee arcs, and final-pass attack warnings make combat easier to read. The action deck offers contextual tactical guidance and the companion panel shows damage, target, and time to its next strike.
+
+Combat tuning is based on a reproducible fresh-character run: sentries take about 7–9 seconds and named fights about 13–19 seconds using supported pet tactics, healing, interrupts, gear, and consumables. Both Earth and Air builds complete the entire quest chain across three seeded runs, including a save/reload before the crypt. These are simulation measurements, not a measure of how long a human expedition takes. Run `npm run test:journey` or inspect [the results](docs/EXPEDITION_BALANCE.json).
 
 ## Illustrated Willowmere
 
@@ -19,7 +27,7 @@ Named relics now change play:
 | Othrek’s Runebone Focus | Arcane Root and Frost Lance last 3 extra seconds. |
 | Warden’s Boneguard | Magic Shield absorbs 55% of damage instead of 45%. |
 
-Replacing an item removes its property. Existing saves gain these properties from their equipped items. Artwork is still single-frame; animation, remaining camp props, effects, and balance work are tracked in the [development plan](docs/DEVELOPMENT_PLAN.md). Asset specifications are in [artwork notes](assets/ARTWORK.md).
+Replacing an item removes its property. Existing saves gain these properties from their equipped items. Further progression, equipment choices, and the current completion audit are tracked in the [development plan](docs/DEVELOPMENT_PLAN.md). Asset specifications are in [artwork notes](assets/ARTWORK.md).
 
 ## Impact and discovery
 

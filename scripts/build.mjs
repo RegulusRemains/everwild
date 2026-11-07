@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const output = path.join(root, 'dist');
-const files = ['index.html', 'styles.css', 'src/engine.js', 'src/render.js', 'src/app.js', 'assets/woodland-atlas.webp', 'assets/arcana-atlas.webp', '.nojekyll'];
+const files = ['index.html', 'styles.css', 'src/engine.js', 'src/render.js', 'src/app.js', 'assets/woodland-atlas.webp', 'assets/arcana-atlas.webp', 'assets/environment-atlas.webp', 'assets/walk-atlas.webp', 'assets/action-atlas.webp', 'assets/extra-arcana.webp', 'assets/floor-atlas.webp', '.nojekyll'];
 
 // Validate every input before touching a previous successful build.
 for (const file of files) {

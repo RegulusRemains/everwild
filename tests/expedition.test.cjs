@@ -80,7 +80,13 @@ test('a fresh character can complete the four-guard patrol through normal travel
     game.setTarget(mob.id);
     assert.equal(game.commandPet('attack').ok, true);
     advance(game, 1.5);
-    for (let attempts = 0; mob.alive && attempts < 5; attempts++) cast(game, 1);
+    for (let attempts = 0; mob.alive && attempts < 20; attempts++) {
+      if (game.player.mp < 28) game.useSupply('mana-tonic');
+      if (mob.intent && game.player.mp >= 24) cast(game, 3);
+      else if (game.pet && game.pet.hp < game.pet.maxHp * 0.55 && game.player.mp >= 28) cast(game, 4);
+      else if (game.player.mp >= 19) cast(game, 1);
+      else advance(game, 0.5);
+    }
     assert.equal(mob.alive, false);
     assert.equal(game.dead, false);
     game.commandPet('follow');
@@ -425,3 +431,4 @@ test('Bramblemaw healing can be interrupted and each named camp offers distinct 
   assert.equal(new Set(CAMPS.map(camp => camp.rareItemId)).size, CAMPS.length);
   assert.ok(CAMPS.every(camp => ITEMS[camp.rareItemId]?.rarity === 'rare'));
 });
+

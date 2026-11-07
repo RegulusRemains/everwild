@@ -132,7 +132,7 @@ async function main() {
     assert.equal(await page.evaluate(() => window.everwild.game.questState('scout-road').status), 'active');
     await page.locator('#dialog-close').click();
 
-    // Explicit high-level scenario: four real hotkey casts exercise quest counting.
+    // Explicit high-level scenario: real hotkey casts exercise quest counting.
     // This is a functional smoke check, not a claim to have played the full progression.
     await page.evaluate(() => { window.everwild.game.player.level = 20; });
     const sentries = await page.evaluate(() => window.everwild.game.mobs.filter(mob => mob.campId === 'briar').map(mob => mob.id));
@@ -150,8 +150,12 @@ async function main() {
         game.setTarget(targetId);
       }, id);
       await page.locator('#game').focus();
-      await page.keyboard.press('2');
-      await page.waitForFunction(targetId => !window.everwild.game.mobs.some(mob => mob.id === targetId && mob.alive), id, { timeout: 7000 });
+      for (let casts = 0; casts < 3; casts++) {
+        if (!(await page.evaluate(targetId => window.everwild.game.mobs.some(mob => mob.id === targetId && mob.alive), id))) break;
+        await page.keyboard.press('2');
+        await page.waitForFunction(() => !window.everwild.game.cast, undefined, { timeout: 7000 });
+      }
+      assert.equal(await page.evaluate(targetId => window.everwild.game.mobs.some(mob => mob.id === targetId && mob.alive), id), false);
     }
     assert.equal(await page.evaluate(() => window.everwild.game.questState('scout-road').status), 'ready');
     await page.evaluate(() => {

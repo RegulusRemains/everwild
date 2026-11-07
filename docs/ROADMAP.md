@@ -20,6 +20,10 @@ A separate world render pass adds light pixelation without reducing interface cl
 
 Integrated painterly pixel atlases replace the trees, village buildings, characters, companions, NPC portraits, and spell/item icons. Equipment slots, filters, comparison gains/losses, named drop origins, and active properties explain loot. Spell profiles share combat calculations and display current and next-rank benefits. Four relic properties add mana recovery, companion protection, longer control, and stronger shielding. Further environmental art, animation, effects, and observed balancing remain open in the active development plan.
 
+## 0.5: encounters come alive
+
+Illustrated environments and ground textures, four-frame walk/action cycles for ordinary actors, distinct named enemies, death remains, spell auras/connections, tactical coaching, and visible pet attack rhythm. Encounter health and damage now leave room for mechanics to matter. The full fresh-character quest chain passes with both companions across three seeded runs each, with recorded balance evidence. The active development plan tracks the next equipment and completion pass.
+
 ## Next: make repeated expeditions richer
 
 - Tune progression, tonic prices, pet durability, spell choices, and recovery time using observed play sessions.

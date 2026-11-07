@@ -4,6 +4,7 @@
   const { WORLD, CAMPS, NPCS = [], QUESTS = [] } = root.Everwild;
   const bindstone = WORLD.bindstone || { x: WORLD.spawn.x - 58, y: WORLD.spawn.y - 36 };
   const TAU = Math.PI * 2;
+  const artBoxes = {"environment": [[9, 17, 298, 288], [379, 8, 196, 300], [634, 7, 300, 302], [959, 12, 290, 295], [13, 339, 290, 264], [329, 344, 282, 255], [639, 355, 290, 233], [953, 350, 289, 239], [14, 655, 286, 256], [329, 661, 281, 234], [639, 642, 289, 269], [949, 639, 298, 275], [18, 954, 285, 281], [333, 943, 264, 292], [638, 957, 274, 275], [964, 942, 271, 291]], "walk": [[38, 11, 201, 230], [294, 11, 201, 230], [550, 11, 201, 230], [806, 11, 201, 230], [19, 261, 219, 234], [275, 261, 219, 234], [531, 261, 219, 234], [787, 261, 219, 234], [22, 517, 212, 244], [278, 517, 212, 244], [534, 517, 212, 244], [790, 517, 212, 244], [32, 788, 201, 236], [288, 788, 201, 236], [544, 788, 201, 236], [800, 788, 201, 236], [25, 1024, 193, 243], [281, 1024, 193, 243], [537, 1024, 193, 243], [793, 1024, 193, 243], [23, 1282, 215, 240], [279, 1282, 215, 240], [535, 1282, 215, 240], [791, 1282, 215, 240]], "action": [[10, 22, 239, 222], [266, 22, 239, 222], [522, 22, 239, 222], [778, 22, 239, 222], [16, 283, 230, 209], [272, 283, 230, 209], [528, 283, 230, 209], [784, 283, 230, 209], [9, 523, 237, 226], [265, 523, 237, 226], [521, 523, 237, 226], [777, 523, 237, 226], [20, 775, 229, 249], [276, 775, 229, 249], [532, 775, 229, 249], [788, 775, 229, 249], [8, 1024, 246, 256], [264, 1024, 246, 256], [520, 1024, 246, 256], [776, 1024, 246, 256], [0, 1280, 256, 232], [256, 1280, 256, 232], [512, 1280, 256, 232], [768, 1280, 256, 232]]};
   const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
   const intentColors = { slam: '#dfad70', hex: '#e29581', heal: '#bcb6d2' };
   const activeIntent = (mob, time) => mob.intent && mob.alive && !mob.returning && !(mob.rootUntil > time) && mob.intent.done > time;
@@ -67,19 +68,31 @@
       this.worldSurface = canvas(1, 1);
       this.worldCtx = this.worldSurface.getContext('2d');
       this.pixelArt = true;
-      this.atlas = new Image();
-      this.atlasLoaded = false;
-      this.artReady = new Promise(resolve => {
-        this.atlas.onload = () => { this.atlasLoaded = this.atlas.naturalWidth > 0; resolve(this.atlasLoaded); };
-        this.atlas.onerror = () => resolve(false); // Procedural art remains a playable fallback.
+      this.artStatus = {};
+      const load = (name, path) => new Promise(resolve => {
+        const image = new Image(); this[name] = image;
+        image.onload = () => {
+          this[name + 'Loaded'] = image.naturalWidth > 0; this.artStatus[name] = this[name + 'Loaded'];
+          if (name === 'floor' && this.terrain) {
+            this.trees = []; this.decor = [];
+            this.terrain = this._terrain(); this.mapTexture = this._mapTexture();
+          }
+          resolve(this[name + 'Loaded']);
+        };
+        image.onerror = () => { this.artStatus[name] = false; resolve(false); };
+        image.src = path;
       });
-      this.atlas.src = 'assets/woodland-atlas.webp';
+      this.artReady = Promise.all([
+        load('atlas', 'assets/woodland-atlas.webp'), load('environment', 'assets/environment-atlas.webp'),
+        load('walk', 'assets/walk-atlas.webp'), load('action', 'assets/action-atlas.webp'), load('floor', 'assets/floor-atlas.webp')
+      ]).then(results => results.every(Boolean));
       this.camera = { x: 0, y: 0 };
       this.width = 1; this.height = 1; this.dpr = 1; this.zoom = 1.3;
       this.motionPreference = typeof root.matchMedia === 'function' ? root.matchMedia('(prefers-reduced-motion: reduce)') : null;
       this.reducedMotion = Boolean(this.motionPreference && this.motionPreference.matches);
       this.motionPreference?.addEventListener?.('change', event => { this.reducedMotion = event.matches; });
       this.trees = [];
+      this.decor = [];
       this.treeSprites = Array.from({ length: 8 }, (_, i) => this._treeSprite(i));
       this.terrain = this._terrain();
       this.mapTexture = this._mapTexture();
@@ -93,6 +106,28 @@
       const width = height * sw / sh;
       c.drawImage(this.atlas, sx, sy, sw, sh, Math.round(x - width / 2), Math.round(y - height), width, height);
       return true;
+    }
+
+    _sheet(c, name, index, x, y, height) {
+      if (!this[name + 'Loaded']) return false;
+      const box = artBoxes[name]?.[index];
+      if (!box) return false;
+      const [sx, sy, sw, sh] = box, width = height * sw / sh;
+      c.drawImage(this[name], sx, sy, sw, sh, Math.round(x - width / 2), Math.round(y - height), width, height);
+      return true;
+    }
+
+    _pose(kind, entity, game, time) {
+      const row = kind === 'player' ? 0 : kind === 'pet' ? (entity.type === 'Earth' ? 1 : 2) : entity.type === 'goblin' ? 3 : entity.ability === 'hex' ? 5 : 4;
+      if (this.reducedMotion) return null;
+      if (kind === 'player' && game.cast) {
+        const progress = clamp((time - game.cast.started) / Math.max(0.1, game.cast.done - game.cast.started), 0, 0.999);
+        return { sheet: 'action', index: row * 4 + Math.min(2, Math.floor(progress * 3)) };
+      }
+      if (entity.strikeUntil > time) return { sheet: 'action', index: row * 4 + Math.min(3, Math.floor((time - entity.strikeAt) / 0.14)) };
+      if (entity.intent) return { sheet: 'action', index: row * 4 + (entity.intent.done - time < 0.5 ? 2 : 1) };
+      if (entity.walkUntil > time) return { sheet: 'walk', index: row * 4 + Math.floor(time * (row === 1 ? 5 : 8)) % 4 };
+      return null;
     }
 
     resize(width, height, dpr = 1) {
@@ -117,9 +152,17 @@
         y > this.camera.y - margin && y < this.camera.y + this.height / this.zoom + margin;
     }
 
+    _texture(c, index) {
+      if (!this.floorLoaded) return null;
+      const tile = canvas(256, 256), t = tile.getContext('2d');
+      const side = this.floor.naturalWidth / 2;
+      t.drawImage(this.floor, (index % 2) * side, Math.floor(index / 2) * side, side, side, 0, 0, 256, 256);
+      return c.createPattern(tile, 'repeat');
+    }
+
     _terrain() {
       const image = canvas(WORLD.w, WORLD.h), c = image.getContext('2d'), r = random(47629);
-      c.fillStyle = '#284b3b'; c.fillRect(0, 0, WORLD.w, WORLD.h);
+      c.fillStyle = this._texture(c, 0) || '#284b3b'; c.fillRect(0, 0, WORLD.w, WORLD.h);
       for (let i = 0; i < 1500; i++) {
         ellipse(c, r() * WORLD.w, r() * WORLD.h, 8 + r() * 80, 4 + r() * 37,
           ['#6d88551a', '#112e3025', '#96a7760c', '#193d331a'][i % 4]);
@@ -129,7 +172,7 @@
         glow.addColorStop(0, '#7f885c6b'); glow.addColorStop(0.65, '#62794e35'); glow.addColorStop(1, '#62794e00');
         c.fillStyle = glow; c.fillRect(place.x - 210, place.y - 210, 420, 420);
       }
-      for (let i = 0; i < 14000; i++) {
+      for (let i = 0; i < (this.floorLoaded ? 3500 : 14000); i++) {
         const x = r() * WORLD.w, y = r() * WORLD.h;
         c.strokeStyle = i % 4 ? '#a8b56a21' : '#1d392a40'; c.lineWidth = 0.7;
         c.beginPath(); c.moveTo(x, y); c.lineTo(x - 1 + r() * 3, y - 2 - r() * 3); c.stroke();
@@ -139,6 +182,7 @@
       for (const [width, color] of [[76, '#71805938'], [59, '#9387604d'], [45, '#9b8c64'], [32, '#ab9970']]) {
         traceRoad(c); c.lineWidth = width; c.strokeStyle = color; c.stroke();
       }
+      if (this.floorLoaded) { traceRoad(c); c.lineWidth = 43; c.strokeStyle = this._texture(c, 1); c.stroke(); }
       for (let i = 0; i < 2300; i++) {
         const x = 130 + r() * 1660, y = 160 + r() * 1040;
         if (roadDistance(x, y) < 23) ellipse(c, x, y, 0.6 + r() * 2.8, 0.4 + r(), i % 3 ? '#ddc59a45' : '#665c4245');
@@ -162,7 +206,11 @@
       // Broken flagstones and moss give the southeastern crypt its own palette.
       c.save();
       polygon(c, [[1205, 780], [1430, 735], [1690, 875], [1760, 1160], [1570, 1230], [1240, 1080], [1165, 930]], '#465548'); c.clip();
-      for (let row = 0; row < 16; row++) for (let col = 0; col < 15; col++) {
+      if (this.floorLoaded) {
+        c.fillStyle = this._texture(c, 2); c.fillRect(1140, 730, 650, 520);
+        c.save(); polygon(c, [[1480, 915], [1710, 875], [1770, 1160], [1570, 1240], [1480, 1120]], this._texture(c, 3)); c.restore();
+      }
+      for (let row = 0; !this.floorLoaded && row < 16; row++) for (let col = 0; col < 15; col++) {
         const x = 1150 + col * 44 + (row % 2) * 22, y = 730 + row * 35;
         c.fillStyle = ['#697362', '#5b695b', '#626f60', '#73806a'][Math.floor(r() * 4)];
         c.globalAlpha = 0.5 + r() * 0.35; c.fillRect(x + 2, y + 2, 41, 32);
@@ -199,6 +247,11 @@
             ellipse(c, px + 1, py - 6, 1.3, 1, i % 5 ? '#c9c58b' : '#b79db5');
           }
         }
+      }
+      for (let i = 0; i < 180; i++) {
+        const x = 30 + r() * (WORLD.w - 60), y = 60 + r() * (WORLD.h - 110);
+        if (roadDistance(x, y) < 45 || Math.hypot(x - WORLD.spawn.x, y - WORLD.spawn.y) < 150 || CAMPS.some(camp => Math.hypot(x - camp.x, y - camp.y) < 115) || (x > 200 && x < 550 && y > 745 && y < 1050)) continue;
+        this.decor.push({ x, y, sprite: [4,5,5,6,10][i % 5], height: i % 5 === 4 ? 38 : 12 + r() * 15 });
       }
       return image;
     }
@@ -300,16 +353,20 @@
       for (const npc of NPCS) if (this._visible(npc.x, npc.y)) actors.push({ kind: 'npc', entity: npc, y: npc.y });
       const objects = [...actors, { kind: 'lodge', x: 140, y: 175 }, { kind: 'stone', x: bindstone.x, y: bindstone.y },
         { kind: 'signpost', x: 402, y: 202 }, { kind: 'study', x: 133, y: 307 }, { kind: 'market', x: 412, y: 285 }];
+      for (const fallen of game.remains || []) if (this._visible(fallen.x, fallen.y)) objects.push({ kind: 'fallen', entity: fallen, y: fallen.y });
+      for (const detail of this.decor) if (this._visible(detail.x, detail.y, 60)) objects.push({ kind: 'decor', ...detail });
       for (const tree of this.trees) if (this._visible(tree.x, tree.y, 190)) objects.push({ kind: 'tree', ...tree });
       for (const camp of CAMPS) if (this._visible(camp.x, camp.y, 220)) objects.push({ kind: 'camp', camp, y: camp.y - 25 });
       objects.sort((a, b) => a.y - b.y);
       for (const object of objects) {
         c.save();
         if (object.kind === 'tree') {
-          const occludes = actors.some(({ entity: e }) => Math.abs(e.x - object.x) < 48 * object.scale + 8 && e.y < object.y + 15 && e.y > object.y - 155 * object.scale);
-          c.globalAlpha = occludes ? 0.25 : 1;
+          const occludes = actors.some(({ entity: e }) => Math.abs(e.x - object.x) < 91 * object.scale && e.y < object.y + 40 && e.y > object.y - 170 * object.scale);
+          c.globalAlpha = occludes ? 0.1 : 1;
           if (!this._art(c, object.sprite % 4, object.x, object.y, 156 * object.scale)) c.drawImage(this.treeSprites[object.sprite], object.x - 64 * object.scale, object.y - 155 * object.scale, 128 * object.scale, 168 * object.scale);
-        } else if (object.kind === 'lodge') this._lodge(c, object.x, object.y, p);
+        } else if (object.kind === 'decor') this._sheet(c, 'environment', object.sprite, object.x, object.y, object.height);
+        else if (object.kind === 'fallen') this._fallen(c, object.entity);
+        else if (object.kind === 'lodge') this._lodge(c, object.x, object.y, p);
         else if (object.kind === 'stone') this._bindstone(c, object.x, object.y, motionTime, p);
         else if (object.kind === 'camp') this._camp(c, object.camp, motionTime, actors.filter(actor => actor.kind !== 'mob' || actor.entity.aggro || actor.entity.id === game.selectedId));
         else if (['signpost', 'study', 'market'].includes(object.kind)) this._villageProp(c, object, game);
@@ -317,6 +374,7 @@
         else this._actor(c, object.kind, object.entity, game, time);
         c.restore();
       }
+      this._spellAuras(c, game, motionTime);
       this._visuals(c, game, true);
       c.restore();
       c = this.ctx;
@@ -324,6 +382,7 @@
       c.imageSmoothingEnabled = !this.pixelArt;
       c.drawImage(this.worldSurface, 0, 0, this.width, this.height);
       c.save(); c.scale(this.zoom, this.zoom); c.translate(-this.camera.x, -this.camera.y);
+      this._intents(c, game, time);
       for (const actor of actors) if (actor.kind === 'mob' || actor.kind === 'pet') this._actorLabel(c, actor.kind, actor.entity, game, time);
       for (const npc of NPCS) if (this._visible(npc.x, npc.y)) this._npcLabel(c, npc, game);
       for (const camp of CAMPS) if (this._visible(camp.x, camp.y) && !game.mobs.some(mob => mob.campId === camp.id && mob.aggro && !mob.returning)) {
@@ -428,7 +487,24 @@
         const progress = clamp(1 - visual.life / Math.max(0.001, visual.maxLife || visual.life), 0, 1);
         const fade = clamp((1 - progress) * 2, 0, 1), color = visual.color || '#d7cb9b';
         c.save(); c.lineJoin = 'round'; c.lineCap = 'round'; c.globalAlpha = fade;
-        if (visual.kind === 'impact' || visual.kind === 'discovery') {
+        if (visual.kind === 'melee') {
+          if (foreground) {
+            c.translate(visual.x, visual.y - 18); c.strokeStyle = color; c.lineWidth = 1.6;
+            c.beginPath(); c.arc(0, 0, 15, -1.2, this.reducedMotion ? 0.8 : -1.2 + progress * 2.5); c.stroke();
+          }
+        } else if (visual.kind === 'summon') {
+          c.translate(visual.x, visual.y);
+          if (!foreground) {
+            c.lineWidth = 1.5; ellipse(c, 0, 1, 30, 13, '#d2ddbb12', color);
+            ellipse(c, 0, 1, 23, 10, null, color);
+            for (let i = 0; i < 6; i++) { const a = i * TAU / 6; polygon(c, [[Math.cos(a)*28,Math.sin(a)*12-3],[Math.cos(a)*28-2,Math.sin(a)*12+2],[Math.cos(a)*28+2,Math.sin(a)*12+2]], color); }
+          } else {
+            for (let i = 0; i < 8; i++) {
+              const a = i * 2.4 + (this.reducedMotion ? 0 : progress * 2), lift = this.reducedMotion ? 16 : progress * 55;
+              ellipse(c, Math.cos(a) * (12 + progress * 13), -lift + Math.sin(a) * 7, 1.1, 2.1, color);
+            }
+          }
+        } else if (visual.kind === 'impact' || visual.kind === 'discovery') {
           if (foreground) {
             c.translate(visual.x, visual.y - 18);
             const discovery = visual.kind === 'discovery';
@@ -462,6 +538,11 @@
               }
             }
           } else if (visual.kind === 'heal') {
+            if (Number.isFinite(visual.fromX)) {
+              c.save(); c.strokeStyle = color; c.lineWidth = 1.2; c.globalAlpha = fade * 0.6;
+              c.beginPath(); c.moveTo(visual.fromX - visual.x, visual.fromY - visual.y - 25);
+              c.quadraticCurveTo((visual.fromX - visual.x) / 2, -45, 0, -22); c.stroke(); c.restore();
+            }
             for (let i = 0; i < (this.reducedMotion ? 3 : 6); i++) {
               const a = i * 2.4, lift = this.reducedMotion ? 12 : progress * 28;
               const x = Math.cos(a) * 18, y = -13 - lift + Math.sin(a) * 11;
@@ -695,6 +776,30 @@
     }
 
     _camp(c, camp, time, actors) {
+      if (this.environmentLoaded) {
+        const blocked = actors.some(({ entity }) => Math.abs(entity.x - camp.x) < 90 && entity.y < camp.y && entity.y > camp.y - 145);
+        if (blocked) c.globalAlpha = 0.3;
+        if (camp.id === 'briar') {
+          this._sheet(c, 'environment', 0, camp.x + 38, camp.y - 20, 103);
+          this._sheet(c, 'environment', 8, camp.x - 52, camp.y - 15, 32);
+          this._sheet(c, 'environment', 9, camp.x - 20, camp.y + 15, 31);
+          this._fire(c, camp.x - 20, camp.y + 12, time, false);
+        } else if (camp.id === 'mossfang') {
+          this._sheet(c, 'environment', 0, camp.x - 65, camp.y - 30, 75);
+          this._sheet(c, 'environment', 1, camp.x + 30, camp.y - 12, 122);
+          this._sheet(c, 'environment', 6, camp.x - 10, camp.y + 10, 25);
+        } else if (camp.id === 'crypt') {
+          this._sheet(c, 'environment', 11, camp.x, camp.y - 12, 39);
+          this._sheet(c, 'environment', 2, camp.x, camp.y - 40, 133);
+          this._sheet(c, 'environment', 7, camp.x + 85, camp.y + 20, 53);
+          this._sheet(c, 'environment', 4, camp.x - 75, camp.y + 5, 35);
+        } else {
+          this._sheet(c, 'environment', 3, camp.x, camp.y - 25, 113);
+          this._sheet(c, 'environment', 7, camp.x - 85, camp.y + 15, 51);
+          this._sheet(c, 'environment', 7, camp.x + 85, camp.y + 20, 45);
+        }
+        return;
+      }
       const occluded = actors.some(({ entity }) => entity.y < camp.y - 25 && (camp.type === 'goblin'
         ? entity.y > camp.y - 78 && entity.x > camp.x - 10 && entity.x < camp.x + 95
         : entity.y > camp.y - 118 && Math.abs(entity.x - camp.x) < 80));
@@ -723,6 +828,38 @@
         for (let i = 0; i < 3; i++) { c.fillStyle = ['#536457', '#667363', '#7a826e'][i]; c.fillRect(-23 + i * 3, -66 + i * 8, 55 - i * 6, 6); }
         this._fire(c, -50, 1, time, true);
         this._fire(c, 49, 10, time + 1, true);
+      }
+    }
+
+    _fallen(c, entity) {
+      const progress = 1 - entity.life / entity.maxLife;
+      c.save(); c.translate(entity.x, entity.y); c.globalAlpha = clamp(entity.life, 0, 0.65);
+      c.filter = 'saturate(0.3)';
+      if (!this.reducedMotion) { c.rotate(progress * (entity.facing === -1 ? -0.8 : 0.8)); c.scale(1, 1 - progress * 0.65); }
+      const index = entity.kind === 'pet' ? (entity.type === 'Earth' ? 9 : 10) : entity.type === 'goblin' ? 11 : 12;
+      if (entity.named) this._sheet(c, 'environment', 12 + CAMPS.findIndex(camp => camp.id === entity.campId), 0, 0, 52);
+      else this._art(c, index, 0, 0, entity.kind === 'pet' ? 51 : 44);
+      c.restore();
+    }
+
+    _spellAuras(c, game, time) {
+      if (game.shieldUntil > game.clock && !game.dead) {
+        const p = game.player, remaining = game.shieldUntil - game.clock;
+        c.save(); c.translate(p.x, p.y - 23); c.strokeStyle = '#b0dce5'; c.lineWidth = 1.2;
+        c.globalAlpha = Math.min(1, remaining / 3) * 0.5;
+        ellipse(c, 0, 0, 23, 32, '#a1d4e412', '#b6deed80');
+        for (let i = 0; i < 3; i++) {
+          const a = i * TAU / 3 + (this.reducedMotion ? 0 : time * 0.3);
+          c.beginPath(); c.ellipse(0, 0, 25, 34, 0, a, a + 0.7); c.stroke();
+        }
+        c.restore();
+      }
+      if (game.pet?.targetId) {
+        const target = game.mobs.find(mob => mob.id === game.pet.targetId && mob.alive);
+        if (target) {
+          c.save(); c.setLineDash([2, 6]); c.lineWidth = 0.7; c.globalAlpha = 0.35;
+          line(c, [[game.pet.x, game.pet.y + 2], [target.x, target.y + 2]], '#cbd6a4'); c.restore();
+        }
       }
     }
 
@@ -757,7 +894,16 @@
       if (this.atlasLoaded) {
         const index = kind === 'player' ? 8 : kind === 'pet' ? (entity.type === 'Earth' ? 9 : 10) : entity.type === 'goblin' ? 11 : 12;
         if (kind === 'mob' && entity.returning) c.globalAlpha = 0.55;
-        this._art(c, index, 0, 0, kind === 'pet' ? 51 : entity.named ? 52 : 44);
+        const height = kind === 'pet' ? 51 : entity.named ? 55 : 44;
+        c.save();
+        const face = entity.facing === -1 ? -1 : 1;
+        c.scale(face, 1);
+        const pose = this._pose(kind, entity, game, time);
+        if (entity.named && this.environmentLoaded) {
+          if (entity.strikeUntil > time && !this.reducedMotion) c.rotate(Math.sin((entity.strikeUntil - time) * 7) * 0.12);
+          this._sheet(c, 'environment', 12 + CAMPS.findIndex(camp => camp.id === entity.campId), 0, 0, height);
+        } else if (!pose || !this._sheet(c, pose.sheet, pose.index, 0, 0, height)) this._art(c, index, 0, 0, height);
+        c.restore();
       } else if (kind === 'player') this._magician(c, game, time);
       else if (kind === 'pet') this._elemental(c, entity, motionTime);
       else {
@@ -783,6 +929,10 @@
           }
         }
         if (entity.slowUntil > time) {
+          for (let i = 0; i < 5; i++) {
+            const px = -16 + i * 8, py = Math.sin(i * 2) * 4;
+            polygon(c, [[px, py], [px - 2, py - 5 - i % 2 * 3], [px + 2, py - 3]], '#b1e2e480', '#d2edef80');
+          }
           c.save(); c.lineWidth = 1; ellipse(c, 0, 1, 15, 7, '#a4d6e413', '#b1ddea8c');
           c.translate(-20, -17);
           for (let i = 0; i < 3; i++) { c.rotate(Math.PI / 3); line(c, [[-4, 0], [4, 0]], '#c7e7e9', 1); }

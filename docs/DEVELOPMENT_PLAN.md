@@ -23,15 +23,18 @@ Work across art, interface, gameplay, spells, equipment, sound, and onboarding. 
 - v0.3.1: pixel world pass, hit responses, optional sound, discovery presentation, presentation preferences.
 - v0.4: first illustrated trees, village, actors, NPC portraits, spell and item icons; redesigned inventory with slot filters and equipment comparisons; live spell and rank previews; four named-item properties. Existing saves retain progress and gain the properties of equipped relics.
 
-## Next milestone: encounter and world identity
+## v0.5 checkpoint: encounter and world identity
 
-Prioritize these together, rather than expanding the map first:
+- Illustrated camp tents, shaman totems, crypt archways, ritual altars, ground textures, rocks, ferns, logs, walls, and distinct named enemies are integrated.
+- Four-frame ordinary-actor walking, casting, and attacking are integrated. Named enemies keep their unique sprite with attack leaning. Fallen actors collapse and fade; full directional animation and authored death frames remain later refinements.
+- Summoning rituals, shield aura, pet-mend connection, frost crystals, burning particles, melee arcs, and final-pass telegraphs communicate combat state. Canopy fading covers the wider illustrated trees.
+- Six fresh-character runs cover Earth and Air companions and seeds 42, 73, 2026. They use normal movement, targeting, casting, commands, consumables, gear, quests, and one save/reload; no character or mob state is injected. See EXPEDITION_BALANCE.json and scripts/expedition-run.cjs.
+- Contextual tactical guidance and companion target/damage/next-strike information are visible in play. Both fresh and staged scenes are inspected in desktop/mobile Chromium, including reduced motion.
+- 52 simulation tests pass. Browser smoke covers actual controls, menus, assignments, equipment, tonics, saves, and phone layouts; visual review covers all four camps and combat effects.
 
-1. Replace the remaining geometric goblin tents, totems, crypt masonry, floor textures, rocks, and ground plants with cohesive artwork. Give each camp a recognizable silhouette and lighting.
-2. Add real walking, striking, casting, and death animation. Distinguish named monsters beyond scale and labels; create dedicated Frost Lance and Ember Nova icons.
-3. Make spell effects distinct: visible rooted vines, burning marks, frost trails, protective shield, pet mend connection, summoning ritual. Telegraphs must remain readable under scenery and effects.
-4. Run fresh-character expeditions to tune risk, time between kills, pet durability, healing pressure, mana recovery, tonic costs, spell upgrades, and quest reward timing.
-5. Improve contextual feedback for commands that cannot execute and make the pet's target and attack rhythm legible without opening a menu.
+## Active next checkpoint: useful clothing and completion audit
+
+The first equipment find should include humble cloth worth equipping, with later garments offering a choice between personal spell reserves and companion sustain. Add that choice with matching inventory art, preserve old saves, then repeat the expedition and the full acceptance audit. Keep the expansion within Willowmere.
 
 ## Following milestone: progression worth pursuing
 
@@ -47,4 +50,4 @@ Choose the highest-impact unfinished part of the goal, implement it in the playa
 
 ## Current limitations
 
-The artwork is a first integrated pass. Movement and attacks still use single-frame sprites; some camp props and terrain remain procedural. Audio is synthesized rather than a composed soundscape. Expanded equipment slots, deeper elemental specialization, and new regions are not implemented. Balance needs observed fresh-character play beyond automated regression checks.
+The animation set uses mirrored right/left facing rather than eight authored directions. Named enemies use their unique sprite with attack leaning; death collapse/fade is rendered from the actor rather than a separate death-frame atlas. Audio is synthesized rather than a composed soundscape. The seeded journey verifies reproducible supported routes, not human comprehension, exploration time, or every possible combat choice. Online play and new regions remain outside this first-expedition goal.
