@@ -1,6 +1,6 @@
 {
   "name": "everwild",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "private": true,
   "description": "Everwild: a solo fantasy pet-caster RPG prototype for the browser.",
   "scripts": {

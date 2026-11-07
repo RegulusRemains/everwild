@@ -66,3 +66,13 @@ The animation set uses mirrored right/left facing rather than eight authored dir
 - Moved progression, currency, detailed pet stats, quests, map, combat log, guide, and saves into paused game windows.
 - Added automatic resolution-based HUD sizing, manual sizing, camera zoom, and native fullscreen. Resizing recalculates canvas resolution, camera, and pointer coordinates.
 - Browser regression checks cover 1280×720 through 3840×2160, 5120×1440 ultrawide, portrait phone, landscape phone, and narrow 320px screens.
+
+## v0.8 checkpoint: a wider frontier and stable canopies
+
+- Replaced instant tree opacity switches with spatially feathered, time-smoothed party occlusion. Ordinary monsters no longer trigger canopy fading. Tree spacing and clearings preserve actor readability.
+- Expanded 1900×1350 to 4200×2600 while keeping the original village, camps, and quest chain in their old positions. Branch roads connect four added biomes, each with authored terrain, trees, camp landmark, ordinary creature, and named creature artwork.
+- Added Crownfang Den (wolves, 3–4), Lanternfen Shrine (beetles, 5–6), Rimeglass Spire (wisps, 8–9), and Cinderwake Forge (drakes, 10–11). Pursuit speed, durability, attack range, and marked ability area differ by family.
+- Added twelve items: eight common pieces with tradeoffs, four rare properties with actual combat effects. Named drops remain guaranteed; repeats salvage normally. Added four optional NPC hunts with prerequisites, correct named-kill credit, one-time rewards, and persistence.
+- Verified supported-level pet fights at all four new named encounters, plus equipment effects, respawning, quests, and saves. These are staged supported-level scenarios; they do not claim a fully measured fresh-character journey through every new level range.
+- The six original fresh-character Earth/Air runs across seeds 42, 73, and 2026 still finish. Desktop/mobile visual review covers all new camps, the map, rare icons, and smooth canopy entry/recovery; existing viewport/HUD checks remain in the browser suite.
+- New monster families use one ordinary and one named illustration each with rendered movement/hover/attack/hit/death transforms. They do not yet have independently authored multi-frame gait sheets. Terrain is scenery, as in the existing region; it does not block movement.

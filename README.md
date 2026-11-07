@@ -1,10 +1,25 @@
 # Everwild
 
-**Version 0.7.0 — a full-window game interface**
+**Version 0.8.0 — beyond Willowmere**
 
-Everwild is a solo fantasy RPG about exploring a dangerous frontier with a summoned companion. Fight through Willowmere's forest and crypt camps, collect equipment, and grow an earth or air pet into the center of your combat strategy.
+Everwild is a solo fantasy RPG about exploring a dangerous frontier with a summoned companion. Explore five habitats and eight camps, from Willowmere’s forest and crypt to golden downs, marshland, frozen ruins, and volcanic barrens. Collect equipment and grow an earth or air pet into the center of your combat strategy.
 
 The game runs entirely in your browser with HTML, CSS, and JavaScript. It has no runtime dependencies, account requirement, or server-side game state.
+
+## Beyond the old road
+
+The map is now **4200 × 2600**, over four times its original area. The original expedition remains intact; four optional hunts extend it:
+
+| Region | Camp / enemies | Levels | Named relic |
+| --- | --- | --- | --- |
+| Amberfall Downs | Crownfang Den / fast wolves | 3–4 | Crownfang’s Signet: +12% pet strike damage |
+| Lantern Mire | Lanternfen Shrine / durable beetles | 5–6 | Lanternheart: recover 8 health per credited kill |
+| Rimeglass Reach | Rimeglass Spire / ranged wisps | 8–9 | Rimeglass Focus: +25% Frost Lance damage |
+| Cinderwake Barrens | Cinderwake Forge / heavy drakes | 10–11 | Ashwake Mantle: Nova radius 135 instead of 100 |
+
+There are **24 equipment items**: twelve new finds include eight common pieces with stat tradeoffs and four named relics. Each new camp has its own common loot table, named drop, landmark, habitat texture, tree species, and marked special attack. Rowan and Liora offer the new hunts as earlier assignments progress. Open the map [M] and camp notes for routes and drop sources.
+
+Trees now ease into transparency near your party and recover smoothly afterward. Unselected monsters no longer make the forest blink. Canopies retain a visible silhouette rather than disappearing.
 
 ## Clothing worth keeping
 
@@ -16,7 +31,7 @@ The first expedition now has a closing journal card and villagers who react to y
 
 ## Encounters come alive
 
-The world now includes illustrated camp tents, shaman totems, crypt entrances, ritual altars, ground textures, rocks, plants, and four distinct named enemies. Ordinary actors have four-frame walk and action cycles. Named enemies retain their unique artwork and lean into attacks; defeated creatures collapse and fade independently of live spawn slots. Reduced-motion settings disable these transforms and frame cycles.
+The world now includes illustrated camp tents, shaman totems, crypt entrances, ritual altars, ground textures, rocks, plants, and eight distinct named enemies. The original ordinary actors have four-frame walk and action cycles. New wolves, beetles, wisps, and drakes use distinct illustrated sprites with movement, hover, strike, hit, and death transforms. Named enemies retain their unique artwork and lean into attacks; defeated creatures collapse and fade independently of live spawn slots. Reduced-motion settings disable these transforms and frame cycles.
 
 Summoning circles, a persistent shield, pet-mend connections, frost crystals, melee arcs, and final-pass attack warnings make combat easier to read. The HUD keeps health, mana, companion status, a compact top-edge target, and icon spell slots visible. Character details, quests, map, combat log, and instructions live in menus. The game fills the window at desktop, 4K, ultrawide, and phone sizes; Esc offers HUD sizing, camera zoom, and fullscreen (also Alt+Enter).
 

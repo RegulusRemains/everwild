@@ -27,3 +27,11 @@ Row 2: leaf with luminous green dew (pet healing); cyan spiral of air with a vio
 Row 3: primitive polished-root talisman on a cord; splintered carved bone wand with pale blue light; engraved copper ring with a green leaf gemstone; lucky goblin charm made of antique gold and a tiny emerald.
 Row 4: heavy stone ring containing an amber rune; ornate runebone focus wand with violet crystal; carved bone ward amulet on a leather cord; simple willow wand with a warm amber bud.
 Each silhouette should remain legible when scaled to 40px. True alpha transparency outside objects; no black backgrounds. Consistent lighting from upper left. These will be used as clickable game inventory and spellbook art.
+
+## Frontier expansion (v0.8)
+
+`frontier-atlas.webp`: 4 columns × 5 rows, normalized 256px cells with alpha. Rows: wolf/beetle/wisp/drake; matching named creatures; den/shrine/spire/forge; oak/cypress/spruce/charred tree; signet/talisman/focus/mantle. Runtime crop bounds are recorded in `src/render.js`; item icons use the final row. Common loot reuses existing slot artwork.
+
+`frontier-floor.webp`: 2×2 ground atlas: amber grass, marsh peat, rime earth, basalt ash. Runtime mirrored tiles remove hard repeat seams and feathered masks soften region boundaries.
+
+Generated with the built-in image generator, then cropped, normalized, and compressed for game use. Prompt set: “A perfectly regular 4×5 transparent sprite atlas in slightly pixelated hand-painted fantasy style; ordinary and named wolf, beetle, wisp and drake; matching camp landmarks, biome trees, and four magical relic icons; isolated whole subjects, consistent elevated 3/4 view, no text.” Terrain prompt: “Four orthographic, independently repeatable painterly pixel ground quadrants: golden meadow, teal marsh peat, blue-grey frosty earth and dark basalt gravel; subtle tiny detail, no large focal objects, no borders or text.”

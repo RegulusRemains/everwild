@@ -263,3 +263,5 @@ dialog{width:min(57rem,calc(100vw - 2rem));max-height:calc(100dvh - 2rem);paddin
 @media(max-height:560px) and (min-width:601px){.action-deck{bottom:5px}.utility-row{margin-bottom:2px}.vitals{top:8px;left:8px}.hud-nav{top:8px;right:8px}.pet-frame{top:90px;left:8px}.target-card{top:8px}.interaction-hint{bottom:110px}#toast{bottom:8px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
 .hud-frame,.target-card{pointer-events:auto}.item-card p,.spell-card p,.quest-card p,.guide-card p,.shop-item p{font-size:.88rem!important;line-height:1.6!important}.item-card .eyebrow,.spell-card .eyebrow{font-size:.58rem}.quest-rewards{font-size:.75rem}.spell-numbers small{font-size:.58rem}.camp-loot small{font-size:.8rem;line-height:1.6}
+
+.frontier-art{background-image:url('assets/frontier-atlas.webp');background-size:400% 500%}

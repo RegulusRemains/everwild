@@ -7,13 +7,27 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '0.7.0';
-  const WORLD = Object.freeze({ w: 1900, h: 1350, spawn: Object.freeze({ x: 260, y: 250 }), bindstone: Object.freeze({ x: 202, y: 214 }) });
+  const VERSION = '0.8.0';
+  const WORLD = Object.freeze({ w: 4200, h: 2600, spawn: Object.freeze({ x: 260, y: 250 }), bindstone: Object.freeze({ x: 202, y: 214 }) });
+  const BIOMES = Object.freeze([
+    { id:'willowmere', name:'Willowmere Woodland', x:0, y:0, w:1850, h:2600, color:'#46633e', level:1 },
+    { id:'amber', name:'Amberfall Downs', x:1850, y:0, w:950, h:1100, color:'#857040', level:3, art:0 },
+    { id:'mire', name:'The Lantern Mire', x:1850, y:1100, w:950, h:1500, color:'#355b56', level:5, art:1 },
+    { id:'rime', name:'Rimeglass Reach', x:2800, y:0, w:1400, h:1100, color:'#859b9f', level:8, art:2 },
+    { id:'cinder', name:'Cinderwake Barrens', x:2800, y:1100, w:1400, h:1500, color:'#59483f', level:10, art:3 }
+  ].map(Object.freeze));
+  const biomeAt = (x,y) => BIOMES.slice(1).find(b=>x>=b.x&&x<b.x+b.w&&y>=b.y&&y<b.y+b.h) || BIOMES[0];
   const CAMPS = Object.freeze([
     { id: 'briar', name: 'Briarwatch', x: 710, y: 350, type: 'goblin', n: 4, level: 1, delay: 45, namedName: 'Grik the Hoarder', rareItemId: 'griks-lucky-charm', description: 'A ragged goblin lookout watches the old trade road.', roleHint: 'Pull the western scout alone. Move out of Grik’s marked ground slam.' },
     { id: 'mossfang', name: 'Mossfang Camp', x: 1090, y: 410, type: 'goblin', n: 5, level: 3, delay: 55, namedName: 'Bramblemaw', rareItemId: 'ring-of-bound-earth', description: 'Thorn-twined totems surround the goblin shaman’s refuge.', roleHint: 'Dodge shaman hexes. Root Bramblemaw to interrupt his healing ritual.' },
     { id: 'crypt', name: 'Willowmere Crypt', x: 1330, y: 890, type: 'skeleton', n: 5, level: 5, delay: 65, namedName: 'The Bonewarden', rareItemId: 'warden-boneguard', description: 'The fallen guardians of Willowmere still keep their watch.', roleHint: 'Recall your pet from a guardian’s marked slam, or interrupt it with Root.' },
-    { id: 'vigil', name: 'Othrek’s Vigil', x: 1570, y: 1040, type: 'skeleton', n: 4, level: 7, delay: 75, namedName: 'Graveminder Othrek', rareItemId: 'othreks-focus', bonusItemId: 'emberwoven-robe', bonusDropChance: 0.25, description: 'Old magic gathers around the keeper of the deepest graves.', roleHint: 'Keep moving when Othrek marks the ground. Save mana for healing and control.' }
+    { id: 'vigil', name: 'Othrek’s Vigil', x: 1570, y: 1040, type: 'skeleton', n: 4, level: 7, delay: 75, namedName: 'Graveminder Othrek', rareItemId: 'othreks-focus', bonusItemId: 'emberwoven-robe', bonusDropChance: 0.25, description: 'Old magic gathers around the keeper of the deepest graves.', roleHint: 'Keep moving when Othrek marks the ground. Save mana for healing and control.' },
+
+    { id:'amber-den', name:'Crownfang Den', x:2290, y:540, type:'wolf', biome:'amber', n:4, level:3, delay:50, namedName:'Crownfang', rareItemId:'crownfang-ring', loot:['amber-fang','hunter-wrap'], description:'Golden grass hides a pack beneath an antler-crowned den arch.', roleHint:'Wolves close quickly. Root the pack leader or leave the marked hunting pounce.' },
+    { id:'lantern-shrine', name:'Lanternfen Shrine', x:2320, y:1790, type:'beetle', biome:'mire', n:4, level:5, delay:60, namedName:'Old Lanternback', rareItemId:'lanternheart', loot:['reedwoven-cloak','carapace-band'], description:'Luminous beetles nest in a drowned shrine among violet fungi.', roleHint:'Beetles are slow but durable. Leave the wide carapace-crush circle.' },
+    { id:'rime-spire', name:'Rimeglass Spire', x:3400, y:520, type:'wisp', biome:'rime', n:4, level:8, delay:70, namedName:'The Glass Choir', rareItemId:'rimeglass-focus', loot:['rime-splinter','snowthread-robe'], description:'The frozen choir gathers around a fractured blue runestone.', roleHint:'Wisps are fragile ranged casters. Interrupt their shard volleys or move out of the mark.' },
+    { id:'cinder-forge', name:'Cinderwake Forge', x:3460, y:1880, type:'drake', biome:'cinder', n:5, level:10, delay:80, namedName:'Ashjaw', rareItemId:'ashwake-mantle', loot:['basalt-focus','ember-scale'], description:'Wingless drakes have claimed the last burning forge of the frontier.', roleHint:'Drakes hit hard. Step away from the broad breath mark before it erupts.' }
+
   ].map(Object.freeze));
   const NPCS = Object.freeze([
     { id: 'rowan', name: 'Warden Rowan', role: 'Frontier warden', x: 330, y: 210, description: 'The warden keeps the eastern road open, one patrol at a time.', dialogue: ['The road used to carry lanterns all the way to the crypt. Help me make it safe again.', 'Bring your elemental. Watch the ground when an enemy gathers its strength.'] },
@@ -25,6 +39,10 @@
     { id: 'griks-talisman', npcId: 'rowan', title: 'Grik’s Lucky Talisman', description: 'Rowan wants to examine Grik’s charm. If you already found it, show it to him; you will keep it.', objectiveText: 'Obtain Grik’s Lucky Charm and show it to Rowan.', required: 1, countType: 'item', itemId: 'griks-lucky-charm', prerequisite: 'scout-road', reward: { xp: 110, gold: 45 } },
     { id: 'mossfang', npcId: 'liora', title: 'A Thorn in the Wilds', description: 'Bramblemaw is binding the forest’s strength into his totems. Liora needs his ritual stopped.', objectiveText: 'Defeat Bramblemaw at Mossfang Camp after accepting the task.', required: 1, countType: 'named', campId: 'mossfang', targetName: 'Bramblemaw', prerequisite: 'griks-talisman', reward: { xp: 180, gold: 65, itemId: 'mosswoven-mantle' } },
     { id: 'crypt-proof', npcId: 'rowan', title: 'Proof from the Crypt', description: 'The Bonewarden bars the old crypt road. Break its watch and return with word of your victory.', objectiveText: 'Defeat The Bonewarden at Willowmere Crypt after accepting the task.', required: 1, countType: 'named', campId: 'crypt', targetName: 'The Bonewarden', prerequisite: 'mossfang', reward: { xp: 250, gold: 90 } }
+    ,{ id:'amber-hunt', npcId:'rowan', title:'The Crown of Amberfall', description:'A golden pack has claimed the eastern downs. Break its leader’s hold.', objectiveText:'Defeat Crownfang at Crownfang Den.', required:1, countType:'named', campId:'amber-den', targetName:'Crownfang', prerequisite:'scout-road', reward:{xp:150,gold:55} },
+    { id:'mire-hunt', npcId:'liora', title:'A Light Beneath the Mire', description:'An ancient beetle guards the drowned shrine. Recover its light.', objectiveText:'Defeat Old Lanternback at Lanternfen Shrine.', required:1, countType:'named', campId:'lantern-shrine', targetName:'Old Lanternback', prerequisite:'griks-talisman', reward:{xp:220,gold:75} },
+    { id:'rime-hunt', npcId:'liora', title:'Silence the Glass Choir', description:'A frozen chorus carries beyond the northern pass.', objectiveText:'Defeat The Glass Choir at Rimeglass Spire.', required:1, countType:'named', campId:'rime-spire', targetName:'The Glass Choir', prerequisite:'crypt-proof', reward:{xp:340,gold:110} },
+    { id:'cinder-hunt', npcId:'rowan', title:'The Last Burning Forge', description:'Ashjaw keeps the old eastern forge alight. End its watch.', objectiveText:'Defeat Ashjaw at Cinderwake Forge.', required:1, countType:'named', campId:'cinder-forge', targetName:'Ashjaw', prerequisite:'crypt-proof', reward:{xp:420,gold:140} }
   ].map(quest => Object.freeze({ ...quest, reward: Object.freeze(quest.reward) })));
   const SUPPLIES = Object.freeze({
     'health-tonic': Object.freeze({ id: 'health-tonic', name: 'Health Tonic', description: 'Restore up to 60 health. Shares a 20-second recovery time with mana tonics.', cost: 20, restoreHP: 60 }),
@@ -55,6 +73,19 @@
     'waxed-travel-cloak': Object.freeze({ id: 'waxed-travel-cloak', name: 'Waxed Travel Cloak', slot: 'garb', rarity: 'common', description: 'Stiff green cloth and a battered leaf clasp. Less room for spellwork, more protection from the wilds.', stats: Object.freeze({ hp: 18, mp: -4 }) }),
     'mosswoven-mantle': Object.freeze({ id: 'mosswoven-mantle', name: 'Mosswoven Mantle', slot: 'garb', rarity: 'rare', description: 'Liora’s living threads stir when your companion is wounded. The cloth smells of rain on warm stone.', effectName: 'Living Thread', effect: 'Pet Mend restores 25% more health. Trades the linen robe’s mana and spell power for endurance.', stats: Object.freeze({ hp: 16 }) }),
     'emberwoven-robe': Object.freeze({ id: 'emberwoven-robe', name: 'Emberwoven Robe', slot: 'garb', rarity: 'rare', campId: 'vigil', description: 'Runic embers breathe along the hem. Its thread is exquisite, and dangerously thin.', effectName: 'Cinderweave', effect: 'Fire Bolt, Burning Mark, and Ember Nova deal 15% more damage. Its fragile cloth reduces maximum health by 10.', stats: Object.freeze({ hp: -10, mp: 24, power: 3 }) })
+,
+    "amber-fang": Object.freeze({"id": "amber-fang", "name": "Amber Fang", "slot": "charm", "stats": Object.freeze({"power": 3, "hp": -4}), "description": "A honey-colored fang bound in plain twine.", "campId": "amber-den", "frontierArt": 0, "rarity": "common"}),
+    "hunter-wrap": Object.freeze({"id": "hunter-wrap", "name": "Hunter’s Wool Wrap", "slot": "garb", "stats": Object.freeze({"hp": 24, "mp": -8}), "description": "Weathered wool that has survived many cold watches.", "campId": "amber-den", "frontierArt": 3, "rarity": "common"}),
+    "reedwoven-cloak": Object.freeze({"id": "reedwoven-cloak", "name": "Reedwoven Cloak", "slot": "garb", "stats": Object.freeze({"hp": 12, "mp": 14}), "description": "Dry reeds rustle against soft marsh silk.", "campId": "lantern-shrine", "frontierArt": 3, "rarity": "common"}),
+    "carapace-band": Object.freeze({"id": "carapace-band", "name": "Carapace Band", "slot": "ring", "stats": Object.freeze({"hp": 26, "power": -1}), "description": "A curved shell polished smooth by the fen.", "campId": "lantern-shrine", "frontierArt": 1, "rarity": "common"}),
+    "rime-splinter": Object.freeze({"id": "rime-splinter", "name": "Rime Splinter", "slot": "focus", "stats": Object.freeze({"mp": 28, "power": 3}), "description": "Frost creeps toward your fingertips.", "campId": "rime-spire", "frontierArt": 2, "rarity": "common"}),
+    "snowthread-robe": Object.freeze({"id": "snowthread-robe", "name": "Snowthread Robe", "slot": "garb", "stats": Object.freeze({"mp": 32, "hp": -8}), "description": "Pale cloth light enough to carry on a whisper.", "campId": "rime-spire", "frontierArt": 3, "rarity": "common"}),
+    "basalt-focus": Object.freeze({"id": "basalt-focus", "name": "Basalt Focus", "slot": "focus", "stats": Object.freeze({"power": 10, "mp": -12}), "description": "Heavy volcanic glass; powerful, but taxing.", "campId": "cinder-forge", "frontierArt": 2, "rarity": "common"}),
+    "ember-scale": Object.freeze({"id": "ember-scale", "name": "Ember Scale", "slot": "charm", "stats": Object.freeze({"hp": 38, "mp": -8}), "description": "A drake’s scale that remains warm in the rain.", "campId": "cinder-forge", "frontierArt": 1, "rarity": "common"}),
+    "crownfang-ring": Object.freeze({"id": "crownfang-ring", "name": "Crownfang’s Signet", "slot": "ring", "stats": Object.freeze({"mp": 8}), "description": "An amber fang set in a narrow silver circle.", "campId": "amber-den", "frontierArt": 0, "rarity": "rare", "effectName": "Packbond", "effect": "Your elemental deals 12% more damage. Trades Stonebound’s protection for offense."}),
+    "lanternheart": Object.freeze({"id": "lanternheart", "name": "Lanternheart", "slot": "charm", "stats": Object.freeze({"mp": 12, "hp": 10}), "description": "A tiny green light beats beneath the shell.", "campId": "lantern-shrine", "frontierArt": 1, "rarity": "rare", "effectName": "Fen Renewal", "effect": "Restore 8 health after each kill credited to you or your elemental."}),
+    "rimeglass-focus": Object.freeze({"id": "rimeglass-focus", "name": "Rimeglass Focus", "slot": "focus", "stats": Object.freeze({"power": 4, "mp": -8}), "description": "A shard humming with a distant choir.", "campId": "rime-spire", "frontierArt": 2, "rarity": "rare", "effectName": "Winter’s Edge", "effect": "Frost Lance deals 25% more damage. Gives up the Runebone Focus’s longer control."}),
+    "ashwake-mantle": Object.freeze({"id": "ashwake-mantle", "name": "Ashwake Mantle", "slot": "garb", "stats": Object.freeze({"hp": -12, "mp": 16}), "description": "Black cloth carries the glow of an ancient forge.", "campId": "cinder-forge", "frontierArt": 3, "rarity": "rare", "effectName": "Spreading Cinders", "effect": "Ember Nova reaches 135 paces instead of 100. A wider burst may awaken more enemies."})
   });
   const MAX_LEVEL = 20;
   const CAST_RANGE = 330;
@@ -248,11 +279,12 @@
         const earth = index === 0;
         profile.petHp = Math.round((earth ? 95 + level * 19 : 65 + level * 14) * bonus);
         profile.petDamage = Math.round((earth ? 10 + level * 4 : 14 + level * 5) * (1 + (rank - 1) * 0.12));
-        profile.summary = `${profile.petHp} pet health · ${profile.petDamage} damage per strike · ${earth ? '1.65' : '1.45'}s between strikes`;
+        profile.summary = `${profile.petHp} pet health · ${Math.round(profile.petDamage*(this.hasEquipped('crownfang-ring')?1.12:1))} damage per strike · ${earth ? '1.65' : '1.45'}s between strikes`;
       } else if ([1, 8, 9].includes(index)) {
-        profile.damage = Math.round((index === 1 ? 24 + level * 9 + power : index === 8 ? 18 + level * 8 + power : 20 + level * 6 + power) * bonus * (index === 8 ? 1 : fireBonus));
+        profile.damage = Math.round((index === 1 ? 24 + level * 9 + power : index === 8 ? 18 + level * 8 + power : 20 + level * 6 + power) * bonus * (index === 8 ? (this.hasEquipped('rimeglass-focus') ? 1.25 : 1) : fireBonus));
         profile.slow = 6 + binding;
-        profile.summary = `${profile.damage} damage${index === 8 ? ' · slows movement for ' + profile.slow + 's' : index === 9 ? ' per enemy within 100 paces' : ' to one enemy'}`;
+        profile.radius = this.hasEquipped('ashwake-mantle') ? 135 : 100;
+        profile.summary = `${profile.damage} damage${index === 8 ? ' · slows movement for ' + profile.slow + 's' : index === 9 ? ' per enemy within ' + profile.radius + ' paces' : ' to one enemy'}`;
       } else if (index === 2) {
         profile.tickDamage = Math.round((7 + level * 2 + power * 0.4) * bonus * fireBonus);
         profile.summary = `${profile.tickDamage} damage every 2s for 14s · reapplying refreshes the mark`;
@@ -314,8 +346,9 @@
       slot.misses = named ? 0 : slot.misses + 1;
       slot.count++;
       const level = camp.level + (named ? 1 : 0);
-      const maxHp = Math.round((camp.type === 'goblin' ? 42 + level * 13 : 50 + level * 15) * (named ? 4.125 : 2));
-      const names = camp.type === 'goblin' ? ['Goblin Scout', 'Goblin Raider', 'Goblin Shaman'] : ['Crypt Skeleton', 'Crypt Guardian', 'Crypt Acolyte'];
+      const maxHp = Math.round((camp.type === 'goblin' ? 42 + level * 13 : 50 + level * 15) * (named ? 4.125 : 2) * ({wolf:0.9,beetle:1.25,wisp:0.75,drake:1.1}[camp.type] || 1));
+      const frontierNames = {wolf:['Amber Wolf','Downs Prowler','Pack Stalker'], beetle:['Fen Beetle','Mire Carapace','Lantern Scarab'], wisp:['Rime Wisp','Shard Singer','Frost Echo'], drake:['Ash Drake','Cinder Stalker','Forge Drake']};
+      const names = frontierNames[camp.type] || (camp.type === 'goblin' ? ['Goblin Scout', 'Goblin Raider', 'Goblin Shaman'] : ['Crypt Skeleton', 'Crypt Guardian', 'Crypt Acolyte']);
       const mob = {
         id: 'mob-' + ++this._uid, x: slot.x, y: slot.y, homeX: slot.x, homeY: slot.y,
         campId: camp.id, index: slot.index, type: camp.type,
@@ -325,11 +358,14 @@
         threatPlayer: 0, threatPet: 0, targetId: null,
         attackAt: 0, dotAt: 0, dotDamage: 0, _slot: slot,
         damage: Math.round((4 + level * 2.2) * (named ? 1.72 : 1.5)),
+        speed: ({wolf:122,beetle:63,wisp:80,drake:92}[camp.type] || 86) + level * 2,
+        reach: camp.type === 'wisp' ? 185 : 35,
         ability: null, intent: null, abilityReadyAt: 0
       };
       mob.ability = named ? (camp.id === 'mossfang' ? 'heal' : camp.id === 'vigil' ? 'hex' : 'slam')
         : mob.name.includes('Shaman') || mob.name.includes('Acolyte') ? 'hex'
           : mob.name.includes('Guardian') ? 'slam' : null;
+      if (frontierNames[camp.type]) mob.ability = camp.type === 'wisp' || camp.type === 'drake' ? 'hex' : (named || slot.index === 1 ? 'slam' : null);
       slot.mobId = mob.id;
       this.mobs.push(mob);
     }
@@ -636,8 +672,8 @@
           break;
         case 9: {
           const center = { x: target.x, y: target.y };
-          const victims = this.mobs.filter(mob => mob.alive && !mob.returning && distance(mob, center) <= 100);
-          this._visual('nova', center, { radius: 100, color: '#edaa70', life: 0.85 });
+          const victims = this.mobs.filter(mob => mob.alive && !mob.returning && distance(mob, center) <= profile.radius);
+          this._visual('nova', center, { radius: profile.radius, color: '#edaa70', life: 0.85 });
           const damage = profile.damage;
           for (const victim of victims) this._damageMob(victim, damage, 'player');
           this.log('Ember Nova strikes ' + victims.length + (victims.length === 1 ? ' enemy.' : ' enemies.'), 'combat');
@@ -836,8 +872,8 @@
       attacker.strikeAt = this.clock;
       attacker.strikeUntil = this.clock + 0.55;
       if (Math.abs(target.x - attacker.x) > 1) attacker.facing = target.x > attacker.x ? 1 : -1;
-      this._visual('melee', target, { fromX: attacker.x, fromY: attacker.y, sourceId: attacker.id,
-        color: attacker.type === 'Air' ? '#b0e4ed' : attacker.type === 'Earth' ? '#d2c594' : '#efbd92', life: 0.35 });
+      this._visual(attacker.type==='wisp'?'bolt':'melee', target, { fromX: attacker.x, fromY: attacker.y, sourceId: attacker.id,
+        color: attacker.type === 'wisp' ? '#afdce9' : attacker.type === 'Air' ? '#b0e4ed' : attacker.type === 'Earth' ? '#d2c594' : '#efbd92', life: 0.35 });
     }
 
     _fall(entity, kind) {
@@ -864,6 +900,7 @@
         this.player.mp += restored;
         if (restored > 0) this._effect(this.player, '+' + Math.round(restored) + ' mana · Second Wind', '#a6c6e6');
       }
+      if (this.hasEquipped('lanternheart')) this._heal(this.player, 8);
       const modifier = clamp(1 + (mob.level - this.player.level) * 0.16, 0.25, 1.8);
       const xp = Math.max(2, Math.round((15 + mob.level * 7) * modifier * (mob.named ? 1.5 : 1)));
       const copper = Math.floor(3 + this._roll() * 5 + mob.level * 1.5 + (mob.named ? 12 : 0));
@@ -879,8 +916,8 @@
       } else if (!this.player.inventory.includes('worn-linen-robe')) {
         this._loot('worn-linen-robe');
       } else if (this._roll() < 0.3) {
-        const table = mob.type === 'skeleton' ? ['cracked-bone-wand', 'waxed-travel-cloak', 'copperleaf-ring']
-          : ['goblin-talisman', 'copperleaf-ring', 'worn-linen-robe', 'waxed-travel-cloak'];
+        const table = CAMPS[mob._slot.campIndex].loot || (mob.type === 'skeleton' ? ['cracked-bone-wand', 'waxed-travel-cloak', 'copperleaf-ring']
+          : ['goblin-talisman', 'copperleaf-ring', 'worn-linen-robe', 'waxed-travel-cloak']);
         this._loot(table[Math.floor(this._roll() * table.length)]);
       }
     }
@@ -1092,7 +1129,7 @@
         if (distance(pet, target) <= 35 && this.clock >= pet.attackAt) {
           pet.attackAt = this.clock + (pet.type === 'Air' ? 1.45 : 1.65);
           this._strike(pet, target);
-          this._damageMob(target, pet.damage, 'pet');
+          this._damageMob(target, Math.round(pet.damage * (this.hasEquipped('crownfang-ring') ? 1.12 : 1)), 'pet');
         }
       } else {
         pet.targetId = null;
@@ -1116,11 +1153,12 @@
       if (kind === 'heal' && mob.hp > mob.maxHp * 0.72) return false;
       if (kind !== 'heal' && distance(mob, target) > (kind === 'hex' ? 240 : 100)) return false;
       const point = kind === 'heal' ? mob : target;
-      const name = kind === 'heal' ? 'Thorn Renewal' : kind === 'hex' ? (mob.named ? 'Grave Hex' : 'Withering Hex')
-        : mob.name === 'The Bonewarden' ? 'Bonebreaker Slam' : mob.named ? 'Groundbreaker' : 'Grave Slam';
+      const frontierIntent = {wolf:'Hunting Pounce',beetle:'Carapace Crush',wisp:'Shard Volley',drake:'Cinder Breath'}[mob.type];
+      const name = frontierIntent || (kind === 'heal' ? 'Thorn Renewal' : kind === 'hex' ? (mob.named ? 'Grave Hex' : 'Withering Hex')
+        : mob.name === 'The Bonewarden' ? 'Bonebreaker Slam' : mob.named ? 'Groundbreaker' : 'Grave Slam');
       mob.intent = {
         name, kind, started: this.clock, done: this.clock + (kind === 'hex' ? 1.8 : 2),
-        x: point.x, y: point.y, radius: kind === 'hex' ? 50 : 65
+        x: point.x, y: point.y, radius: mob.type === 'drake' ? 95 : mob.type === 'beetle' ? 85 : kind === 'hex' ? 50 : 65
       };
       this.log(mob.name + ' prepares ' + name + '. ' + (kind === 'heal' ? 'Root can interrupt the ritual.' : 'Leave the marked ground or interrupt with Root.'), 'warning');
       return true;
@@ -1183,8 +1221,8 @@
         return;
       }
       if (this._beginIntent(mob, target)) return;
-      if (mob.rootUntil <= this.clock) this._walk(mob, target, (86 + mob.level * 2) * (mob.slowUntil > this.clock ? 0.55 : 1), dt, 30);
-      if (distance(mob, target) <= 35 && this.clock >= mob.attackAt) {
+      if (mob.rootUntil <= this.clock) this._walk(mob, target, mob.speed * (mob.slowUntil > this.clock ? 0.55 : 1), dt, Math.max(30,mob.reach-5));
+      if (distance(mob, target) <= mob.reach && this.clock >= mob.attackAt) {
         mob.attackAt = this.clock + 2.2;
         this._strike(mob, target);
         if (attacksPet) this._takePetDamage(mob.damage);
@@ -1210,6 +1248,6 @@
   }
 
   // The renderer extends this namespace after loading; shared data stay frozen.
-  return { Game, WORLD, CAMPS, SPELLS, ITEMS, NPCS, QUESTS, SUPPLIES, VERSION };
+  return { Game, WORLD, BIOMES, biomeAt, CAMPS, SPELLS, ITEMS, NPCS, QUESTS, SUPPLIES, VERSION };
 });
 

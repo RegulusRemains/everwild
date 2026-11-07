@@ -346,6 +346,7 @@ async function main() {
       await page.locator('#dialog-close').click();
     }
     await require('./hud-review.cjs').runHudChecks(page, screenshots);
+    await require('./world-review.cjs').runWorldChecks(page, screenshots);
     assert.deepEqual(errors, [], 'The browser must not report runtime or console errors');
     console.log('Browser smoke passed: controls, NPC dialogue, quest rewards, equipment, spell assignment, pet guard/taunt, tonic purchase/cooldown, save/reload, and mobile layout.');
     console.log(`Screenshots: ${screenshots}`);

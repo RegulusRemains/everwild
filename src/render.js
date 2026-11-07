@@ -1,15 +1,18 @@
 /* Everwild — layered woodland illustration with a low-resolution world pass. */
 (function (root) {
   'use strict';
-  const { WORLD, CAMPS, NPCS = [], QUESTS = [], ITEMS = {} } = root.Everwild;
+  const { WORLD, BIOMES, biomeAt, CAMPS, NPCS = [], QUESTS = [], ITEMS = {} } = root.Everwild;
   const bindstone = WORLD.bindstone || { x: WORLD.spawn.x - 58, y: WORLD.spawn.y - 36 };
   const TAU = Math.PI * 2;
   const lootNames = new Set(Object.values(ITEMS).map(item => item.name));
   const artBoxes = {"environment": [[9, 17, 298, 288], [379, 8, 196, 300], [634, 7, 300, 302], [959, 12, 290, 295], [13, 339, 290, 264], [329, 344, 282, 255], [639, 355, 290, 233], [953, 350, 289, 239], [14, 655, 286, 256], [329, 661, 281, 234], [639, 642, 289, 269], [949, 639, 298, 275], [18, 954, 285, 281], [333, 943, 264, 292], [638, 957, 274, 275], [964, 942, 271, 291]], "walk": [[38, 11, 201, 230], [294, 11, 201, 230], [550, 11, 201, 230], [806, 11, 201, 230], [19, 261, 219, 234], [275, 261, 219, 234], [531, 261, 219, 234], [787, 261, 219, 234], [22, 517, 212, 244], [278, 517, 212, 244], [534, 517, 212, 244], [790, 517, 212, 244], [32, 788, 201, 236], [288, 788, 201, 236], [544, 788, 201, 236], [800, 788, 201, 236], [25, 1024, 193, 243], [281, 1024, 193, 243], [537, 1024, 193, 243], [793, 1024, 193, 243], [23, 1282, 215, 240], [279, 1282, 215, 240], [535, 1282, 215, 240], [791, 1282, 215, 240]], "action": [[10, 22, 239, 222], [266, 22, 239, 222], [522, 22, 239, 222], [778, 22, 239, 222], [16, 283, 230, 209], [272, 283, 230, 209], [528, 283, 230, 209], [784, 283, 230, 209], [9, 523, 237, 226], [265, 523, 237, 226], [521, 523, 237, 226], [777, 523, 237, 226], [20, 775, 229, 249], [276, 775, 229, 249], [532, 775, 229, 249], [788, 775, 229, 249], [8, 1024, 246, 256], [264, 1024, 246, 256], [520, 1024, 246, 256], [776, 1024, 246, 256], [0, 1280, 256, 232], [256, 1280, 256, 232], [512, 1280, 256, 232], [768, 1280, 256, 232]]};
+  artBoxes.frontier = [[13, 106, 230, 137], [269, 111, 230, 132], [548, 40, 183, 203], [781, 110, 230, 133], [13, 279, 230, 220], [269, 308, 230, 191], [525, 271, 230, 228], [781, 296, 230, 203], [13, 544, 230, 211], [269, 545, 230, 210], [525, 526, 230, 229], [781, 546, 230, 209], [13, 792, 230, 219], [269, 798, 230, 213], [525, 799, 230, 212], [781, 790, 230, 221], [21, 1058, 213, 209], [281, 1037, 206, 230], [525, 1053, 230, 214], [782, 1037, 228, 230]];
+  const frontierTypes = {wolf:0,beetle:1,wisp:2,drake:3};
   const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
   const intentColors = { slam: '#dfad70', hex: '#e29581', heal: '#bcb6d2' };
   const activeIntent = (mob, time) => mob.intent && mob.alive && !mob.returning && !(mob.rootUntil > time) && mob.intent.done > time;
   const roads = [[180, 200], [310, 260], [430, 325], [550, 335], [710, 325], [860, 345], [970, 415], [1090, 410], [1190, 560], [1240, 720], [1330, 890], [1460, 980], [1570, 1040], [1730, 1140]];
+  const roadRoutes = [roads, [[1090,410],[1550,430],[1860,670],[2290,540],[2740,580],[3060,430],[3400,520]], [[1860,670],[1900,1180],[2230,1450],[2320,1790],[2700,1940],[3040,1780],[3460,1880]]];
   function random(seed) {
     return () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
   }
@@ -40,20 +43,22 @@
   }
   function roadDistance(x, y) {
     let result = Infinity;
-    for (let i = 1; i < roads.length; i++) {
-      const [ax, ay] = roads[i - 1], [bx, by] = roads[i];
+    for (const route of roadRoutes) for (let i = 1; i < route.length; i++) {
+      const [ax, ay] = route[i - 1], [bx, by] = route[i];
       const t = clamp(((x - ax) * (bx - ax) + (y - ay) * (by - ay)) / ((bx - ax) ** 2 + (by - ay) ** 2), 0, 1);
       result = Math.min(result, Math.hypot(x - ax - (bx - ax) * t, y - ay - (by - ay) * t));
     }
     return result;
   }
   function traceRoad(c) {
-    c.beginPath(); c.moveTo(...roads[0]);
-    for (let i = 1; i < roads.length - 1; i++) {
-      c.quadraticCurveTo(...roads[i], (roads[i][0] + roads[i + 1][0]) / 2, (roads[i][1] + roads[i + 1][1]) / 2);
+    c.beginPath();
+    for (const route of roadRoutes) {
+      c.moveTo(...route[0]);
+      for (let i=1;i<route.length-1;i++) c.quadraticCurveTo(...route[i],(route[i][0]+route[i+1][0])/2,(route[i][1]+route[i+1][1])/2);
+      c.lineTo(...route[route.length-1]);
     }
-    c.lineTo(...roads[roads.length - 1]);
   }
+
   function lake(c) {
     c.beginPath(); c.moveTo(245, 850);
     c.bezierCurveTo(240, 760, 350, 733, 415, 784);
@@ -74,7 +79,7 @@
         const image = new Image(); this[name] = image;
         image.onload = () => {
           this[name + 'Loaded'] = image.naturalWidth > 0; this.artStatus[name] = this[name + 'Loaded'];
-          if (name === 'floor' && this.terrain) {
+          if (['floor','frontierFloor'].includes(name) && this.terrain) {
             this.trees = []; this.decor = [];
             this.terrain = this._terrain(); this.mapTexture = this._mapTexture();
           }
@@ -85,7 +90,7 @@
       });
       this.artReady = Promise.all([
         load('atlas', 'assets/woodland-atlas.webp'), load('environment', 'assets/environment-atlas.webp'),
-        load('walk', 'assets/walk-atlas.webp'), load('action', 'assets/action-atlas.webp'), load('floor', 'assets/floor-atlas.webp')
+        load('frontier','assets/frontier-atlas.webp'), load('frontierFloor','assets/frontier-floor.webp'), load('walk', 'assets/walk-atlas.webp'), load('action', 'assets/action-atlas.webp'), load('floor', 'assets/floor-atlas.webp')
       ]).then(results => results.every(Boolean));
       this.camera = { x: 0, y: 0 };
       this.width = 1; this.height = 1; this.dpr = 1; this.zoom = 1.3;
@@ -181,6 +186,29 @@
         c.strokeStyle = i % 4 ? '#a8b56a21' : '#1d392a40'; c.lineWidth = 0.7;
         c.beginPath(); c.moveTo(x, y); c.lineTo(x - 1 + r() * 3, y - 2 - r() * 3); c.stroke();
       }
+      for (const biome of BIOMES.slice(1)) {
+        c.save();
+        c.beginPath(); c.rect(biome.x-65,biome.y===0?0:biome.y-65,biome.w+65,biome.h+65); c.clip();
+        const tile=canvas(256,256), tc=tile.getContext('2d');
+        if(this.frontierFloorLoaded) { const side=this.frontierFloor.naturalWidth/2; tc.drawImage(this.frontierFloor,(biome.art%2)*side,Math.floor(biome.art/2)*side,side,side,0,0,256,256); }
+        else {tc.fillStyle=biome.color;tc.fillRect(0,0,256,256);}
+        const mirrored=canvas(512,512),mc=mirrored.getContext('2d');
+        for(const [ix,iy]of [[0,0],[1,0],[0,1],[1,1]]){mc.save();mc.translate(ix?512:0,iy?512:0);mc.scale(ix?-1:1,iy?-1:1);mc.drawImage(tile,0,0);mc.restore();}
+        const layer=canvas(biome.w+130,biome.h+130),lc=layer.getContext('2d');lc.fillStyle=lc.createPattern(mirrored,'repeat');lc.fillRect(0,0,layer.width,layer.height);
+        lc.globalCompositeOperation='destination-in';
+        for(let row=0;row<layer.height;row+=8){const wobble=24*Math.sin((row+biome.y)/147)+13*Math.sin((row+biome.y)/63);const edge=lc.createLinearGradient(wobble-30,0,wobble+150,0);edge.addColorStop(0,'#fff0');edge.addColorStop(1,'#fff');lc.fillStyle=edge;lc.fillRect(0,row,layer.width,8);}
+        if(biome.y>0)for(let col=0;col<layer.width;col+=8){const wobble=22*Math.sin((col+biome.x)/173);const top=lc.createLinearGradient(0,wobble-25,0,wobble+145);top.addColorStop(0,'#fff0');top.addColorStop(1,'#fff');lc.fillStyle=top;lc.fillRect(col,0,8,layer.height);}
+        c.drawImage(layer,biome.x-65,biome.y===0?0:biome.y-65);
+        for(let i=0;i<110;i++) {
+          const x=biome.x+60+r()*(biome.w-80),y=biome.y+50+r()*(biome.h-70);
+          if(roadDistance(x,y)<45)continue;
+          if(biome.art===1){ellipse(c,x,y,12+r()*20,4+r()*8,'#102b323b');line(c,[[x,y],[x+2,y-11]],'#718f7d',1);ellipse(c,x+5,y-3,3,2,'#a382b2');}
+          else if(biome.art===2){ellipse(c,x,y,10+r()*22,4+r()*9,'#c1d4d428');polygon(c,[[x,y],[x+4,y-12],[x+7,y]],'#a1c5ce55');}
+          else if(biome.art===3){line(c,[[x-7,y-4],[x,y],[x-2,y+7],[x+10,y+10]],'#bd633638',1);ellipse(c,x+9,y+5,4+r()*7,3,'#2628295e');}
+          else {ellipse(c,x,y,2+r()*4,1.2,'#d7b95c55');}
+        }
+        c.restore();
+      }
       // The worn path remains legible against the darker forest floor.
       c.lineCap = 'round'; c.lineJoin = 'round';
       for (const [width, color] of [[76, '#71805938'], [59, '#9387604d'], [45, '#9b8c64'], [32, '#ab9970']]) {
@@ -226,20 +254,23 @@
         ellipse(c, x, y, 5 + r() * 12, 2 + r() * 4, '#82935b45');
       }
       // Reproducible decor; clearings and the main route stay open.
-      for (let i = 0; i < 700; i++) {
+      for (let i = 0; i < 3100; i++) {
         const x = 25 + r() * (WORLD.w - 50), y = 40 + r() * (WORLD.h - 65);
         if (roadDistance(x, y) < 62 || ((x - 270) / 222) ** 2 + ((y - 260) / 167) ** 2 < 1 ||
             CAMPS.some(camp => Math.hypot(x - camp.x, y - camp.y) < 172) ||
             (x > 190 && x < 570 && y > 715 && y < 1080) ||
             (x > 1150 && x < 1770 && y > 735 && y < 1235)) continue;
-        if (this.trees.some(tree => Math.hypot(x - tree.x, y - tree.y) < 38)) continue;
-        const tree = { x, y, sprite: Math.floor(r() * 8), scale: 0.72 + r() * 0.48 };
+        const biome=biomeAt(x,y);
+        const spacing=biome.art===undefined?48:[140,120,145,180][biome.art];
+        if (this.trees.some(tree => Math.hypot(x - tree.x, y - tree.y) < spacing)) continue;
+        if(biome.art!==undefined && r()>[.58,.78,.72,.25][biome.art])continue;
+        const tree = { kind:'tree', alpha:1, biome:biome.id, frontier:biome.art, x, y, sprite: Math.floor(r() * 8), scale: 0.72 + r() * 0.48 };
         this.trees.push(tree);
         ellipse(c, x + 14, y + 4, 35 * tree.scale, 11 * tree.scale, '#132e2438');
       }
       for (let i = 0; i < 280; i++) {
         const x = r() * WORLD.w, y = r() * WORLD.h;
-        if (roadDistance(x, y) < 31 || (x > 215 && x < 545 && y > 745 && y < 1050)) continue;
+        if (x>1800 || roadDistance(x, y) < 31 || (x > 215 && x < 545 && y > 745 && y < 1050)) continue;
         if (i % 3 === 0) {
           ellipse(c, x + 3, y + 3, 7, 3, '#102d2533');
           polygon(c, [[x - 6, y], [x - 3, y - 5], [x + 4, y - 6], [x + 8, y], [x + 2, y + 3]], '#77806a', '#4b614b');
@@ -254,7 +285,7 @@
       }
       for (let i = 0; i < 180; i++) {
         const x = 30 + r() * (WORLD.w - 60), y = 60 + r() * (WORLD.h - 110);
-        if (roadDistance(x, y) < 45 || Math.hypot(x - WORLD.spawn.x, y - WORLD.spawn.y) < 150 || CAMPS.some(camp => Math.hypot(x - camp.x, y - camp.y) < 115) || (x > 200 && x < 550 && y > 745 && y < 1050)) continue;
+        if (x>1800 || roadDistance(x, y) < 45 || Math.hypot(x - WORLD.spawn.x, y - WORLD.spawn.y) < 150 || CAMPS.some(camp => Math.hypot(x - camp.x, y - camp.y) < 115) || (x > 200 && x < 550 && y > 745 && y < 1050)) continue;
         this.decor.push({ x, y, sprite: [4,5,5,6,10][i % 5], height: i % 5 === 4 ? 38 : 12 + r() * 15 });
       }
       return image;
@@ -325,14 +356,15 @@
     }
 
     _mapTexture() {
-      const image = canvas(380, 270), c = image.getContext('2d');
-      c.drawImage(this.terrain, 0, 0, 380, 270);
-      for (const tree of this.trees) ellipse(c, tree.x / 5, tree.y / 5 - 3, 4.5 * tree.scale, 5.5 * tree.scale, '#284e32b3');
-      c.fillStyle = '#18322426'; c.fillRect(0, 0, 380, 270);
+      const image = canvas(420, 260), c = image.getContext('2d');
+      c.drawImage(this.terrain, 0, 0, 420, 260);
+      for (const tree of this.trees) ellipse(c, tree.x / 10, tree.y / 10 - 1, 2.2 * tree.scale, 2.7 * tree.scale, '#284e32b3');
+      c.fillStyle = '#18322426'; c.fillRect(0, 0, 420, 260);
       return image;
     }
 
     draw(game) {
+      const now=performance.now()/1000;this.frameDelta=Math.min(.05,Math.max(0,now-(this.lastFrameTime||now)));this.lastFrameTime=now;
       let c = this.worldCtx;
       const p = game.player, time = game.clock || 0;
       // World art uses a stable pixel grid; names and interface stay at display resolution.
@@ -359,15 +391,25 @@
         { kind: 'signpost', x: 402, y: 202 }, { kind: 'study', x: 133, y: 307 }, { kind: 'market', x: 412, y: 285 }];
       for (const fallen of game.remains || []) if (this._visible(fallen.x, fallen.y)) objects.push({ kind: 'fallen', entity: fallen, y: fallen.y });
       for (const detail of this.decor) if (this._visible(detail.x, detail.y, 60)) objects.push({ kind: 'decor', ...detail });
-      for (const tree of this.trees) if (this._visible(tree.x, tree.y, 190)) objects.push({ kind: 'tree', ...tree });
+      for (const tree of this.trees) if (this._visible(tree.x, tree.y, 190)) objects.push(tree);
       for (const camp of CAMPS) if (this._visible(camp.x, camp.y, 220)) objects.push({ kind: 'camp', camp, y: camp.y - 25 });
       objects.sort((a, b) => a.y - b.y);
       for (const object of objects) {
         c.save();
         if (object.kind === 'tree') {
-          const occludes = actors.some(({ entity: e }) => Math.abs(e.x - object.x) < 91 * object.scale && e.y < object.y + 40 && e.y > object.y - 170 * object.scale);
-          c.globalAlpha = occludes ? 0.1 : 1;
-          if (!this._art(c, object.sprite % 4, object.x, object.y, 156 * object.scale)) c.drawImage(this.treeSprites[object.sprite], object.x - 64 * object.scale, object.y - 155 * object.scale, 128 * object.scale, 168 * object.scale);
+          // The party and its current opponent reveal scenery; wandering monsters do not.
+          const party = [p,...(game.pet?[game.pet]:[]),...(game.selected&&game.selected.aggro?[game.selected]:[])];
+          let proximity=0;
+          for(const e of party){
+            const dx=(e.x-object.x)/(88*object.scale),dy=(e.y-23-(object.y-72*object.scale))/(88*object.scale);
+            const d=Math.sqrt(dx*dx+dy*dy);
+            proximity=Math.max(proximity,clamp((1.18-d)/0.4,0,1));
+          }
+          const desired=1-proximity*0.75;
+          object.alpha += (desired-object.alpha)*(1-Math.exp(-this.frameDelta/(desired < object.alpha ? .14 : .3)));
+          c.globalAlpha=object.alpha;
+          if(object.frontier!==undefined) this._sheet(c,'frontier',12+object.frontier,object.x,object.y,145*object.scale);
+          else if (!this._art(c, object.sprite % 4, object.x, object.y, 156 * object.scale)) c.drawImage(this.treeSprites[object.sprite], object.x - 64 * object.scale, object.y - 155 * object.scale, 128 * object.scale, 168 * object.scale);
         } else if (object.kind === 'decor') this._sheet(c, 'environment', object.sprite, object.x, object.y, object.height);
         else if (object.kind === 'fallen') this._fallen(c, object.entity);
         else if (object.kind === 'lodge') this._lodge(c, object.x, object.y, p);
@@ -772,6 +814,12 @@
     }
 
     _camp(c, camp, time, actors) {
+      if(camp.biome) { const biome=BIOMES.find(b=>b.id===camp.biome);
+        this._sheet(c,'frontier',8+biome.art,camp.x,camp.y-15,155);
+        for(const side of [-1,1])this._sheet(c,'frontier',12+biome.art,camp.x+side*110,camp.y+24,65);
+        if(camp.type==='drake')this._fire(c,camp.x,camp.y-35,time,false);
+        return;
+      }
       if (this.environmentLoaded) {
         const blocked = actors.some(({ entity }) => Math.abs(entity.x - camp.x) < 90 && entity.y < camp.y && entity.y > camp.y - 145);
         if (blocked) c.globalAlpha = 0.3;
@@ -832,6 +880,7 @@
       c.save(); c.translate(entity.x, entity.y); c.globalAlpha = clamp(entity.life, 0, 0.65);
       c.filter = 'saturate(0.3)';
       if (!this.reducedMotion) { c.rotate(progress * (entity.facing === -1 ? -0.8 : 0.8)); c.scale(1, 1 - progress * 0.65); }
+      if(frontierTypes[entity.type]!==undefined){this._sheet(c,'frontier',frontierTypes[entity.type]+(entity.named?4:0),0,0,entity.named?65:47);c.restore();return;}
       const index = entity.kind === 'pet' ? (entity.type === 'Earth' ? 9 : 10) : entity.type === 'goblin' ? 11 : 12;
       if (entity.named) this._sheet(c, 'environment', 12 + CAMPS.findIndex(camp => camp.id === entity.campId), 0, 0, 52);
       else this._art(c, index, 0, 0, entity.kind === 'pet' ? 51 : 44);
@@ -895,7 +944,11 @@
         const face = entity.facing === -1 ? -1 : 1;
         c.scale(face, 1);
         const pose = this._pose(kind, entity, game, time);
-        if (entity.named && this.environmentLoaded) {
+        if(kind==='mob' && frontierTypes[entity.type]!==undefined) {
+          const moving=(entity.walkUntil||0)>time;
+          if(!this.reducedMotion){c.translate(0,entity.type==='wisp'?Math.sin(time*2.5)*3:moving?Math.sin(time*10)*1.7:0);if(entity.strikeUntil>time)c.rotate(Math.sin((entity.strikeUntil-time)*9)*.14);}
+          this._sheet(c,'frontier',frontierTypes[entity.type]+(entity.named?4:0),0,0,entity.named?65:entity.type==='beetle'?39:47);
+        } else if (entity.named && this.environmentLoaded) {
           if (entity.strikeUntil > time && !this.reducedMotion) c.rotate(Math.sin((entity.strikeUntil - time) * 7) * 0.12);
           this._sheet(c, 'environment', 12 + CAMPS.findIndex(camp => camp.id === entity.campId), 0, 0, height);
         } else if (!pose || !this._sheet(c, pose.sheet, pose.index, 0, 0, height)) this._art(c, index, 0, 0, height);
@@ -1114,6 +1167,7 @@
       ellipse(c, x, y, labels ? 8 : 5, labels ? 8 : 5, '#e5eadb18', '#e8e5bf80');
       polygon(c, [[x, y - 4], [x + 3, y + 3], [x, y + 1.5], [x - 3, y + 3]], '#f6edc5', '#314b35');
       if (labels) {
+        for(const b of BIOMES.slice(1))text(c,b.name,(b.x+b.w*.5)*sx,(b.y+80)*sy,10,b.art===2?'#e1eeee':'#d8cba8',true);
         text(c, 'N', w - 22, 23, 12, '#dfd4aa', true);
         line(c, [[w - 22, 34], [w - 22, 53]], '#c8c19b', 1);
         polygon(c, [[w - 22, 32], [w - 25, 39], [w - 19, 39]], '#d7cfa7');

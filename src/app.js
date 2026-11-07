@@ -153,9 +153,11 @@
 
 
   const itemArt = { ...Object.fromEntries(Object.keys(ITEMS).slice(0, 8).map((id, index) => [id, index + 8])), 'worn-linen-robe':20, 'waxed-travel-cloak':21, 'mosswoven-mantle':22, 'emberwoven-robe':23 };
+  for(const item of Object.values(ITEMS))if(item.frontierArt!==undefined)itemArt[item.id]=item.rarity==='rare'?24+item.frontierArt:({charm:8,ring:10,focus:9,garb:21}[item.slot]);
   const spellArt = [0, 1, 2, 3, 4, 5, 6, 7, 16, 17];
   const spellRoles = ['Companion · endurance', 'Direct damage', 'Damage over time', 'Control · interrupt', 'Companion · recovery', 'Companion · offense', 'Protection', 'Recovery', 'Damage · slow', 'Area damage'];
   function arcanaIcon(index, extra = '') {
+    if(index>=24)return `<span class="atlas-icon frontier-art ${extra}" aria-hidden="true" style="background-position:${(index-24)*100/3}% 100%"></span>`;
     if (index >= 20) return `<span class="atlas-icon garb-art ${extra}" aria-hidden="true" style="background-position:${(index - 20) % 2 * 100}% ${Math.floor((index - 20) / 2) * 100}%"></span>`;
     if (index >= 16) return `<span class="atlas-icon extra-arcana ${extra}" aria-hidden="true" style="background-position:${(index - 16) % 2 * 100}% ${Math.floor((index - 16) / 2) * 100}%"></span>`;
     return `<span class="atlas-icon ${extra}" aria-hidden="true" style="background-position:${index % 4 * 100 / 3}% ${Math.floor(index / 4) * 100 / 3}%"></span>`;
@@ -226,6 +228,7 @@
     document.documentElement.style.setProperty('--ui-scale', String(scale));
     renderer.resize(bounds.width, bounds.height, Math.min(window.devicePixelRatio || 1, 2));
     renderer.draw(game);
+    if($('world-map'))renderer.drawMap($('world-map'),game,true);
   }
 
   function pause(value) {
@@ -458,7 +461,7 @@
     } else if (name === 'journal') {
       setText('dialog-title', 'The Eastern Road');
       const completed = QUESTS.filter(quest => game.questState(quest.id).status === 'completed').length;
-      content.innerHTML = menuTabs('journal') + (completed === QUESTS.length ? completionCard() : '') + `<p>${completed === QUESTS.length ? 'The first expedition is recorded below. Revisit the camps, compare their relics, and prepare your next spell bar when you are ready.' : 'Willowmere’s quiet roads have become dangerous. Help the people here, learn what the goblins are carrying, and trace the disturbance toward the crypt.'}</p><div class="journal-summary"><span>Your expedition</span><span>${completed} of ${QUESTS.length} assignments completed</span></div><div class="quest-list">` + QUESTS.map(quest => questCard(quest)).join('') + '</div><p class="muted" style="margin-top:17px">Accept an assignment before hunting its targets. Existing equipment can satisfy item evidence assignments, and you keep the equipment when you report back.</p>';
+      content.innerHTML = menuTabs('journal') + (game.questState('crypt-proof').status === 'completed' ? completionCard() : '') + `<p>${game.questState('crypt-proof').status === 'completed' ? 'The first expedition is recorded below. Revisit the camps, compare their relics, and prepare your next spell bar when you are ready.' : 'Willowmere’s quiet roads have become dangerous. Help the people here, learn what the goblins are carrying, and trace the disturbance toward the crypt.'}</p><div class="journal-summary"><span>Your expedition</span><span>${completed} of ${QUESTS.length} assignments completed</span></div><div class="quest-list">` + QUESTS.map(quest => questCard(quest)).join('') + '</div><p class="muted" style="margin-top:17px">Accept an assignment before hunting its targets. Existing equipment can satisfy item evidence assignments, and you keep the equipment when you report back.</p>';
     } else if (name === 'camps') {
       setText('dialog-title', 'Rumors from the road');
       content.innerHTML = menuTabs('camps') + '<p>Every camp has a reason to return. Learn the guards, watch for the named foe, and choose the piece of equipment you want to pursue.</p><div class="camp-list">' + CAMPS.map(camp => {
@@ -473,7 +476,7 @@
         '<h3>Read the fight</h3><p>Amber ground circles warn of an enemy’s special attack. Move outside the circle before it fills, or interrupt the enemy with Arcane Root. Rooted enemies can still strike anyone beside them. Your target card shows whether you or your elemental has its attention.</p>' +
         '<h3>A companion with commands</h3><p>Guard [C] tells your pet to defend you when you are hit. Attack [F] sends it to your chosen enemy. Follow [G] recalls it passively so it will not immediately start another fight. Taunt [Q] pulls a nearby enemy’s attention toward the elemental and recovers in 12 seconds.</p>' +
         '<div class="build-guides"><article><h3>Steady earth</h3><p>An Earth Pet holds attention while Burning Mark works. Save mana for Root and Pet Mend; a Mosswoven Mantle strengthens each mend, and the earth ring reduces incoming pet damage.</p></article><article><h3>Swift air</h3><p>An Air Pet deals more damage but needs closer care. A linen robe adds mana and spell power for a faster kill. Grik’s charm replenishes mana between fights; the Boneguard protects you when attention slips.</p></article></div><h3>Deliberate magic</h3><p>Moving interrupts a cast without spending mana. Spells keep the target chosen when casting began. Frost Lance unlocks at level 3 and slows a foe; Ember Nova unlocks at level 5 and hits nearby enemies. Open the spellbook [B] to assign any unlocked spell to one of your eight hotbar slots.</p>' +
-        '<h3>Progress that stays with you</h3><p>Defeated enemies return after 45–75 seconds. Named enemies have a chance to return in their camp’s final guard position and carry rare gear. Duplicates become copper. At levels 2 and 5, buy spell ranks at the bindstone. Death adds 15% of your next level’s XP requirement as debt; you keep your level, items, and copper.</p>' +
+        '<h3>Beyond the old road</h3><p>The eastern branch leads to Amberfall’s wolves (levels 3–4), then the northern Rimeglass wisps (8–9). Take the southern branch into Lantern Mire (5–6) and onward to Cinderwake’s drakes (10–11). Rowan and Liora offer optional hunts as your first assignments progress. The map [M] shows the regions; camp rumors describe their rare equipment.</p><h3>Progress that stays with you</h3><p>Defeated enemies return after 45–80 seconds. Named enemies have a chance to return in their camp’s final guard position and carry rare gear. Duplicates become copper. At levels 2 and 5, buy spell ranks at the bindstone. Death adds 15% of your next level’s XP requirement as debt; you keep your level, items, and copper.</p>' +
         '<div class="controls-grid">' + [['WASD / ↑↓←→', 'Move (or click ground)'], ['Click / Space', 'Choose / nearest target'], ['Tab', 'Cycle targets while canvas focused'], ['1–8', 'Cast the assigned hotbar spell'], ['F / G', 'Pet attack / passive follow'], ['C / Q', 'Pet guard / taunt'], ['R', 'Meditate / stand'], ['E', 'Talk nearby / use bindstone'], ['Z / X', 'Health / mana tonic'], ['I / M', 'Pack / frontier map'], ['J / B', 'Quest journal / spellbook'], ['Esc', 'Stop moving / pause']].map(([key, text]) => `<div><kbd>${key}</kbd><span>${text}</span></div>`).join('') + '</div>' +
         '<p class="muted" style="margin-top:20px">On touch devices: tap ground to move, tap an enemy to target, then use the spell and pet buttons. Trees, water, and ruin walls are scenery in this prototype; they do not block movement.</p>';
     } else if (name === 'inventory') {
@@ -508,7 +511,7 @@
       }).join('') + '</div><p class="muted" style="margin-top:15px">Spell ranks improve strength or duration. Summon a new elemental after upgrading its spell to receive the new rank’s benefits.</p>';
     } else if (name === 'map') {
       setText('dialog-title', 'The Willowmere frontier');
-      content.innerHTML = menuTabs('map') + '<p>The road leads east through goblin territory, then southeast to the old crypt. Rowan, Liora, and Mara wait in Willowmere. Discover camps by approaching them.</p><canvas id="world-map" width="1000" height="710" aria-label="Map of Willowmere, showing your position, village, and discovered camps"></canvas><div class="map-legend"><span>✦ You</span><span>◆ Willowmere</span><span>● Discovered camp</span><span>? Unexplored</span></div>';
+      content.innerHTML = menuTabs('map') + '<p>The old road leads to the crypt. Beyond Mossfang, the eastern branch crosses Amberfall into Rimeglass; the southern branch passes through Lantern Mire to Cinderwake. Discover camps by approaching them.</p><canvas id="world-map" width="1000" height="619" aria-label="Map of Willowmere, showing your position, village, and discovered camps"></canvas><div class="map-legend"><span>✦ You</span><span>◆ Willowmere</span><span>● Discovered camp</span><span>? Unexplored</span></div>';
     } else if (name === 'save') {
       setText('dialog-title', 'Keep your story');
       content.innerHTML = `<p>Your character saves automatically in this browser. Export a character file to transfer between computers, browsers, the direct HTML file, and a hosted game.</p><div class="save-banner">Level ${player.level} Magician · ${player.kills} victories · ${player.gold} copper<br><small>${storageAvailable ? 'Browser storage is available.' : 'Browser storage is blocked. Export before closing this page.'}</small></div><div class="stack-buttons"><button data-action="save-now"><strong>Save now</strong><small>Write your current progress to this browser.</small></button><button data-action="export"><strong>Export character</strong><small>Download a small JSON backup of your progress.</small></button><button data-action="import"><strong>Import character</strong><small>Choose a character file, then review before replacing this save.</small></button></div><div class="menu-actions"><button data-action="menu" data-menu="guide">Field guide</button><button data-action="menu" data-menu="spellbook">Spellbook</button><button class="danger-button" data-action="reset-review">New character</button></div><p class="muted">Saves preserve character progression, equipment, position, and death state. Encounters restart and elementals must be summoned again after loading. A saved position beside a guard is moved to safety on reload. There is no cloud synchronization.</p>`;
@@ -714,7 +717,10 @@
     canvas.focus({ preventScroll: true });
     const bounds = canvas.getBoundingClientRect();
     const point = renderer.screenToWorld(event.clientX - bounds.left, event.clientY - bounds.top);
-    const hitDistance = enemy => Math.hypot((enemy.x - point.x) / 24, (enemy.y - 18 - point.y) / 31);
+    const hitDistance = enemy => {
+      const frontier=['wolf','beetle','wisp','drake'].includes(enemy.type),height=enemy.named?65:enemy.type==='beetle'?39:47;
+      return Math.hypot((enemy.x-point.x)/(frontier?(enemy.named?42:34):24),(enemy.y-(frontier?height*.48:18)-point.y)/(frontier?height*.6:31));
+    };
     const mob = game.mobs.filter(enemy => enemy.alive).sort((a, b) => hitDistance(a) - hitDistance(b))
       .find(enemy => hitDistance(enemy) < 1.15);
     const npc = NPCS.find(value => hitDistance(value) < 1.2);

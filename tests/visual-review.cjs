@@ -17,6 +17,7 @@ const { chromium } = require(path.join(process.env.CODEX_PRIMARY_RUNTIME_NODE_MO
     browser=await chromium.launch({headless:true,...(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH?{executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH}:{})});
     const page=await browser.newPage({viewport:{width:1440,height:1000}}), errors=[];
     page.on('pageerror',e=>errors.push(e.message)); page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
+    await page.addStyleTag({content:'#paused-overlay{display:none!important}'});
     const output=path.resolve('test-results/visual-review');await fs.mkdir(output,{recursive:true});
     await page.goto('http://127.0.0.1:'+port);await page.waitForFunction(()=>Boolean(window.everwild));
     assert.equal(await page.evaluate(()=>window.everwild.renderer.artReady),true);
