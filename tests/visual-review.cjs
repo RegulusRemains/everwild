@@ -1,5 +1,6 @@
 'use strict';
 // Explicitly staged art-review scenes, separate from the no-injection journey test.
+const {enterCharacter}=require('./browser-helpers.cjs');
 const assert = require('node:assert/strict');
 const { spawn } = require('node:child_process');
 const { once } = require('node:events');
@@ -19,7 +20,7 @@ const { chromium } = require(path.join(process.env.CODEX_PRIMARY_RUNTIME_NODE_MO
     page.on('pageerror',e=>errors.push(e.message)); page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
     await page.addStyleTag({content:'#paused-overlay{display:none!important}'});
     const output=path.resolve('test-results/visual-review');await fs.mkdir(output,{recursive:true});
-    await page.goto('http://127.0.0.1:'+port);await page.waitForFunction(()=>Boolean(window.everwild));
+    await page.goto('http://127.0.0.1:'+port);await page.waitForFunction(()=>Boolean(window.everwild));await enterCharacter(page);
     assert.equal(await page.evaluate(()=>window.everwild.renderer.artReady),true);
     await page.screenshot({path:path.join(output,'01-willowmere-desktop.png'),fullPage:true});
     await page.setViewportSize({width:390,height:844}); await page.waitForTimeout(100);
@@ -88,7 +89,7 @@ const { chromium } = require(path.join(process.env.CODEX_PRIMARY_RUNTIME_NODE_MO
     const completion=await browser.newPage({viewport:{width:390,height:844}});
     completion.on('pageerror',e=>errors.push(e.message));
     await completion.addInitScript(save=>localStorage.setItem('everwild_save',JSON.stringify(save)),journey.save);
-    await completion.goto('http://127.0.0.1:'+port);await completion.waitForFunction(()=>Boolean(window.everwild));
+    await completion.goto('http://127.0.0.1:'+port);await completion.waitForFunction(()=>Boolean(window.everwild));await enterCharacter(completion);
     assert.equal(await completion.evaluate(()=>window.everwild.renderer.artReady),true);
     await completion.waitForFunction(()=>window.everwild.game.questState('crypt-proof').status==='completed');
     await completion.evaluate(()=>window.everwild.openMenu('journal'));

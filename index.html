@@ -15,7 +15,7 @@
       <canvas id="game" tabindex="0" aria-label="Willowmere game world. WASD or arrows move. Space selects an enemy. I opens inventory; Escape opens the game menu."></canvas>
       <div class="hud" aria-label="Game HUD">
         <section class="vitals hud-frame" aria-label="Character health and mana">
-          <button class="character-tag" data-dialog="character" title="Character [V]"><span class="character-sigil" aria-hidden="true">✧</span><span>Wayfarer</span><span id="level">Lv. 1</span></button>
+          <button class="character-tag" data-dialog="character" title="Character [V]"><span class="character-sigil" aria-hidden="true">✧</span><span id="character-name">Wayfarer</span><span id="level">Lv. 1</span></button>
           <div class="resource health-resource"><span>HP</span><div class="meter health"><i id="hpbar"></i><span id="hptext"></span></div></div>
           <div class="resource mana-resource"><span>MP</span><div class="meter mana"><i id="mpbar"></i><span id="mptext"></span></div></div>
         </section>
@@ -61,6 +61,7 @@
   <input id="import-file" type="file" accept="application/json,.json" hidden>
   <script src="src/engine.js"></script>
   <script src="src/render.js"></script>
+  <script src="src/audio.js"></script>
   <script src="src/app.js"></script>
 </body>
 </html>

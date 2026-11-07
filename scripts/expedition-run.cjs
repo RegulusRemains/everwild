@@ -3,13 +3,13 @@
 // mob state, quest state, or resources are injected into the simulation.
 const assert = require('node:assert/strict');
 const { Game, SPELLS, ITEMS, WORLD } = require('../src/engine.js');
-function runExpedition(seed = 42, companion = 'Earth', verifyRecovery = true, includeSave = false) {
+function runExpedition(seed = 42, companion = 'Earth', verifyRecovery = true, includeSave = false, classId = 'magician') {
   assert.ok(['Earth', 'Air'].includes(companion));
   const companionSpell = companion === 'Air' ? 5 : 0;
   let state = seed >>> 0;
   const random = () => { state = (Math.imul(state, 1664525) + 1013904223) >>> 0; return state / 4294967296; };
-  let game = new Game({ random });
-  const report = { fights: [], milestones: [], interruptions: 0, travelSeconds: 0, seed, companion };
+  let game = new Game({random,save:{player:{classId,level:1,inventory:[]}}});
+  const report = { fights: [], milestones: [], interruptions: 0, travelSeconds: 0, seed, companion, classId };
   const tick = seconds => { for (let t = 0; t < seconds - 1e-7; t += .05) { game.update(.05); assert.ok(!game.dead, 'Player died: '+game.logs.slice(-4).map(l=>l.text).join(' | ')); } };
   const travel = points => {
     for (const [x,y] of points) {

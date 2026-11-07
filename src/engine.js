@@ -7,7 +7,7 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '0.8.0';
+  const VERSION = '0.9.0';
   const WORLD = Object.freeze({ w: 4200, h: 2600, spawn: Object.freeze({ x: 260, y: 250 }), bindstone: Object.freeze({ x: 202, y: 214 }) });
   const BIOMES = Object.freeze([
     { id:'willowmere', name:'Willowmere Woodland', x:0, y:0, w:1850, h:2600, color:'#46633e', level:1 },
@@ -16,7 +16,18 @@
     { id:'rime', name:'Rimeglass Reach', x:2800, y:0, w:1400, h:1100, color:'#859b9f', level:8, art:2 },
     { id:'cinder', name:'Cinderwake Barrens', x:2800, y:1100, w:1400, h:1500, color:'#59483f', level:10, art:3 }
   ].map(Object.freeze));
-  const biomeAt = (x,y) => BIOMES.slice(1).find(b=>x>=b.x&&x<b.x+b.w&&y>=b.y&&y<b.y+b.h) || BIOMES[0];
+  function biomeWeights(x,y){
+    // Shared geography for rendering, vegetation, and region identity. Coordinates
+    // are warped before blending regional centers, so no rectangular tile owns land.
+    const wx=x+125*Math.sin(y/237)+55*Math.sin((x+y)/113);
+    const wy=y+150*Math.sin(x/317)+55*Math.sin((x-y)/171);
+    const edge=1820+145*Math.sin(y/310)+65*Math.sin(y/91);
+    const forest=Math.max(0,Math.min(1,(edge+110-x)/220));
+    const centers=[[2260,470],[2300,1860],[3500,380],[3490,1950]];
+    const d=centers.map(([cx,cy])=>((wx-cx)/900)**2+((wy-cy)/870)**2),min=Math.min(...d),raw=d.map(v=>Math.exp(-(v-min)*5)),sum=raw.reduce((a,b)=>a+b,0);
+    return [forest,...raw.map(v=>(1-forest)*v/sum)];
+  }
+  const biomeAt=(x,y)=>{const weights=biomeWeights(x,y);return BIOMES[weights.indexOf(Math.max(...weights))];};
   const CAMPS = Object.freeze([
     { id: 'briar', name: 'Briarwatch', x: 710, y: 350, type: 'goblin', n: 4, level: 1, delay: 45, namedName: 'Grik the Hoarder', rareItemId: 'griks-lucky-charm', description: 'A ragged goblin lookout watches the old trade road.', roleHint: 'Pull the western scout alone. Move out of Grik’s marked ground slam.' },
     { id: 'mossfang', name: 'Mossfang Camp', x: 1090, y: 410, type: 'goblin', n: 5, level: 3, delay: 55, namedName: 'Bramblemaw', rareItemId: 'ring-of-bound-earth', description: 'Thorn-twined totems surround the goblin shaman’s refuge.', roleHint: 'Dodge shaman hexes. Root Bramblemaw to interrupt his healing ritual.' },
@@ -60,6 +71,24 @@
     { id: 'frost-lance', name: 'Frost Lance', cost: 24, cast: 1.9, key: '', unlockLevel: 3, description: 'Strike an enemy with ice and slow its movement by 45%. Gravebinding extends the chill. Range: 330 paces.' },
     { id: 'ember-nova', name: 'Ember Nova', cost: 38, cast: 2.6, key: '', unlockLevel: 5, description: 'Burst into flame around your selected enemy, damaging foes within 100 paces. Nearby allies may join the fight.' }
   ].map(spell => Object.freeze({ unlockLevel: 1, ...spell })));
+  const CLASSES = Object.freeze({
+    magician:Object.freeze({id:'magician',name:'Magician',role:'Elemental command',description:'Powerful direct spells and sturdy elementals. The original balanced pet caster.',color:'#c4b174',hp:110,mp:160,hpStep:13,mpStep:18,direct:1,dot:1,healing:1,root:0,petHp:1,petDamage:1,drain:0,primaryPet:'Earth Elemental',secondaryPet:'Air Elemental'}),
+    necromancer:Object.freeze({id:'necromancer',name:'Necromancer',role:'Attrition and life drain',description:'Grave Rot deals 35% more damage over time. Siphon Life restores 30% of damage dealt. Fragile undead companions strike harder.',color:'#b999c9',hp:92,mp:175,hpStep:11,mpStep:20,direct:.85,dot:1.35,healing:.85,root:0,petHp:.8,petDamage:1.12,drain:.3,primaryPet:'Boneguard',secondaryPet:'Shade'}),
+    druid:Object.freeze({id:'druid',name:'Druid',role:'Roots and restoration',description:'Roots last 4 seconds longer and healing is 30% stronger. Sturdy wild companions trade damage for endurance; direct magic is gentler.',color:'#a9bf82',hp:120,mp:145,hpStep:14,mpStep:17,direct:.85,dot:1,healing:1.3,root:4,petHp:1.15,petDamage:.88,drain:0,primaryPet:'Briar Stag',secondaryPet:'Amber Wolf'})
+  });
+  const classSpellNames={necromancer:['Raise Boneguard','Siphon Life','Grave Rot','Grave Shackles','Stitch Bones','Call Shade','Bone Ward','Dark Renewal','Gravechill','Blight Bloom'],druid:['Call Briar Stag','Sunlance','Creeping Briars','Entangling Roots','Wild Mend','Call Amber Wolf','Barkskin','Nature’s Balm','Winterthorn','Briar Bloom']};
+  const CLASS_SPELLS=Object.freeze(Object.fromEntries(Object.values(CLASSES).map(cls=>[cls.id,cls.id==='magician'?SPELLS:Object.freeze(SPELLS.map((spell,i)=>Object.freeze({...spell,name:classSpellNames[cls.id][i],description:[
+    'Summon your durable '+cls.primaryPet+'. Order it to attack with F; recall it with G.',
+    cls.id==='necromancer'?'Drain life from your enemy, restoring 30% of damage dealt as health. Range: 330 paces.':'Strike your enemy with focused sunlight. Range: 330 paces.',
+    'Afflict your enemy with '+(cls.id==='necromancer'?'grave rot':'creeping briars')+' every two seconds for 14 seconds.',
+    'Interrupt an enemy’s special attack and root it. Nearby rooted foes can still attack.',
+    'Restore your companion’s health. Range: 360 paces.',
+    'Summon a swift '+cls.secondaryPet+' with more damage and less health.',
+    'Create a protective ward that absorbs incoming damage.',
+    'Restore your health with '+(cls.id==='necromancer'?'dark magic.':'restorative nature magic.'),
+    'Strike with cold and slow enemy movement by 45%. Range: 330 paces.',
+    'Burst around your target, damaging nearby foes. Wider bursts may draw allies.'
+  ][i]})))])));
   const ITEMS = Object.freeze({
     'goblin-talisman': Object.freeze({ id: 'goblin-talisman', name: 'Goblin Talisman', slot: 'charm', rarity: 'common', description: 'A surprisingly warm knot of polished roots.', stats: Object.freeze({ hp: 12 }) }),
     'cracked-bone-wand': Object.freeze({ id: 'cracked-bone-wand', name: 'Cracked Bone Wand', slot: 'focus', rarity: 'common', description: 'A splintered focus that still remembers its magic.', stats: Object.freeze({ power: 3, mp: 8 }) }),
@@ -150,6 +179,8 @@
         }
       }
       this.player = {
+        classId: Object.hasOwn(CLASSES,source.classId)?source.classId:'magician',
+        name: typeof source.name==='string'?source.name.replace(/[\u0000-\u001f<>]/g,'').trim().slice(0,24)||'Wayfarer':'Wayfarer',
         x: numeric(source.x, WORLD.spawn.x, 24, WORLD.w - 24),
         y: numeric(source.y, WORLD.spawn.y, 24, WORLD.h - 24),
         hp: 110, maxHp: 110, mp: 160, maxMp: 160,
@@ -157,7 +188,7 @@
         gold: whole(source.gold, 0, 0, 10000000),
         debt: whole(source.debt, 0, 0, requirement(level) * 3),
         inventory, equipment, kills: whole(source.kills, 0, 0, 10000000),
-        spellRanks: SPELLS.map((_, i) => whole(Array.isArray(source.spellRanks) ? source.spellRanks[i] : undefined, 1, 1, 3)),
+        spellRanks: this.spells.map((_, i) => whole(Array.isArray(source.spellRanks) ? source.spellRanks[i] : undefined, 1, 1, 3)),
         hotbar: [], quests: {},
         supplies: Object.fromEntries(Object.keys(SUPPLIES).map(id => [id,
           whole(source.supplies && typeof source.supplies === 'object' ? source.supplies[id] : undefined,
@@ -195,12 +226,15 @@
         this.player.x = WORLD.spawn.x;
         this.player.y = WORLD.spawn.y;
       }
-      this.log(this.dead ? 'Your spirit awaits at the bindstone. Return to continue your adventure.' : 'Welcome to Willowmere. Summon an Earth Elemental from your spell bar, then explore east toward Briarwatch.');
+      this.log(this.dead ? 'Your spirit awaits at the bindstone. Return to continue your adventure.' : 'Welcome to Willowmere. Summon your '+this.characterClass.primaryPet+' from your spell bar, then explore east toward Briarwatch.');
       if (unsafeResume) this.log('Enemies reclaimed your saved camp. You resume safely at the bindstone with your progress intact. Press E to restore health and mana.');
       this.log(this.questState('scout-road').status === 'available'
         ? 'Speak with Warden Rowan for your first patrol. The bindstone restores health and mana [E].'
         : 'Open your journal [J] to review your assignments. The bindstone restores health and mana [E].');
     }
+
+    get characterClass(){return CLASSES[this.player?.classId]||CLASSES.magician;}
+    get spells(){return CLASS_SPELLS[this.player?.classId]||SPELLS;}
 
     get selected() {
       return this.mobs.find(mob => mob.id === this.selectedId && mob.alive) || null;
@@ -233,7 +267,7 @@
       }
       for (let slot = 0; slot < 8; slot++) {
         if (hotbar[slot] !== null) continue;
-        const index = !used.has(slot) ? slot : SPELLS.findIndex((_, candidate) => this.isSpellUnlocked(candidate) && !used.has(candidate));
+        const index = !used.has(slot) ? slot : this.spells.findIndex((_, candidate) => this.isSpellUnlocked(candidate) && !used.has(candidate));
         hotbar[slot] = index;
         used.add(index);
       }
@@ -269,30 +303,32 @@
     }
 
     spellProfile(index, rank = this.player.spellRanks[index]) {
-      if (!Number.isInteger(index) || index < 0 || index >= SPELLS.length) return null;
+      if (!Number.isInteger(index) || index < 0 || index >= this.spells.length) return null;
       rank = whole(rank, 1, 1, 3);
+      const cls=this.characterClass;
       const level = this.player.level, power = this.player.power, bonus = 1 + (rank - 1) * 0.15;
       const binding = this.hasEquipped('othreks-focus') ? 3 : 0;
-      const fireBonus = this.hasEquipped('emberwoven-robe') ? 1.15 : 1;
+      const fireBonus = cls.id==='magician' && this.hasEquipped('emberwoven-robe') ? 1.15 : 1;
       const profile = { rank };
       if (index === 0 || index === 5) {
         const earth = index === 0;
-        profile.petHp = Math.round((earth ? 95 + level * 19 : 65 + level * 14) * bonus);
-        profile.petDamage = Math.round((earth ? 10 + level * 4 : 14 + level * 5) * (1 + (rank - 1) * 0.12));
+        profile.petHp = Math.round((earth ? 95 + level * 19 : 65 + level * 14) * bonus * cls.petHp);
+        profile.petDamage = Math.round((earth ? 10 + level * 4 : 14 + level * 5) * (1 + (rank - 1) * 0.12) * cls.petDamage);
         profile.summary = `${profile.petHp} pet health · ${Math.round(profile.petDamage*(this.hasEquipped('crownfang-ring')?1.12:1))} damage per strike · ${earth ? '1.65' : '1.45'}s between strikes`;
       } else if ([1, 8, 9].includes(index)) {
-        profile.damage = Math.round((index === 1 ? 24 + level * 9 + power : index === 8 ? 18 + level * 8 + power : 20 + level * 6 + power) * bonus * (index === 8 ? (this.hasEquipped('rimeglass-focus') ? 1.25 : 1) : fireBonus));
+        profile.damage = Math.round((index === 1 ? 24 + level * 9 + power : index === 8 ? 18 + level * 8 + power : 20 + level * 6 + power) * bonus * cls.direct * (index === 8 ? (this.hasEquipped('rimeglass-focus') ? 1.25 : 1) : fireBonus));
+        profile.lifeDrain=index===1?cls.drain:0;
         profile.slow = 6 + binding;
         profile.radius = this.hasEquipped('ashwake-mantle') ? 135 : 100;
-        profile.summary = `${profile.damage} damage${index === 8 ? ' · slows movement for ' + profile.slow + 's' : index === 9 ? ' per enemy within ' + profile.radius + ' paces' : ' to one enemy'}`;
+        profile.summary = `${profile.damage} damage${index === 8 ? ' · slows movement for ' + profile.slow + 's' : index === 9 ? ' per enemy within ' + profile.radius + ' paces' : ' to one enemy'}${profile.lifeDrain?' · restores '+Math.round(profile.lifeDrain*100)+'% of damage dealt as health':''}`;
       } else if (index === 2) {
-        profile.tickDamage = Math.round((7 + level * 2 + power * 0.4) * bonus * fireBonus);
+        profile.tickDamage = Math.round((7 + level * 2 + power * 0.4) * bonus * fireBonus * cls.dot);
         profile.summary = `${profile.tickDamage} damage every 2s for 14s · reapplying refreshes the mark`;
       } else if (index === 3) {
-        profile.root = 9 + (rank - 1) * 2 + binding;
+        profile.root = 9 + (rank - 1) * 2 + binding + cls.root;
         profile.summary = `${profile.root}s root · interrupts special attacks · may be resisted`;
       } else if (index === 4 || index === 7) {
-        profile.heal = Math.round((index === 4 ? 60 + level * 10 + power : 35 + level * 9 + power) * bonus * (index === 4 && this.hasEquipped('mosswoven-mantle') ? 1.25 : 1));
+        profile.heal = Math.round((index === 4 ? 60 + level * 10 + power : 35 + level * 9 + power) * bonus * cls.healing * (index === 4 && this.hasEquipped('mosswoven-mantle') ? 1.25 : 1));
         profile.summary = `Restores up to ${profile.heal} ${index === 4 ? 'pet' : 'personal'} health`;
       } else if (index === 6) {
         profile.shield = this.hasEquipped('warden-boneguard') ? 55 : 45;
@@ -304,8 +340,8 @@
 
     _refreshStats() {
       const player = this.player;
-      player.maxHp = 110 + (player.level - 1) * 13;
-      player.maxMp = 160 + (player.level - 1) * 18;
+      player.maxHp = this.characterClass.hp + (player.level - 1) * this.characterClass.hpStep;
+      player.maxMp = this.characterClass.mp + (player.level - 1) * this.characterClass.mpStep;
       player.power = 0;
       for (const id of Object.values(player.equipment)) {
         const item = ITEMS[id];
@@ -335,8 +371,9 @@
     }
 
     _visual(kind, entity, options = {}) {
+      if(this._spellVisualIndex!=null&&this.player.classId!=='magician'&&options.source!=='enemy'){const i=this._spellVisualIndex;options={...options,color:i===8?'#b8d9ea':this.player.classId==='necromancer'?'#bb91d4':i===1?'#e2d294':'#a9cf8a'};}
       const life = options.life || 0.7;
-      this.visuals.push({ id: ++this._visualId, kind, x: entity.x, y: entity.y, radius: 28, color: '#e4b77f', ...options, life, maxLife: life });
+      this.visuals.push({ id: ++this._visualId, school:this.player?.classId||'magician',spellIndex:this._spellVisualIndex, kind, x: entity.x, y: entity.y, radius: 28, color: '#e4b77f', ...options, life, maxLife: life });
       if (this.visuals.length > 64) this.visuals.splice(0, this.visuals.length - 64);
     }
 
@@ -373,18 +410,18 @@
     xpNeeded() { return requirement(this.player.level); }
 
     isSpellUnlocked(index) {
-      return Number.isInteger(index) && index >= 0 && index < SPELLS.length && this.player.level >= SPELLS[index].unlockLevel;
+      return Number.isInteger(index) && index >= 0 && index < this.spells.length && this.player.level >= this.spells[index].unlockLevel;
     }
 
     assignSpell(slot, index) {
-      if (!Number.isInteger(slot) || slot < 0 || slot >= 8 || !Number.isInteger(index) || index < 0 || index >= SPELLS.length) return { ok: false };
+      if (!Number.isInteger(slot) || slot < 0 || slot >= 8 || !Number.isInteger(index) || index < 0 || index >= this.spells.length) return { ok: false };
       if (this.dead) return this._result(false, 'Return to the bindstone before preparing your spell bar.', 'warning');
-      if (!this.isSpellUnlocked(index)) return this._result(false, SPELLS[index].name + ' unlocks at level ' + SPELLS[index].unlockLevel + '.', 'warning');
+      if (!this.isSpellUnlocked(index)) return this._result(false, this.spells[index].name + ' unlocks at level ' + this.spells[index].unlockLevel + '.', 'warning');
       const previousSlot = this.player.hotbar.indexOf(index);
-      if (previousSlot === slot) return { ok: true, message: SPELLS[index].name + ' is already in that slot.' };
+      if (previousSlot === slot) return { ok: true, message: this.spells[index].name + ' is already in that slot.' };
       if (previousSlot >= 0) this.player.hotbar[previousSlot] = this.player.hotbar[slot];
       this.player.hotbar[slot] = index;
-      return this._result(true, SPELLS[index].name + ' is prepared in spell slot ' + (slot + 1) + '.', 'success');
+      return this._result(true, this.spells[index].name + ' is prepared in spell slot ' + (slot + 1) + '.', 'success');
     }
 
     nearestNpc() {
@@ -560,17 +597,17 @@
 
     _interruptCast() {
       if (!this.cast) return;
-      this.log('Movement interrupted ' + SPELLS[this.cast.i].name + '. Mana was not spent.', 'warning');
+      this.log('Movement interrupted ' + this.spells[this.cast.i].name + '. Mana was not spent.', 'warning');
       this.cast = null;
     }
 
     castSpell(index) {
-      if (!Number.isInteger(index) || index < 0 || index >= SPELLS.length) return { ok: false };
+      if (!Number.isInteger(index) || index < 0 || index >= this.spells.length) return { ok: false };
       if (this.dead) return this._result(false, 'Return to the bindstone before casting.', 'warning');
-      if (!this.isSpellUnlocked(index)) return this._result(false, SPELLS[index].name + ' unlocks at level ' + SPELLS[index].unlockLevel + '.', 'warning');
+      if (!this.isSpellUnlocked(index)) return this._result(false, this.spells[index].name + ' unlocks at level ' + this.spells[index].unlockLevel + '.', 'warning');
       if (this.cast) return this._result(false, 'Finish your current spell or move to interrupt it.', 'warning');
       if (this._moving || this.moveTarget) return this._result(false, 'Stand still to cast. Press Esc to stop traveling.', 'warning');
-      const spell = SPELLS[index];
+      const spell = this.spells[index];
       if (this.player.mp < spell.cost) return this._result(false, 'Not enough mana for ' + spell.name + '. Meditate [R] or return to the bindstone.', 'warning');
       let targetId = null;
       if (TARGETED_SPELLS.includes(index)) {
@@ -586,6 +623,7 @@
         targetId = this.pet.id;
       }
       this.meditate = false;
+      this._visual('cast',this.player,{spellIndex:index,life:.05,duration:spell.cast,color:this.characterClass.color});
       this.cast = { i: index, targetId, started: this.clock, done: this.clock + spell.cast };
       return { ok: true, message: 'Casting ' + spell.name + '.' };
     }
@@ -594,7 +632,7 @@
       const pending = this.cast;
       if (!pending || this.dead) return;
       this.cast = null;
-      const spell = SPELLS[pending.i];
+      const spell = this.spells[pending.i];
       const rank = this.player.spellRanks[pending.i];
       const target = this.mobs.find(mob => mob.id === pending.targetId && mob.alive);
       if (TARGETED_SPELLS.includes(pending.i) && (!target || target.returning || distance(target, this.player) > CAST_RANGE)) {
@@ -608,32 +646,36 @@
       if (this.player.mp < spell.cost) return;
       this.player.mp -= spell.cost;
       const profile = this.spellProfile(pending.i, rank);
+      this._spellVisualIndex=pending.i;
       switch (pending.i) {
         case 0: case 5: this._summon(pending.i === 0 ? 'Earth' : 'Air', rank); break;
-        case 1:
-          this._visual('bolt', target, { fromX: this.player.x, fromY: this.player.y, radius: 14, color: '#f3a05e', life: 0.5 });
+        case 1: {
+          const drained=Math.min(target.hp,profile.damage);
+          this._visual('bolt', target, { fromX: this.player.x, fromY: this.player.y, radius: 24, color: this.player.classId==='necromancer'?'#c493df':this.player.classId==='druid'?'#e0d092':'#f3a05e', life: 0.5 });
           this._damageMob(target, profile.damage, 'player');
-          this.log('Fire Bolt strikes ' + target.name + '.', 'combat');
+          this.log(this.spells[1].name+' strikes ' + target.name + '.', 'combat');
+          if(profile.lifeDrain&&this.player.hp<this.player.maxHp){const healed=this._heal(this.player,Math.round(drained*profile.lifeDrain));this._healingThreat(healed*.25);}
           break;
+        }
         case 2:
           target.dotUntil = this.clock + 14;
           target.dotAt = this.clock + 2;
           target.dotDamage = profile.tickDamage;
           this._engage(target, 'player', 8, true);
-          this._visual('bolt', target, { fromX: this.player.x, fromY: this.player.y, radius: 24, color: '#d88b7a', life: 0.65 });
-          this._effect(target, 'Burning', '#efa17a');
-          this.log(target.name + ' bears your Burning Mark.', 'combat');
+          this._visual('bolt', target, { fromX: this.player.x, fromY: this.player.y, radius: 24, color: this.player.classId==='necromancer'?'#ac83d1':this.player.classId==='druid'?'#a0c67f':'#d88b7a', life: 0.65 });
+          this._effect(target, this.player.classId==='magician'?'Burning':'Afflicted', '#efa17a');
+          this.log(target.name + ' bears '+this.spells[2].name+'.', 'combat');
           break;
         case 3: {
           const resist = clamp(0.04 + Math.max(0, target.level - this.player.level) * 0.06 - (rank - 1) * 0.02, 0.02, 0.45);
           this._engage(target, 'player', 7, true);
           if (this._roll() < resist) {
             this._effect(target, 'Resisted', '#e99a84');
-            this.log(target.name + ' resists Arcane Root.', 'warning');
+            this.log(target.name + ' resists '+this.spells[3].name+'.', 'warning');
           } else {
             target.rootUntil = this.clock + profile.root;
             if (target.intent) {
-              this.log('Arcane Root interrupts ' + target.name + '’s ' + target.intent.name + '!', 'success');
+              this.log(this.spells[3].name+' interrupts ' + target.name + '’s ' + target.intent.name + '!', 'success');
               target.intent = null;
               target.abilityReadyAt = this.clock + 8;
               target.attackAt = Math.max(target.attackAt, this.clock + 0.8);
@@ -661,14 +703,14 @@
           const restored = this._heal(this.player, profile.heal);
           this._visual('heal', this.player, { radius: 32, color: '#aecf9e' });
           this._healingThreat(restored * 0.25);
-          this.log('Minor Heal restores ' + restored + ' health.', 'success');
+          this.log(this.spells[7].name+' restores ' + restored + ' health.', 'success');
           break;
         }
         case 8:
           target.slowUntil = this.clock + profile.slow;
           this._visual('bolt', target, { fromX: this.player.x, fromY: this.player.y, radius: 17, color: '#a7d9e7', life: 0.55 });
           this._damageMob(target, profile.damage, 'player');
-          this.log('Frost Lance chills ' + target.name + ' for ' + profile.slow + ' seconds.', 'combat');
+          this.log(this.spells[8].name+' chills ' + target.name + ' for ' + profile.slow + ' seconds.', 'combat');
           break;
         case 9: {
           const center = { x: target.x, y: target.y };
@@ -676,11 +718,12 @@
           this._visual('nova', center, { radius: profile.radius, color: '#edaa70', life: 0.85 });
           const damage = profile.damage;
           for (const victim of victims) this._damageMob(victim, damage, 'player');
-          this.log('Ember Nova strikes ' + victims.length + (victims.length === 1 ? ' enemy.' : ' enemies.'), 'combat');
+          this.log(this.spells[9].name+' strikes ' + victims.length + (victims.length === 1 ? ' enemy.' : ' enemies.'), 'combat');
           break;
         }
       }
       if ([1, 2, 8, 9].includes(pending.i)) this._assistPet(target);
+      this._spellVisualIndex=null;
     }
 
     _heal(entity, amount) {
@@ -708,14 +751,14 @@
       const profile = this.spellProfile(earth ? 0 : 5, rank);
       const maxHp = profile.petHp;
       this.pet = {
-        id: 'pet-' + ++this._uid, type, x: this.player.x - 32, y: this.player.y + 28,
+        id: 'pet-' + ++this._uid, type, classId:this.player.classId, name: earth?this.characterClass.primaryPet:this.characterClass.secondaryPet, x: this.player.x - 32, y: this.player.y + 28,
         hp: maxHp, maxHp, targetId: null, attackAt: this.clock, mode: 'guard', tauntReadyAt: this.clock,
         damage: profile.petDamage,
         speed: earth ? 152 : 185
       };
       this._visual('summon', this.pet, { radius: 42, color: earth ? '#c0c599' : '#a6d3da', life: 1.2 });
-      this._effect(this.pet, type + ' elemental', '#bad6ae');
-      this.log('Your ' + type.toLowerCase() + ' elemental is guarding you. Send it to attack [F], or use Follow [G] to make it passive.', 'success');
+      this._effect(this.pet, this.pet.name, '#bad6ae');
+      this.log('Your ' + this.pet.name + ' is guarding you. Send it to attack [F], or use Follow [G] to make it passive.', 'success');
     }
 
     _assistPet(target) {
@@ -781,25 +824,25 @@
     }
 
     upgradeCost(index) {
-      if (!Number.isInteger(index) || index < 0 || index >= SPELLS.length) return 0;
+      if (!Number.isInteger(index) || index < 0 || index >= this.spells.length) return 0;
       return this.player.spellRanks[index] >= 3 ? 0 : this.player.spellRanks[index] * 45;
     }
 
     buyUpgrade(index) {
-      if (!Number.isInteger(index) || index < 0 || index >= SPELLS.length) return { ok: false };
+      if (!Number.isInteger(index) || index < 0 || index >= this.spells.length) return { ok: false };
       if (this.dead) return this._result(false, 'Return to the bindstone to study your spells.', 'warning');
-      if (!this.isSpellUnlocked(index)) return this._result(false, SPELLS[index].name + ' unlocks at level ' + SPELLS[index].unlockLevel + '.', 'warning');
+      if (!this.isSpellUnlocked(index)) return this._result(false, this.spells[index].name + ' unlocks at level ' + this.spells[index].unlockLevel + '.', 'warning');
       if (distance(this.player, WORLD.spawn) > 110) return this._result(false, 'Visit the bindstone to study a spell upgrade.', 'warning');
       if (this.inCombat) return this._result(false, 'Finish combat before studying a spell upgrade.', 'warning');
       const rank = this.player.spellRanks[index];
-      if (rank >= 3) return this._result(false, SPELLS[index].name + ' is already at rank 3.');
+      if (rank >= 3) return this._result(false, this.spells[index].name + ' is already at rank 3.');
       const requiredLevel = rank === 1 ? 2 : 5;
       if (this.player.level < requiredLevel) return this._result(false, 'Reach level ' + requiredLevel + ' to learn rank ' + (rank + 1) + '.', 'warning');
       const cost = this.upgradeCost(index);
       if (this.player.gold < cost) return this._result(false, 'This upgrade costs ' + cost + ' copper.', 'warning');
       this.player.gold -= cost;
       this.player.spellRanks[index]++;
-      return this._result(true, SPELLS[index].name + ' reaches rank ' + (rank + 1) + '.', 'success');
+      return this._result(true, this.spells[index].name + ' reaches rank ' + (rank + 1) + '.', 'success');
     }
 
     restoreAtBindstone() {
@@ -834,6 +877,7 @@
       if (!mob.alive || mob.returning) return;
       const fresh = !mob.aggro;
       mob.aggro = true;
+      mob.pursuitLostAt = null;
       mob[source === 'pet' ? 'threatPet' : 'threatPlayer'] += Math.max(1, amount);
       if (fresh) {
         mob.attackAt = this.clock + 0.8;
@@ -955,7 +999,7 @@
         this.player.mp = this.player.maxMp;
         this._effect(this.player, 'Level ' + this.player.level, '#e9d79f');
         this.log('You reached level ' + this.player.level + '! Health and mana restored.', 'success');
-        for (const spell of SPELLS) if (spell.unlockLevel === this.player.level && spell.unlockLevel > 1) {
+        for (const spell of this.spells) if (spell.unlockLevel === this.player.level && spell.unlockLevel > 1) {
           this.log('New spell: ' + spell.name + '. Prepare it in a spell-bar slot from your spellbook.', 'success');
         }
       }
@@ -963,6 +1007,7 @@
     }
 
     _returnHome(mob) {
+      mob.pursuitLostAt = null;
       mob.returning = true;
       mob.aggro = false;
       mob.targetId = null;
@@ -1119,7 +1164,7 @@
     _updatePet(dt) {
       const pet = this.pet;
       let target = this.mobs.find(mob => mob.id === pet.targetId && mob.alive && !mob.returning);
-      if (target && (distance(target, this.player) > 470 || distance(pet, this.player) > 440)) {
+      if (target && (distance(target, this.player) > 1000 || distance(pet, this.player) > 900)) {
         pet.targetId = null;
         target = null;
         this.log('Your elemental returns; its target is too far away.', 'warning');
@@ -1194,9 +1239,13 @@
       if (!mob.alive) return;
       if (mob.returning) { this._updateReturning(mob, dt); return; }
       const safe = distance(this.player, WORLD.spawn) < SAFE_RADIUS;
-      if (mob.aggro && (Math.hypot(mob.x - mob.homeX, mob.y - mob.homeY) > 310 || safe || (distance(mob, this.player) > 450 && (!this.pet || distance(mob, this.pet) > 230)))) {
-        this._returnHome(mob);
-        return;
+      // Pursuit is tied to losing the party, not an invisible circle around camp.
+      const lostParty = distance(mob,this.player)>1000 && (!this.pet || distance(mob,this.pet)>1000);
+      if(mob.aggro && lostParty && mob.dotUntil<=this.clock){
+        if(mob.pursuitLostAt==null)mob.pursuitLostAt=this.clock;
+      }else mob.pursuitLostAt=null;
+      if(mob.aggro && (safe || (mob.pursuitLostAt!=null && this.clock-mob.pursuitLostAt>=10))){
+        this._returnHome(mob);return;
       }
       if (mob.dotUntil > 0 && this.clock >= mob.dotAt && mob.dotAt <= mob.dotUntil) {
         mob.dotAt += 2;
@@ -1236,6 +1285,7 @@
         version: VERSION, dead: this.dead, discovered: [...this.discovered],
         supplyCooldownRemaining: Math.max(0, this.supplyReadyAt - this.clock),
         player: {
+          classId:player.classId,name:player.name,
           x: player.x, y: player.y, hp: this.dead ? 0 : player.hp, maxHp: player.maxHp,
           mp: player.mp, maxMp: player.maxMp, level: player.level, xp: player.xp,
           gold: player.gold, debt: player.debt, kills: player.kills,
@@ -1248,6 +1298,6 @@
   }
 
   // The renderer extends this namespace after loading; shared data stay frozen.
-  return { Game, WORLD, BIOMES, biomeAt, CAMPS, SPELLS, ITEMS, NPCS, QUESTS, SUPPLIES, VERSION };
+  return { Game, WORLD, BIOMES, biomeAt, biomeWeights, CAMPS, SPELLS, CLASSES, CLASS_SPELLS, ITEMS, NPCS, QUESTS, SUPPLIES, VERSION };
 });
 

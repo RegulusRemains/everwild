@@ -3,6 +3,7 @@
 // Optional real-browser smoke test. The game itself has no package dependencies.
 // Install Playwright and its Chromium browser in your development environment,
 // then run: node tests/browser-smoke.cjs
+const {enterCharacter}=require('./browser-helpers.cjs');
 const assert = require('node:assert/strict');
 const { spawn } = require('node:child_process');
 const { once } = require('node:events');
@@ -74,6 +75,7 @@ async function main() {
     const response = await page.goto(started.url);
     assert.equal(response.status(), 200);
     await page.waitForFunction(() => Boolean(window.everwild?.game));
+    await enterCharacter(page);
     assert.equal(await page.evaluate(() => window.everwild.renderer.artReady), true, 'Illustrated world art must load');
     const atlasResponse = await page.request.get(new URL('assets/arcana-atlas.webp', started.url).href);
     assert.equal(atlasResponse.status(), 200);
@@ -88,11 +90,13 @@ async function main() {
     assert.equal(await page.evaluate(() => window.everwild.renderer.pixelArt), false);
     await page.reload();
     await page.waitForFunction(() => Boolean(window.everwild?.game));
+    await enterCharacter(page);
     await page.locator('#pause').click();
     assert.equal(await page.locator('#art-style').getAttribute('aria-pressed'), 'false');
     await page.locator('#art-style').click();
+    const soundBefore=await page.locator('#sound').getAttribute('aria-pressed');
     await page.locator('#sound').click();
-    assert.equal(await page.locator('#sound').getAttribute('aria-pressed'), 'true');
+    assert.notEqual(await page.locator('#sound').getAttribute('aria-pressed'), soundBefore);
     await page.locator('#sound').click();
     await page.locator('#dialog-close').click();
     await page.evaluate(() => window.everwild.game._loot('griks-lucky-charm'));
@@ -101,6 +105,7 @@ async function main() {
     // Reload clears transient discoveries but retains character progression.
     await page.reload();
     await page.waitForFunction(() => Boolean(window.everwild?.game));
+    await enterCharacter(page);
 
     // Menus must pause the simulation and return focus to the game safely.
     await page.locator('#pause').click();
@@ -298,6 +303,7 @@ async function main() {
     });
     await page.reload();
     await page.waitForFunction(() => Boolean(window.everwild?.game));
+    await enterCharacter(page);
     const loaded = await page.evaluate(() => {
       const player = window.everwild.game.player;
       return { level: player.level, gold: player.gold, equipment: player.equipment, quests: player.quests, hotbar: player.hotbar, supplies: player.supplies };
@@ -347,6 +353,8 @@ async function main() {
     }
     await require('./hud-review.cjs').runHudChecks(page, screenshots);
     await require('./world-review.cjs').runWorldChecks(page, screenshots);
+    await require('./character-review.cjs').runCharacterChecks(page,screenshots);
+    await require('./effects-review.cjs').runEffectsChecks(page,screenshots);
     assert.deepEqual(errors, [], 'The browser must not report runtime or console errors');
     console.log('Browser smoke passed: controls, NPC dialogue, quest rewards, equipment, spell assignment, pet guard/taunt, tonic purchase/cooldown, save/reload, and mobile layout.');
     console.log(`Screenshots: ${screenshots}`);

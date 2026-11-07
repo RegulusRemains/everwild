@@ -1,7 +1,7 @@
 /* Browser input, accessible menus, and local persistence for Everwild. */
 (function () {
   'use strict';
-  const { Game, Renderer, WORLD, CAMPS, SPELLS, ITEMS, NPCS, QUESTS, SUPPLIES, VERSION } = window.Everwild;
+  const { Game, Renderer, WORLD, CAMPS, CLASSES, ITEMS, NPCS, QUESTS, SUPPLIES, VERSION } = window.Everwild;
   const $ = id => document.getElementById(id);
   const escape = value => String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
   const SAVE_KEY = 'everwild_save';
@@ -27,6 +27,17 @@
     storageAvailable = false;
     loadWarning = 'Browser storage is unavailable. Use Save → Export character to keep your progress.';
   }
+  const ROSTER_KEY='everwild_roster';
+  let characters=[],activeCharacterId=null,selectedCharacterId=null,selectedClassId='magician';
+  try {
+    const roster=JSON.parse(localStorage.getItem(ROSTER_KEY)||'null');
+    if(roster&&Array.isArray(roster.characters))characters=roster.characters.filter(c=>c&&typeof c.id==='string'&&validSave(c.save)).slice(0,24);
+    activeCharacterId=characters.some(c=>c.id===roster?.activeId)?roster.activeId:characters[0]?.id||null;
+    if(!characters.length&&savedData){activeCharacterId='legacy-wayfarer';characters.push({id:activeCharacterId,save:savedData});}
+    if(activeCharacterId)savedData=characters.find(c=>c.id===activeCharacterId).save;
+    selectedCharacterId=activeCharacterId;
+  }catch(_){storageAvailable=false;}
+  if(!characters.length&&savedData){activeCharacterId='legacy-wayfarer';selectedCharacterId=activeCharacterId;characters.push({id:activeCharacterId,save:savedData});}
   let game = new Game({ save: savedData });
   const renderer = new Renderer(canvas);
   let manualPause = false;
@@ -44,11 +55,13 @@
   let inventoryFilter = 'all';
   let lastVisualId = 0, discoveryUntil = 0;
   const discoveryQueue = [];
-  let audioContext = null, soundEnabled = false, lastImpactSound = -Infinity;
+  let soundscape=null,volumePreference=.65;
+  let audioContext = null, soundEnabled = true, lastImpactSound = -Infinity;
   let hudScalePreference = 'auto';
   try {
     renderer.pixelArt = localStorage.getItem('everwild_pixel_art') !== 'false';
-    soundEnabled = localStorage.getItem('everwild_sound') === 'true';
+    soundEnabled = localStorage.getItem('everwild_sound') !== 'false';
+    const savedVolume=localStorage.getItem('everwild_volume');if(savedVolume!==null)volumePreference=Math.max(0,Math.min(1,Number(savedVolume)||0));
     const zoom = Number(localStorage.getItem('everwild_view_zoom'));
     renderer.zoomFactor = Number.isFinite(zoom) && zoom >= 0.75 && zoom <= 1.5 ? zoom : 1;
     const scale = localStorage.getItem('everwild_hud_scale');
@@ -81,35 +94,23 @@
     try {
       const Audio = window.AudioContext || window.webkitAudioContext;
       if (!Audio) return;
-      if (!audioContext) audioContext = new Audio();
+      if (!audioContext){audioContext=new Audio();soundscape=new window.Everwild.Soundscape(audioContext,volumePreference);}soundscape?.setVolume(soundEnabled?volumePreference:0);
       if (audioContext.state === 'suspended') audioContext.resume().catch(() => {});
     } catch (_) { /* Sound is optional on browsers without Web Audio. */ }
   }
   function tone(frequency, delay, duration, volume, endFrequency, type = 'sine') {
     if (!soundEnabled || !audioContext || audioContext.state !== 'running') return;
-    const oscillator = audioContext.createOscillator(), gain = audioContext.createGain();
-    const start = audioContext.currentTime + delay;
-    oscillator.type = type;
-    oscillator.frequency.setValueAtTime(frequency, start);
-    oscillator.frequency.exponentialRampToValueAtTime(endFrequency || frequency, start + duration);
-    gain.gain.setValueAtTime(0.0001, start);
-    gain.gain.exponentialRampToValueAtTime(volume, start + 0.008);
-    gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
-    oscillator.connect(gain); gain.connect(audioContext.destination);
-    oscillator.start(start); oscillator.stop(start + duration + 0.01);
-    oscillator.onended = () => { oscillator.disconnect(); gain.disconnect(); };
+    soundscape?.tone(frequency,delay,duration,volume*2.5,endFrequency||frequency,type);
   }
+
   function presentationFeedback(now) {
     for (const visual of game.visuals) {
       if (visual.id <= lastVisualId) continue;
       lastVisualId = visual.id;
-      if (visual.kind === 'impact' && now - lastImpactSound > 85) {
-        lastImpactSound = now;
-        const enemy = visual.source === 'enemy';
-        tone(enemy ? 105 : 190, 0, 0.14, enemy ? 0.065 : 0.035, enemy ? 38 : 65, 'triangle');
-      } else if (visual.kind === 'summon') { tone(110, 0, 0.7, 0.02, 220); tone(330, 0.18, 0.6, 0.015); }
-      else if (visual.kind === 'bolt') tone(380, 0, 0.22, 0.018, 100, 'triangle');
-      else if (visual.kind === 'discovery') discoveryQueue.push({ id: visual.itemId, rare: visual.rare });
+      if(soundEnabled&&audioContext?.state==='running'){
+        if(visual.kind!=='impact'||now-lastImpactSound>65){soundscape?.play(visual,Math.max(-.75,Math.min(.75,(visual.x-game.player.x)/500)));if(visual.kind==='impact')lastImpactSound=now;}
+      }
+      if(visual.kind==='discovery')discoveryQueue.push({id:visual.itemId,rare:visual.rare});
     }
     if (now >= discoveryUntil && discoveryQueue.length) {
       const found = discoveryQueue.shift(), item = ITEMS[found.id];
@@ -125,7 +126,7 @@
   document.addEventListener('click', event => {
     const setting = event.target.closest('button[data-setting]')?.dataset.setting;
     if (setting === 'sound') {
-      soundEnabled = !soundEnabled; unlockAudio(); syncPresentationButtons();
+      soundEnabled = !soundEnabled; if(soundEnabled)unlockAudio();soundscape?.setVolume(soundEnabled?volumePreference:0);syncPresentationButtons();
       try { localStorage.setItem('everwild_sound', String(soundEnabled)); } catch (_) {}
     } else if (setting === 'art') {
       renderer.pixelArt = !renderer.pixelArt; syncPresentationButtons();
@@ -141,6 +142,7 @@
         try { localStorage.setItem('everwild_hud_scale', value); } catch (_) {}
         resize();
       }
+    } else if(setting==='volume'){volumePreference=Math.max(0,Math.min(1,Number(event.target.value)));soundscape?.setVolume(soundEnabled?volumePreference:0);try{localStorage.setItem('everwild_volume',String(volumePreference));}catch(_){}
     } else if (setting === 'zoom') {
       renderer.zoomFactor = Math.max(0.75, Math.min(1.5, Number(event.target.value) || 1));
       try { localStorage.setItem('everwild_view_zoom', String(renderer.zoomFactor)); } catch (_) {}
@@ -197,7 +199,11 @@
 
   function save() {
     try {
-      localStorage.setItem(SAVE_KEY, JSON.stringify(game.serialize()));
+      if(!activeCharacterId)return false;
+      const data=game.serialize(),entry=characters.find(c=>c.id===activeCharacterId);
+      if(entry)entry.save=data;
+      localStorage.setItem(ROSTER_KEY,JSON.stringify({activeId:activeCharacterId,characters}));
+      localStorage.setItem(SAVE_KEY, JSON.stringify(data));
       storageAvailable = true;
       if ($('save-status')) $('save-status').textContent = 'Progress saved';
       return true;
@@ -257,11 +263,11 @@
   }
 
   function refreshHotbar() {
-    const signature = game.player.hotbar.join(',') + ':' + game.player.spellRanks.join(',') + ':' + game.player.level + ':' + Object.values(game.player.equipment).join(',');
+    const signature = game.player.classId + ':' + game.player.hotbar.join(',') + ':' + game.player.spellRanks.join(',') + ':' + game.player.level + ':' + Object.values(game.player.equipment).join(',');
     if (signature === hotbarSignature) return;
     hotbarSignature = signature;
     game.player.hotbar.forEach((index, slot) => {
-      const spell = SPELLS[index];
+      const spell = game.spells[index];
       const button = $('spell' + slot);
       button.style.setProperty('--spell-color', spellColors[index]);
       button.title = `${spell.name} [${slot + 1}] — ${game.spellProfile(index).summary}. ${spell.description} ${spell.cast}s cast, ${spell.cost} mana.`;
@@ -291,6 +297,8 @@
 
   function updateUI() {
     const player = game.player, pet = game.pet, selected = game.selected;
+    document.documentElement.dataset.characterClass=player.classId;
+    setText('character-name',player.name);
     refreshHotbar();
     setText('level', `Lv. ${player.level}`);
     setText('hptext', `${Math.ceil(player.hp)} / ${player.maxHp}`);
@@ -299,10 +307,10 @@
     $('pet-frame').hidden = !pet;
     const petTarget = pet && game.mobs.find(mob => mob.id === pet.targetId && mob.alive && !mob.returning);
     if (pet) {
-      setText('pet-type', pet.type);
+      setText('pet-type', pet.name||pet.type);
       setText('pet-order', petTarget ? (Math.hypot(pet.x-petTarget.x,pet.y-petTarget.y)>35 ? 'Approaching' : 'Attacking') : pet.mode === 'guard' ? 'Guard' : 'Follow');
       meter('petbar', pet.hp, pet.maxHp);
-      $('pet-frame').title = `${pet.type} elemental · ${Math.ceil(pet.hp)} / ${pet.maxHp} HP · ${pet.damage} damage per strike${petTarget ? ' · ' + petTarget.name : ''}`;
+      $('pet-frame').title = `${pet.name||pet.type} · ${Math.ceil(pet.hp)} / ${pet.maxHp} HP · ${pet.damage} damage per strike${petTarget ? ' · ' + petTarget.name : ''}`;
     }
     $('target-card').hidden = !selected;
     if (selected) {
@@ -321,14 +329,14 @@
       }
     }
     $('cast-readout').hidden = !game.cast && !game.meditate;
-    setText('cast-status', game.cast ? SPELLS[game.cast.i].name : game.meditate ? 'Meditating' : '');
+    setText('cast-status', game.cast ? game.spells[game.cast.i].name : game.meditate ? 'Meditating' : '');
     meter('cast-progress', game.cast ? game.clock-game.cast.started : 0, game.cast ? game.cast.done-game.cast.started : 1);
     setText('cast-time', game.cast ? Math.max(0,game.cast.done-game.clock).toFixed(1)+'s' : '');
     for (let slot = 0; slot < 8; slot++) {
       const index = player.hotbar[slot], button = $('spell'+slot);
-      button.disabled = game.dead || player.mp < SPELLS[index].cost || isPaused();
+      button.disabled = game.dead || player.mp < game.spells[index].cost || isPaused();
       button.classList.toggle('casting', Boolean(game.cast && game.cast.i===index));
-      button.classList.toggle('unaffordable', player.mp < SPELLS[index].cost);
+      button.classList.toggle('unaffordable', player.mp < game.spells[index].cost);
     }
     $('rest').innerHTML = `<kbd>R</kbd><span>${game.meditate ? 'Stand' : 'Rest'}</span>`;
     $('rest').classList.toggle('active', game.meditate);
@@ -356,12 +364,17 @@
       .map(([name, label]) => `<button class="${name === active ? 'current' : ''}" data-action="menu" data-menu="${name}">${label}</button>`).join('') + '</div>';
   }
 
+  function classLanguage(text){
+    if(game.player.classId==='magician')return text;
+    window.Everwild.SPELLS.forEach((spell,i)=>{text=text.replaceAll(spell.name,game.spells[i].name);});
+    return text.replaceAll('Earth Elemental',game.characterClass.primaryPet).replaceAll('Air Elemental',game.characterClass.secondaryPet).replaceAll('elemental','companion').replaceAll('magician',game.characterClass.name.toLowerCase());
+  }
   function nearNpc(npc) {
     return npc && Math.hypot(game.player.x - npc.x, game.player.y - npc.y) <= 90;
   }
 
   function completionCard() {
-    return `<section class="completion-card"><span class="eyebrow">FIRST EXPEDITION COMPLETE</span><h3>The eastern road is open.</h3><p>You answered Rowan’s call, broke Bramblemaw’s binding, and ended the Bonewarden’s watch. Willowmere has a reason to light its lanterns again.</p><div>Level ${game.player.level} magician · ${game.player.kills} victories · ${game.player.inventory.length} unique finds</div><button data-action="menu" data-menu="camps">Choose your next hunt →</button></section>`;
+    return `<section class="completion-card"><span class="eyebrow">FIRST EXPEDITION COMPLETE</span><h3>The eastern road is open.</h3><p>You answered Rowan’s call, broke Bramblemaw’s binding, and ended the Bonewarden’s watch. Willowmere has a reason to light its lanterns again.</p><div>Level ${game.player.level} ${game.characterClass.name} · ${game.player.kills} victories · ${game.player.inventory.length} unique finds</div><button data-action="menu" data-menu="camps">Choose your next hunt →</button></section>`;
   }
 
   function rewardText(quest) {
@@ -434,12 +447,22 @@
     activeMenu = name;
     const content = $('dialog-content');
     const player = game.player;
-    if (name === 'system') {
+    if(name==='characters') {
+      save();
+      setText('dialog-title','Your characters');
+      content.innerHTML='<p class="roster-intro">Choose an adventurer. Each keeps their own equipment, quests, and discoveries.</p><div class="character-roster">'+characters.map(c=>{
+        const p=c.save.player,cls=Object.hasOwn(CLASSES,p.classId)?CLASSES[p.classId]:CLASSES.magician,selected=c.id===selectedCharacterId;
+        return `<button class="roster-character ${selected?'selected':''}" data-action="choose-character" data-character="${escape(c.id)}" aria-pressed="${selected}"><span class="class-portrait portrait-${cls.id}"></span><span><strong>${escape(p.name||'Wayfarer')}</strong><small>Level ${Math.max(1,Math.min(20,p.level))} ${cls.name}</small><small>${p.inventory.length} finds · ${Math.max(0,Math.min(10000000,Number(p.kills)||0))} victories</small></span>${selected?'<span class="roster-check">◆</span>':''}</button>`;
+      }).join('')+'</div><div class="menu-actions"><button class="primary" data-action="enter-character" '+(!selectedCharacterId?'disabled':'')+'>Enter the frontier</button><button data-action="new-character">Create character</button></div>';
+    } else if(name==='create') {
+      const cls=CLASSES[selectedClassId];setText('dialog-title','Begin a new story');
+      content.innerHTML=`<div class="character-creation"><div class="class-showcase"><span class="class-portrait portrait-${cls.id}"></span><h3>${cls.name}</h3><span class="eyebrow">${cls.role}</span><p>${escape(cls.description)}</p><small>${cls.hp} health · ${cls.mp} mana<br>${cls.primaryPet} / ${cls.secondaryPet}</small></div><div><div class="class-choices">`+Object.values(CLASSES).map(c=>`<button data-action="choose-class" data-class="${c.id}" aria-pressed="${c.id===selectedClassId}" class="${c.id===selectedClassId?'selected':''}"><strong>${c.name}</strong><small>${c.role}</small></button>`).join('')+`</div><label class="name-label" for="new-character-name">Character name</label><input id="new-character-name" maxlength="24" autocomplete="off" placeholder="Your name" value="${escape(creationName)}"><p class="character-note">New characters begin in Willowmere. Your other characters stay saved.</p><div class="menu-actions"><button class="primary" data-action="create-character">Begin adventure</button>${characters.length?'<button data-action="menu" data-menu="characters">Back to characters</button>':''}</div></div></div>`;
+    } else if (name === 'system') {
       setText('dialog-title', 'Everwild');
-      content.innerHTML = `<button class="primary" data-action="resume-game">Resume</button><div class="menu-grid">` + [['inventory','Inventory','I'],['character','Character','V'],['spellbook','Spellbook','B'],['journal','Journal','J'],['map','Map','M'],['log','Combat log',''],['guide','Field guide','?'],['save','Save / export','']].map(([menu,label,key])=>`<button data-action="menu" data-menu="${menu}">${label}<kbd>${key}</kbd></button>`).join('') + `</div><section class="settings"><div class="settings-row"><span>Display</span><button id="fullscreen-button" data-setting="fullscreen">Fullscreen</button></div><div class="settings-row"><label for="hud-scale">HUD size</label><select id="hud-scale" data-setting="hud-scale">` + [['auto','Automatic'],['0.85','Compact'],['1','100%'],['1.25','125%'],['1.5','150%']].map(([value,label])=>`<option value="${value}" ${hudScalePreference===value?'selected':''}>${label}</option>`).join('') + `</select></div><div class="settings-row"><label for="view-zoom">Camera zoom</label><input id="view-zoom" data-setting="zoom" type="range" min="0.75" max="1.5" step="0.05" value="${renderer.zoomFactor||1}"></div><div class="settings-row"><span>Artwork</span><button id="art-style" data-setting="art" aria-pressed="${renderer.pixelArt}"></button></div><div class="settings-row"><span>Effects</span><button id="sound" data-setting="sound" aria-pressed="${soundEnabled}"></button></div></section><div class="system-footer"><span>Willowmere · ${VERSION}</span><span id="save-status">${storageAvailable?'Autosave enabled':'Storage unavailable · export your save'}</span></div>`;
+      content.innerHTML = `<button class="primary" data-action="resume-game">Resume</button><div class="menu-grid">` + [['characters','Characters',''],['inventory','Inventory','I'],['character','Character','V'],['spellbook','Spellbook','B'],['journal','Journal','J'],['map','Map','M'],['log','Combat log',''],['guide','Field guide','?'],['save','Save / export','']].map(([menu,label,key])=>`<button data-action="menu" data-menu="${menu}">${label}<kbd>${key}</kbd></button>`).join('') + `</div><section class="settings"><div class="settings-row"><span>Display</span><button id="fullscreen-button" data-setting="fullscreen">Fullscreen</button></div><div class="settings-row"><label for="hud-scale">HUD size</label><select id="hud-scale" data-setting="hud-scale">` + [['auto','Automatic'],['0.85','Compact'],['1','100%'],['1.25','125%'],['1.5','150%']].map(([value,label])=>`<option value="${value}" ${hudScalePreference===value?'selected':''}>${label}</option>`).join('') + `</select></div><div class="settings-row"><label for="view-zoom">Camera zoom</label><input id="view-zoom" data-setting="zoom" type="range" min="0.75" max="1.5" step="0.05" value="${renderer.zoomFactor||1}"></div><div class="settings-row"><span>Artwork</span><button id="art-style" data-setting="art" aria-pressed="${renderer.pixelArt}"></button></div><div class="settings-row"><label for="effects-volume">Effects volume</label><input id="effects-volume" data-setting="volume" type="range" min="0" max="1" step="0.05" value="${volumePreference}"></div><div class="settings-row"><span>Effects</span><button id="sound" data-setting="sound" aria-pressed="${soundEnabled}"></button></div></section><div class="system-footer"><span>Willowmere · ${VERSION}</span><span id="save-status">${storageAvailable?'Autosave enabled':'Storage unavailable · export your save'}</span></div>`;
     } else if (name === 'character') {
       setText('dialog-title', 'The Wayfarer');
-      content.innerHTML = `<span class="eyebrow">LEVEL ${player.level} MAGICIAN</span><div class="character-stats">` + [['Health',player.maxHp],['Mana',player.maxMp],['Spell power','+'+player.power],['Copper',player.gold],['Victories',player.kills],['Camps',game.discovered.length+' / '+CAMPS.length]].map(([label,value])=>`<div><small>${label}</small><strong>${value}</strong></div>`).join('') + `</div><p class="character-note">${player.level===20?'Maximum level':player.xp+' / '+game.xpNeeded()+' experience toward the next level'}${player.debt?' · '+player.debt+' experience debt':''}</p><div class="meter experience"><i style="width:${Math.min(100,player.xp/game.xpNeeded()*100)}%"></i></div><p class="character-note">${game.pet?game.pet.type+' elemental · '+Math.ceil(game.pet.hp)+' / '+game.pet.maxHp+' health · '+game.pet.damage+' damage per strike':'No companion summoned.'}</p><div class="menu-actions"><button data-action="menu" data-menu="inventory">Equipment</button><button data-action="menu" data-menu="spellbook">Spells</button></div>`;
+      content.innerHTML = `<span class="eyebrow">LEVEL ${player.level} ${game.characterClass.name.toUpperCase()}</span><div class="character-stats">` + [['Health',player.maxHp],['Mana',player.maxMp],['Spell power','+'+player.power],['Copper',player.gold],['Victories',player.kills],['Camps',game.discovered.length+' / '+CAMPS.length]].map(([label,value])=>`<div><small>${label}</small><strong>${value}</strong></div>`).join('') + `</div><p class="character-note">${player.level===20?'Maximum level':player.xp+' / '+game.xpNeeded()+' experience toward the next level'}${player.debt?' · '+player.debt+' experience debt':''}</p><div class="meter experience"><i style="width:${Math.min(100,player.xp/game.xpNeeded()*100)}%"></i></div><p class="character-note">${game.pet?(game.pet.name||game.pet.type)+' · '+Math.ceil(game.pet.hp)+' / '+game.pet.maxHp+' health · '+game.pet.damage+' damage per strike':'No companion summoned.'}</p><div class="menu-actions"><button data-action="menu" data-menu="inventory">Equipment</button><button data-action="menu" data-menu="spellbook">Spells</button></div>`;
     } else if (name === 'log') {
       setText('dialog-title', 'Combat log');
       content.innerHTML = '<div class="log-list">'+game.logs.slice(-60).reverse().map(entry=>`<div class="${escape(entry.type)}">${escape(entry.text)}</div>`).join('')+'</div>';
@@ -447,7 +470,7 @@
       const npc = NPCS.find(value => value.id === currentNpcId);
       setText('dialog-title', npc.name);
       const assignments = QUESTS.filter(quest => quest.npcId === npc.id && game.questState(quest.id).status !== 'locked');
-      content.innerHTML = `<div class="npc-intro"><div class="npc-portrait ${npc.id}">${escape(npc.name.replace(/^(Warden|Elementalist|Quartermaster) /, '').charAt(0))}</div><div><span class="eyebrow">${escape(npc.role)}</span><p>${escape(npc.description)}</p></div></div><div class="npc-dialogue">${game.npcDialogue(npc.id).map(line => `<p>“${escape(line)}”</p>`).join('')}</div>`;
+      content.innerHTML = `<div class="npc-intro"><div class="npc-portrait ${npc.id}">${escape(npc.name.replace(/^(Warden|Elementalist|Quartermaster) /, '').charAt(0))}</div><div><span class="eyebrow">${escape(npc.role)}</span><p>${escape(npc.description)}</p></div></div><div class="npc-dialogue">${game.npcDialogue(npc.id).map(line => `<p>“${escape(classLanguage(line))}”</p>`).join('')}</div>`;
       if (npc.id === 'mara') {
         content.innerHTML += `<div class="journal-summary"><span>Supplies for the road</span><span>${player.gold} copper in your pack</span></div><div class="shop-list">` + Object.values(SUPPLIES).map(supply =>
           `<article class="shop-item"><span class="supply-symbol">${supply.id === 'health-tonic' ? '♧' : '◈'}</span><h3>${escape(supply.name)}</h3><p>${escape(supply.description)}</p><div class="owned">Carrying ${player.supplies[supply.id] || 0} · shared 20s recovery</div><button data-action="buy-supply" data-item="${supply.id}" ${player.gold < supply.cost ? 'disabled' : ''}>Buy · ${supply.cost} copper</button></article>`
@@ -497,16 +520,16 @@
           return `<article class="item-card ${item.rarity}">${arcanaIcon(itemArt[id], 'item-art')}<div class="item-details"><span class="eyebrow">${item.rarity.toUpperCase()} · ${item.slot.toUpperCase()}</span><strong>${escape(item.name)}</strong><p class="item-lore">“${escape(item.description)}”</p><p class="item-stats">${stats}</p>${item.effect ? `<div class="item-magic"><strong>✦ ${escape(item.effectName)}</strong><p>${escape(item.effect)}</p></div>` : ''}${itemComparison(item)}${camp ? `<small class="item-origin">Recovered from ${escape(camp.namedName)} · ${escape(camp.name)}${id === camp.bonusItemId ? ' · ' + Math.round(camp.bonusDropChance * 100) + '% chance after victory' : ''}</small>` : gift ? `<small class="item-origin">Gift from ${escape(giver.name)} · ${escape(gift.title)}</small>` : id === 'worn-linen-robe' ? '<small class="item-origin">Your first ordinary victory guarantees this useful find.</small>' : ''}</div><button data-action="equip" data-item="${id}" ${equipped || game.dead ? 'disabled' : ''}>${equipped ? 'Equipped' : 'Equip'}</button></article>`;
         }).join('') : '<p class="empty-pack">No finds in this part of your pack yet. Your first victory awards equipment; named foes carry unique magic.</p>') + '</div><h3>Supplies for the road</h3><div class="supply-pack">' + Object.values(SUPPLIES).map(supply => `<button data-action="use-supply" data-item="${supply.id}" ${!player.supplies[supply.id] || game.dead || game.supplyReadyAt > game.clock ? 'disabled' : ''}>${escape(supply.name)} ×${player.supplies[supply.id] || 0} · Use</button>`).join('') + '</div><p class="supplies-note">Tonics share a 20-second recovery. Buy more from Mara in Willowmere. Duplicate equipment is salvaged into copper.</p><div class="menu-actions"><button data-action="menu" data-menu="spellbook">Study your spells →</button><button data-action="menu" data-menu="journal">Quest journal</button></div>';
     } else if (name === 'spellbook') {
-      setText('dialog-title', 'The magician’s spellbook');
+      setText('dialog-title', game.characterClass.name+' spellbook');
       const near = Math.hypot(player.x - WORLD.spawn.x, player.y - WORLD.spawn.y) <= 110;
-      content.innerHTML = menuTabs('spellbook') + `<div class="menu-note">${near ? 'You are within reach of the bindstone.' : 'Return to the Willowmere bindstone to study upgrades.'} Rank 2 requires level 2 and 45 copper. Rank 3 requires level 5 and 90 copper. You have ${player.gold} copper. Assign unlocked spells to your eight hotbar slots below.</div><div class="spellbook-list">` + SPELLS.map((spell, index) => {
+      content.innerHTML = menuTabs('spellbook') + `<div class="menu-note">${near ? 'You are within reach of the bindstone.' : 'Return to the Willowmere bindstone to study upgrades.'} Rank 2 requires level 2 and 45 copper. Rank 3 requires level 5 and 90 copper. You have ${player.gold} copper. Assign unlocked spells to your eight hotbar slots below.</div><div class="spellbook-list">` + game.spells.map((spell, index) => {
         const rank = player.spellRanks[index];
         const required = rank === 1 ? 2 : 5;
         const unlocked = game.isSpellUnlocked(index);
         const canBuy = unlocked && rank < 3 && near && !game.inCombat && !game.dead && player.level >= required && player.gold >= game.upgradeCost(index);
         const label = !unlocked ? `Unlocks at level ${spell.unlockLevel}` : rank >= 3 ? 'Mastered' : player.level < required ? `Needs level ${required}` : `Upgrade · ${game.upgradeCost(index)}c`;
         const assigned = player.hotbar.indexOf(index);
-        const choices = '<option value="-1">Choose a slot…</option>' + player.hotbar.map((currentIndex, slot) => `<option value="${slot}" ${assigned === slot ? 'selected' : ''}>${slot + 1} · ${escape(SPELLS[currentIndex].name)}</option>`).join('');
+        const choices = '<option value="-1">Choose a slot…</option>' + player.hotbar.map((currentIndex, slot) => `<option value="${slot}" ${assigned === slot ? 'selected' : ''}>${slot + 1} · ${escape(game.spells[currentIndex].name)}</option>`).join('');
         return `<div class="spell-card ${unlocked ? '' : 'locked'}">${arcanaIcon(spellArt[index], 'spellbook-art')}<div class="spell-details"><span class="eyebrow">${spellRoles[index]}</span><strong>${escape(spell.name)} · ${unlocked ? 'Rank ' + rank : 'Unlearned'}</strong><p>${escape(spell.description)}</p><p>${spell.cost} mana · ${spell.cast}s cast</p><div class="spell-numbers"><small>AT YOUR LEVEL</small><p>${escape(game.spellProfile(index).summary)}</p>${unlocked && rank < 3 ? `<small>NEXT RANK</small><p>${escape(game.spellProfile(index, rank + 1).summary)}</p>` : ''}</div>${spell.unlockLevel > 1 ? `<p class="unlock-note">${unlocked ? 'Unlocked at' : 'Requires'} level ${spell.unlockLevel}</p>` : ''}</div><div class="spell-card-controls"><button data-action="upgrade" data-index="${index}" ${canBuy ? '' : 'disabled'}>${label}</button><label class="spell-bind">Action bar slot<select aria-label="Assign ${escape(spell.name)} to a hotbar slot" data-spell-index="${index}" ${!unlocked || game.dead ? 'disabled' : ''}>${choices}</select></label></div></div>`;
       }).join('') + '</div><p class="muted" style="margin-top:15px">Spell ranks improve strength or duration. Summon a new elemental after upgrading its spell to receive the new rank’s benefits.</p>';
     } else if (name === 'map') {
@@ -514,23 +537,22 @@
       content.innerHTML = menuTabs('map') + '<p>The old road leads to the crypt. Beyond Mossfang, the eastern branch crosses Amberfall into Rimeglass; the southern branch passes through Lantern Mire to Cinderwake. Discover camps by approaching them.</p><canvas id="world-map" width="1000" height="619" aria-label="Map of Willowmere, showing your position, village, and discovered camps"></canvas><div class="map-legend"><span>✦ You</span><span>◆ Willowmere</span><span>● Discovered camp</span><span>? Unexplored</span></div>';
     } else if (name === 'save') {
       setText('dialog-title', 'Keep your story');
-      content.innerHTML = `<p>Your character saves automatically in this browser. Export a character file to transfer between computers, browsers, the direct HTML file, and a hosted game.</p><div class="save-banner">Level ${player.level} Magician · ${player.kills} victories · ${player.gold} copper<br><small>${storageAvailable ? 'Browser storage is available.' : 'Browser storage is blocked. Export before closing this page.'}</small></div><div class="stack-buttons"><button data-action="save-now"><strong>Save now</strong><small>Write your current progress to this browser.</small></button><button data-action="export"><strong>Export character</strong><small>Download a small JSON backup of your progress.</small></button><button data-action="import"><strong>Import character</strong><small>Choose a character file, then review before replacing this save.</small></button></div><div class="menu-actions"><button data-action="menu" data-menu="guide">Field guide</button><button data-action="menu" data-menu="spellbook">Spellbook</button><button class="danger-button" data-action="reset-review">New character</button></div><p class="muted">Saves preserve character progression, equipment, position, and death state. Encounters restart and elementals must be summoned again after loading. A saved position beside a guard is moved to safety on reload. There is no cloud synchronization.</p>`;
-    } else if (name === 'reset') {
-      setText('dialog-title', 'Begin a new story?');
-      content.innerHTML = '<p>This replaces the character saved in this browser. Export your current character first if you want to return to it.</p><div class="menu-actions"><button data-action="export">Export current character</button><button class="danger-button" data-action="reset-confirm">Replace with a new character</button><button data-action="menu" data-menu="save">Keep playing</button></div>';
+      content.innerHTML = `<p>Your character saves automatically in this browser. Export a character file to transfer between computers, browsers, the direct HTML file, and a hosted game.</p><div class="save-banner">${escape(player.name)} · Level ${player.level} ${game.characterClass.name} · ${player.kills} victories · ${player.gold} copper<br><small>${storageAvailable ? 'Browser storage is available.' : 'Browser storage is blocked. Export before closing this page.'}</small></div><div class="stack-buttons"><button data-action="save-now"><strong>Save now</strong><small>Write your current progress to this browser.</small></button><button data-action="export"><strong>Export character</strong><small>Download a small JSON backup of your progress.</small></button><button data-action="import"><strong>Import character</strong><small>Choose a character file, then review before adding a separate character.</small></button></div><div class="menu-actions"><button data-action="menu" data-menu="guide">Field guide</button><button data-action="menu" data-menu="spellbook">Spellbook</button><button data-action="reset-review">New character</button></div><p class="muted">Saves preserve character progression, equipment, position, and death state. Encounters restart and elementals must be summoned again after loading. A saved position beside a guard is moved to safety on reload. There is no cloud synchronization.</p>`;
     } else if (name === 'import-review' && pendingImport) {
       const incoming = new Game({ save: pendingImport });
       setText('dialog-title', 'Import this character?');
-      content.innerHTML = `<p>This will replace the active character with a level ${incoming.player.level} Magician carrying ${incoming.player.gold} copper and ${incoming.player.inventory.length} items.</p><div class="menu-actions"><button data-action="export">Export current character</button><button class="primary" data-action="import-confirm">Import and replace</button><button data-action="menu" data-menu="save">Cancel</button></div>`;
+      content.innerHTML = `<p>This adds a separate character: level ${incoming.player.level} ${incoming.characterClass.name} carrying ${incoming.player.gold} copper and ${incoming.player.inventory.length} items.</p><div class="menu-actions"><button data-action="export">Export current character</button><button class="primary" data-action="import-confirm">Import character</button><button data-action="menu" data-menu="save">Cancel</button></div>`;
     } else return;
     syncPresentationButtons();
     if (!dialog.open) dialog.showModal();
     content.scrollTop = 0;
+    if(name==='guide'&&game.player.classId!=='magician'){const walker=document.createTreeWalker(content,NodeFilter.SHOW_TEXT);let node;while(node=walker.nextNode())node.nodeValue=classLanguage(node.nodeValue);}
     if (name === 'map') renderer.drawMap($('world-map'), game, true);
     updateUI();
   }
 
   function closeMenu() {
+    if(!activeCharacterId)return;
     dialog.close();
     activeMenu = '';
     clearInput();
@@ -549,7 +571,7 @@
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.href = url;
-    link.download = `Everwild-level-${game.player.level}.json`;
+    link.download = `Everwild-${game.player.name.replace(/[^a-z0-9-]/gi,'-')}-level-${game.player.level}.json`;
     document.body.appendChild(link);
     link.click();
     link.remove();
@@ -560,6 +582,7 @@
     lastVisualId = 0; discoveryQueue.length = 0; discoveryUntil = 0;
     $('discovery').hidden = true;
     game = new Game({ save: data });
+    hotbarSignature='';keys.clear();pendingNpc=null;
     pendingImport = null;
     lastDead = game.dead;
     manualPause = false;
@@ -570,11 +593,25 @@
     updateUI();
   }
 
+  let creationName='';
+  function addCharacter(data){
+    if(characters.length>=24){toast('All 24 character slots are in use.');return;}
+    save();const next=new Game({save:data}),id='character-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,8);
+    characters.push({id,save:next.serialize()});activeCharacterId=id;selectedCharacterId=id;creationName='';replaceGame(next.serialize());
+  }
+  function selectCharacter(){
+    const entry=characters.find(c=>c.id===selectedCharacterId);if(!entry)return;save();activeCharacterId=entry.id;replaceGame(entry.save);
+  }
   $('dialog-content').addEventListener('click', event => {
     const button = event.target.closest('button[data-action]');
     if (!button) return;
     const action = button.dataset.action;
-    if (action === 'resume-game') { closeMenu(); pause(false); }
+    if(action==='choose-class'){creationName=$('new-character-name')?.value||'';selectedClassId=button.dataset.class;activeMenu='';openMenu('create');}
+    else if(action==='new-character'){creationName='';openMenu('create');}
+    else if(action==='choose-character'){selectedCharacterId=button.dataset.character;activeMenu='';openMenu('characters');}
+    else if(action==='enter-character')selectCharacter();
+    else if(action==='create-character'){const name=$('new-character-name').value.trim();if(!name){$('new-character-name').focus();toast('Give your character a name.');return;}addCharacter({player:{classId:selectedClassId,name,level:1,inventory:[]}});}
+    else if (action === 'resume-game') { closeMenu(); pause(false); }
     else if (action === 'filter-items') {
       if (['all', 'charm', 'focus', 'ring', 'garb'].includes(button.dataset.filter)) inventoryFilter = button.dataset.filter;
       refreshMenu();
@@ -600,9 +637,9 @@
       button.innerHTML = saved ? '<strong>Character saved</strong><small>Your progress is safe in this browser.</small>' : '<strong>Storage is blocked</strong><small>Use Export character to keep your progress.</small>';
     } else if (action === 'export') exportCharacter();
     else if (action === 'import') { $('import-file').value = ''; $('import-file').click(); }
-    else if (action === 'reset-review') openMenu('reset');
-    else if (action === 'reset-confirm') replaceGame(null);
-    else if (action === 'import-confirm' && pendingImport) replaceGame(pendingImport);
+    else if (action === 'reset-review') openMenu('create');
+    else if (action === 'reset-confirm') openMenu('create');
+    else if (action === 'import-confirm' && pendingImport) addCharacter(pendingImport);
   });
 
   $('dialog-content').addEventListener('change', event => {
@@ -756,11 +793,12 @@
     requestAnimationFrame(frame);
   }
 
-  window.everwild = Object.freeze({ get game() { return game; }, renderer, openMenu, save, pause, get paused() { return isPaused(); } });
+  window.everwild = Object.freeze({ get game() { return game; }, renderer, openMenu, save, pause, get audioState(){return{enabled:soundEnabled,volume:volumePreference,state:audioContext?.state||'locked',voices:soundscape?.voicesCreated||0};}, get paused() { return isPaused(); } });
   for (const [id,short] of [['attack','⚔'],['follow','↶'],['guard','◇'],['taunt','!'],['rest','◌'],['interact','↗']]) $(id).dataset.short=short;
   resize();
   updateUI();
   if (loadWarning) { game.log(loadWarning, 'warning'); toast(loadWarning); }
+  openMenu(characters.length?'characters':'create');
   requestAnimationFrame(frame);
 })();
 

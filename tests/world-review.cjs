@@ -3,6 +3,7 @@
 const assert=require('node:assert/strict');
 const path=require('node:path');
 async function runWorldChecks(page,output){
+ await require('./browser-helpers.cjs').enterCharacter(page);
  const stagingStyle=await page.addStyleTag({content:'#paused-overlay{display:none!important}'});
  await page.setViewportSize({width:1920,height:1080});
  await page.waitForFunction(()=>window.everwild.renderer.frontierLoaded&&window.everwild.renderer.frontierFloorLoaded);
@@ -21,6 +22,7 @@ async function runWorldChecks(page,output){
   return{first,faded,returning,opaque,monsterOnly:tree.alpha,counts:r.trees.reduce((a,t)=>(a[t.biome]=(a[t.biome]||0)+1,a),{})};
  });
  assert.ok(canopy.first>.85&&canopy.first<1,'first overlap frame must fade gradually');assert.ok(canopy.faded>=.25&&canopy.faded<.3,'tree remains readable behind the party');assert.ok(canopy.returning>canopy.faded&&canopy.returning<.5,'leaving the canopy must recover gradually');assert.ok(canopy.opaque>.98);assert.ok(canopy.monsterOnly>.98,'ordinary monsters must not fade trees');assert.equal(Object.keys(canopy.counts).length,5);
+ const variety=await page.evaluate(()=>({props:new Set(window.everwild.renderer.decor.filter(d=>d.sheet==='journey').map(d=>d.sprite)).size,variants:window.everwild.renderer.trees.filter(t=>t.variant&&t.frontier!==undefined).length}));assert.ok(variety.props>=12&&variety.variants>30,'biomes need varied clustered props and tree variants');
  for(const id of ['amber-den','lantern-shrine','rime-spire','cinder-forge']){
   for(const [width,height] of [[1440,1000],[390,844]]){
    await page.setViewportSize({width,height});

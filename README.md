@@ -1,10 +1,24 @@
 # Everwild
 
-**Version 0.8.0 — beyond Willowmere**
+**Version 0.9.0 — choose your path**
 
-Everwild is a solo fantasy RPG about exploring a dangerous frontier with a summoned companion. Explore five habitats and eight camps, from Willowmere’s forest and crypt to golden downs, marshland, frozen ruins, and volcanic barrens. Collect equipment and grow an earth or air pet into the center of your combat strategy.
+Everwild is a solo fantasy RPG about exploring a dangerous frontier as a Magician, Necromancer, or Druid with a summoned companion. Explore five habitats and eight camps, from Willowmere’s forest and crypt to golden downs, marshland, frozen ruins, and volcanic barrens. Collect equipment and grow an earth or air pet into the center of your combat strategy.
 
 The game runs entirely in your browser with HTML, CSS, and JavaScript. It has no runtime dependencies, account requirement, or server-side game state.
+
+## Characters, classes, and roaming combat
+
+Start at character selection, create a named adventurer, or return to an existing one. **Esc → Characters** switches characters. Each slot keeps its own class, equipment, spell ranks, quests, currency, discoveries, and location. Existing saves migrate into a Magician slot; creating or importing a character adds a slot rather than overwriting another.
+
+| Class | Strength | Tradeoff |
+| --- | --- | --- |
+| Magician | Balanced elementals and strong direct damage | Standard healing and control |
+| Necromancer | 35% stronger damage over time; Siphon Life heals 30% of damage dealt; harder-hitting undead | Less personal and companion health; weaker direct damage and healing |
+| Druid | 4-second longer roots, 30% stronger healing, durable wild companions | Gentler direct damage and pet strikes |
+
+The default desktop camera now shows roughly 520 world units vertically, bringing characters and combat closer. **Esc → Camera zoom** adjusts it. Enemies no longer reset when they cross a camp radius: kite across the frontier with roots, slows, and damage over time. They abandon pursuit after losing both you and your companion by over 1000 paces for 10 seconds without an active damage-over-time effect. Willowmere remains a safe refuge. Pets can remain engaged up to 900 paces from you.
+
+Biome borders follow warped, blended regional shapes. Groves, clearings, mixed ground, pools, grass, fallen logs, fungi, reeds, ice outcrops, boulders, vents, and charred stumps break up the old uniform scatter. New spell buildup, luminous projectile trails, impact bursts, and class colors accompany layered audio with bass, filtered noise, stereo positioning, short reverb, and bounded dynamics. Sound starts after your first interaction unless previously muted; **Esc → Effects / Effects volume** controls it.
 
 ## Beyond the old road
 
@@ -56,7 +70,7 @@ Replacing an item removes its property. Existing saves gain these properties fro
 
 The world now renders on a lightly pixelated canvas layer while names, damage numbers, and interface text stay crisp. Use **Pixel art / Smooth art** in the header to choose your preference. Hits have a brief brightness and recoil response plus small impact particles; reduced-motion settings remove the recoil and particle travel.
 
-New equipment gets a discovery banner, with a longer violet presentation for rare items. Duplicate salvage does not replay a discovery. Optional synthesized effects add low impact tones, spell sounds, and an item discovery chime. Sound starts off; enable **Sound on** to listen. Both presentation preferences stay in this browser, independently of character saves.
+New equipment gets a discovery banner, with a longer violet presentation for rare items. Duplicate salvage does not replay a discovery. Layered synthesized instruments accompany spell charging, projectiles, impacts, summoning, healing, roots, and discoveries. Sound starts after a user gesture unless your saved preference is muted; adjust Effects and Effects volume in the game menu. Both presentation preferences stay in this browser, independently of character saves.
 
 ## Play locally
 
@@ -136,6 +150,7 @@ npm run build  # Copy the playable files into dist/
 No compilation is required. `npm start` serves the source files; changes appear after refreshing the page. The build contains only the game entry point, stylesheet, JavaScript modules, and `.nojekyll`, so `dist` can be copied to a static web host or downloaded as a playable folder.
 
 - `index.html` and `styles.css` define the interface.
+- `src/audio.js` implements the layered live/offline Web Audio instruments.
 - `src/engine.js` implements the world, combat, progression, and save data.
 - `src/render.js` draws the game world.
 - `src/app.js` connects browser input, interface, and persistence to the engine.
@@ -164,5 +179,5 @@ The source files already work at the repository root. Hosting is not enabled by 
 
 ## Scope
 
-This release is a playable starting point with a top-down presentation and one solo character. It is not a complete production RPG: there is no multiplayer service, shared persistent world, or cloud account system. Encounter balance, art, audio, and the breadth of content will continue to evolve. See [the roadmap](docs/ROADMAP.md) for the next development areas.
+This release is a playable starting point with a top-down presentation and a local roster of solo characters. It is not a complete production RPG: there is no multiplayer service, shared persistent world, or cloud account system. Encounter balance, art, audio, and the breadth of content will continue to evolve. See [the roadmap](docs/ROADMAP.md) for the next development areas.
 
