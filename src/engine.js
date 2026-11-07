@@ -7,7 +7,7 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '0.9.0';
+  const VERSION = '0.9.1';
   const WORLD = Object.freeze({ w: 4200, h: 2600, spawn: Object.freeze({ x: 260, y: 250 }), bindstone: Object.freeze({ x: 202, y: 214 }) });
   const BIOMES = Object.freeze([
     { id:'willowmere', name:'Willowmere Woodland', x:0, y:0, w:1850, h:2600, color:'#46633e', level:1 },
@@ -1170,6 +1170,7 @@
         this.log('Your elemental returns; its target is too far away.', 'warning');
       }
       if (target) {
+        pet.followTrail=[{x:this.player.x,y:this.player.y}];pet.following=false;
         this._walk(pet, target, pet.speed, dt, 29);
         if (distance(pet, target) <= 35 && this.clock >= pet.attackAt) {
           pet.attackAt = this.clock + (pet.type === 'Air' ? 1.45 : 1.65);
@@ -1178,8 +1179,32 @@
         }
       } else {
         pet.targetId = null;
-        this._walk(pet, { x: this.player.x - 30, y: this.player.y + 25 }, pet.speed + 35, dt, 5);
+        this._followParty(pet,dt);
       }
+    }
+
+    _followParty(pet,dt){
+      const player=this.player,gap=distance(pet,player);
+      const trail=pet.followTrail||(pet.followTrail=[{x:player.x,y:player.y}]);
+      const last=trail[trail.length-1];
+      if(distance(last,player)>450){trail.length=0;trail.push({x:player.x,y:player.y});}
+      else if(distance(last,player)>=8){trail.push({x:player.x,y:player.y});if(trail.length>128)trail.shift();}
+      // A dead zone and short reaction delay let the player walk away first.
+      if(!pet.following){
+        if(gap<98){pet.followReadyAt=null;return;}
+        if(pet.followReadyAt==null)pet.followReadyAt=this.clock+.22;
+        if(this.clock<pet.followReadyAt)return;
+        pet.following=true;pet.followReadyAt=null;
+      }
+      if(gap<48){pet.following=false;return;}
+      let remaining=65,goal=null,head={x:player.x,y:player.y};
+      // Follow where the player has been, rather than a fixed world-space offset.
+      for(let i=trail.length-1;i>=0;i--){const point=trail[i],length=distance(head,point);if(length>=remaining){const t=remaining/length;goal={x:head.x+(point.x-head.x)*t,y:head.y+(point.y-head.y)*t};break;}remaining-=length;head=point;}
+      if(!goal)goal={x:player.x+(pet.x-player.x)*Math.min(1,65/gap),y:player.y+(pet.y-player.y)*Math.min(1,65/gap)};
+      const goalGap=distance(pet,goal);
+      if(goalGap<8){pet.following=false;return;}
+      const catchSpeed=Math.min(pet.speed+85,pet.speed*.7+gap*.65);
+      this._walk(pet,goal,Math.min(catchSpeed,Math.max(28,goalGap*4)),dt,6);
     }
 
     _updateReturning(mob, dt) {

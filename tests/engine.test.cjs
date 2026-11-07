@@ -135,7 +135,7 @@ test('pet follow stops attacking and brings the elemental back while enemies may
   advance(game, 3);
   assert.equal(game.pet.targetId, null);
   assert.equal(target.hp, health, 'A recalled pet must not continue attacking');
-  assert.ok(Math.hypot(game.pet.x - game.player.x, game.pet.y - game.player.y) < 60);
+  assert.ok(Math.hypot(game.pet.x - game.player.x, game.pet.y - game.player.y) < 100);
 });
 
 test('a replacement elemental does not inherit the old pet’s threat or attack command', () => {

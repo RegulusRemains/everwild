@@ -87,3 +87,9 @@ The animation set uses mirrored right/left facing rather than eight authored dir
 - Added layered Web Audio instruments: filtered noise, bass, harmonics, panning, short convolution reverb, dynamics compression, mute and persisted volume. Offline rendering checks isolated and overlapping effects for audible output without clipping; this measures signal behavior rather than claiming a human listening preference.
 - Browser verification includes new and legacy save entry, three-character switching/reload, separate progression, class spellbooks/companions, desktop/phone creation and selection, canopy transitions, new terrain/props, closer camera, effect scenes and reduced motion. Existing gameplay, inventory, quests, save, resolution and original expedition checks remain in place.
 - Classes share ten underlying spell roles and pet commands. Necromancer/Druid actors use authored idle/casting art with rendered walking movement, rather than separate authored gait sheets. New melee classes, additional active abilities, voice performances and recorded environmental soundscapes remain future scope.
+
+## v0.9.1 checkpoint: companions that trail naturally
+
+- Replaced the fixed player-offset follow target with a bounded history of recent movement, a short reaction delay, a follow dead zone, and a trailing goal roughly 65 paces behind the path head.
+- Follow speed varies with separation and eases near the goal. Companions can fall behind, catch up continuously, and stop without idle jitter or snapping. Combat approach and attack speed remain governed by their existing combat behavior.
+- Regression checks cover both companion speed types, movement onset, long travel, turns, stopping, far-distance catch-up, passive recall, all 18 class/companion/seed expedition runs, and real keyboard movement at desktop/phone sizes.

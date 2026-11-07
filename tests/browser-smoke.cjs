@@ -355,6 +355,7 @@ async function main() {
     await require('./world-review.cjs').runWorldChecks(page, screenshots);
     await require('./character-review.cjs').runCharacterChecks(page,screenshots);
     await require('./effects-review.cjs').runEffectsChecks(page,screenshots);
+    await require('./pet-follow-review.cjs').runPetFollowChecks(page,screenshots);
     assert.deepEqual(errors, [], 'The browser must not report runtime or console errors');
     console.log('Browser smoke passed: controls, NPC dialogue, quest rewards, equipment, spell assignment, pet guard/taunt, tonic purchase/cooldown, save/reload, and mobile layout.');
     console.log(`Screenshots: ${screenshots}`);
