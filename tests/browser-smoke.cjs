@@ -214,6 +214,14 @@ async function main() {
     assert.equal(await page.evaluate(() => window.everwild.game.pet.mode), 'guard');
     await page.keyboard.press('f');
     assert.ok(await page.evaluate(() => window.everwild.game.pet.targetId));
+    // Follow can move the pet away during keyboard round trips. F orders an
+    // approach; taunt is valid only after that approach actually reaches range.
+    await page.waitForFunction(() => {
+      const game = window.everwild.game, pet = game.pet;
+      const target = pet && game.mobs.find(mob => mob.id === pet.targetId && mob.alive && !mob.returning);
+      return target && Math.hypot(pet.x-target.x,pet.y-target.y) <= 70;
+    }, undefined, { timeout: 7000 });
+    await page.waitForFunction(() => !document.getElementById('taunt').disabled);
     await page.keyboard.press('q');
     const tauntReadyAt = await page.evaluate(() => {
       const game = window.everwild.game;

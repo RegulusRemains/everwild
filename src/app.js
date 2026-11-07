@@ -325,8 +325,12 @@
     for (const id of ['attack', 'follow', 'guard', 'rest', 'interact']) $(id).disabled = game.dead || isPaused();
     $('guard').classList.toggle('active', Boolean(pet && pet.mode === 'guard'));
     const tauntRemaining = pet ? Math.max(0, (pet.tauntReadyAt || 0) - game.clock) : 0;
-    $('taunt').disabled = !pet || game.dead || isPaused() || tauntRemaining > 0;
-    $('taunt').innerHTML = `<kbd>Q</kbd> ${tauntRemaining > 0 ? Math.ceil(tauntRemaining) + 's' : 'Taunt'}`;
+    const tauntInRange = Boolean(petTarget && Math.hypot(pet.x-petTarget.x,pet.y-petTarget.y) <= 85);
+    const tauntReason = !pet ? 'Summon an elemental before taunting.' : !petTarget ? 'Select an enemy and order your elemental to attack [F].' : tauntRemaining > 0 ? `Taunt ready in ${Math.ceil(tauntRemaining)} seconds.` : !tauntInRange ? 'Your elemental is approaching. Taunt requires it to be within 85 paces of its target.' : 'Taunt [Q]: draw this enemy’s attention to your elemental.';
+    $('taunt').disabled = !pet || game.dead || isPaused() || tauntRemaining > 0 || !tauntInRange;
+    $('taunt').title = tauntReason;
+    $('taunt').setAttribute('aria-label', tauntReason);
+    $('taunt').innerHTML = `<kbd>Q</kbd> ${tauntRemaining > 0 ? Math.ceil(tauntRemaining) + 's' : petTarget && !tauntInRange ? 'Closing' : 'Taunt'}`;
     const supplyRemaining = Math.max(0, game.supplyReadyAt - game.clock);
     setText('health-count', player.supplies['health-tonic'] || 0);
     setText('mana-count', player.supplies['mana-tonic'] || 0);
@@ -359,7 +363,7 @@
     else if (p.mp < 35) tip = 'Mana is low. Drink a mana tonic [X], or find safety and meditate [R]. The bindstone restores your party free.';
     else if (p.inventory.some(id => !p.equipment[ITEMS[id].slot])) tip = 'A new find can strengthen you. Open your pack [I], compare its properties, and equip it.';
     else if (!pet) tip = `Summon an Earth Pet ${slotKey(0)} before entering a camp. Earth endures; air trades durability for faster damage.`;
-    else if (selected && !selected.aggro) tip = 'Send your elemental [F] and let it reach the enemy before adding damage. Pull a lone guard first.';
+    else if (selected && !selected.aggro) tip = pet?.targetId === selected.id ? 'Your elemental is approaching. Let it engage before adding damage; Taunt [Q] becomes available within 85 paces.' : 'Send your elemental [F] and let it reach the enemy before adding damage. Pull a lone guard first.';
     else if (game.inCombat) tip = `Burning Mark ${slotKey(2)} deals efficient damage over time. Save mana for Pet Mend and Root; use [G] to recall.`;
     else if (game.activeQuests.some(quest => quest.status === 'ready')) tip = 'Your assignment is ready. Return to the quest giver for experience, copper, and the next lead.';
     else if (game.questState('crypt-proof').status === 'completed') tip = 'The eastern road is safer. Revisit named camps for relics, refine your spell ranks, or prepare for Othrek’s Vigil.';

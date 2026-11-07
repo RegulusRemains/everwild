@@ -39,6 +39,7 @@ Work across art, interface, gameplay, spells, equipment, sound, and onboarding. 
 - Old saves retain their gear and quest progress; completed old Mossfang assignments receive the new item once without new experience/copper.
 - All six fresh-character journey runs now include a deliberate death to a live guard, normal revival, retention checks, and save/reload before finishing the crypt and reporting back. Earth uses the sustain mantle and Air keeps linen reserves. No progression, positions, resources or combat results are injected into these runs.
 - Villager dialogue responds to progress, and the journal closes the first expedition while offering an optional next hunt.
+- Taunt readiness follows the actual target range: the control shows Closing while the pet approaches, with an accessible explanation. The browser scenario waits for real approach/readiness before issuing Q, removing a runner-speed timing assumption caught by CI.
 - The first-expedition implementation criteria have been audited in FIRST_EXPEDITION_AUDIT.md. Human judgments of fun, difficulty and artistic taste remain playtest feedback rather than claims made by automated checks.
 
 ## Future scope: progression worth pursuing
