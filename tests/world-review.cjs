@@ -6,6 +6,10 @@ async function runWorldChecks(page,output){
  const stagingStyle=await page.addStyleTag({content:'#paused-overlay{display:none!important}'});
  await page.setViewportSize({width:1920,height:1080});
  await page.waitForFunction(()=>window.everwild.renderer.frontierLoaded&&window.everwild.renderer.frontierFloorLoaded);
+ const colors=await page.evaluate(()=>window.Everwild.BIOMES.map(b=>{
+   const data=window.everwild.renderer.terrain.getContext('2d').getImageData(Math.floor(b.x+b.w*.72),Math.floor(b.y+b.h*.75),80,80).data,sum=[0,0,0];for(let i=0;i<data.length;i+=4)for(let j=0;j<3;j++)sum[j]+=data[i+j];return sum.map(v=>v/(data.length/4));
+ }));
+ for(let i=0;i<colors.length;i++)for(let j=0;j<i;j++)assert.ok(Math.hypot(...colors[i].map((v,k)=>v-colors[j][k]))>18,'Biome terrain must remain visually distinct after masking: '+i+' / '+j);
  const canopy=await page.evaluate(()=>{
   const {game:g,renderer:r}=window.everwild;window.everwild.pause(true);document.getElementById('paused-overlay').hidden=true;g.pet=null;g.selectedId=null;
   const tree=r.trees.find(t=>t.x>500&&t.x<1500&&t.y>400);g.player.x=tree.x;g.player.y=tree.y-68*tree.scale;

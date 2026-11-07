@@ -192,12 +192,16 @@
         const tile=canvas(256,256), tc=tile.getContext('2d');
         if(this.frontierFloorLoaded) { const side=this.frontierFloor.naturalWidth/2; tc.drawImage(this.frontierFloor,(biome.art%2)*side,Math.floor(biome.art/2)*side,side,side,0,0,256,256); }
         else {tc.fillStyle=biome.color;tc.fillRect(0,0,256,256);}
+        if(biome.id==='mire'){tc.fillStyle='rgba(25,70,78,.5)';tc.fillRect(0,0,256,256);}
         const mirrored=canvas(512,512),mc=mirrored.getContext('2d');
         for(const [ix,iy]of [[0,0],[1,0],[0,1],[1,1]]){mc.save();mc.translate(ix?512:0,iy?512:0);mc.scale(ix?-1:1,iy?-1:1);mc.drawImage(tile,0,0);mc.restore();}
         const layer=canvas(biome.w+130,biome.h+130),lc=layer.getContext('2d');lc.fillStyle=lc.createPattern(mirrored,'repeat');lc.fillRect(0,0,layer.width,layer.height);
-        lc.globalCompositeOperation='destination-in';
-        for(let row=0;row<layer.height;row+=8){const wobble=24*Math.sin((row+biome.y)/147)+13*Math.sin((row+biome.y)/63);const edge=lc.createLinearGradient(wobble-30,0,wobble+150,0);edge.addColorStop(0,'#fff0');edge.addColorStop(1,'#fff');lc.fillStyle=edge;lc.fillRect(0,row,layer.width,8);}
-        if(biome.y>0)for(let col=0;col<layer.width;col+=8){const wobble=22*Math.sin((col+biome.x)/173);const top=lc.createLinearGradient(0,wobble-25,0,wobble+145);top.addColorStop(0,'#fff0');top.addColorStop(1,'#fff');lc.fillStyle=top;lc.fillRect(col,0,8,layer.height);}
+        // Compose each complete mask before applying destination-in. Applying individual
+        // strips directly would erase the destination outside every new strip.
+        const mask=canvas(layer.width,layer.height),mk=mask.getContext('2d');
+        for(let row=0;row<layer.height;row+=8){const wobble=24*Math.sin((row+biome.y)/147)+13*Math.sin((row+biome.y)/63);const edge=mk.createLinearGradient(wobble-30,0,wobble+150,0);edge.addColorStop(0,'#fff0');edge.addColorStop(1,'#fff');mk.fillStyle=edge;mk.fillRect(0,row,layer.width,8);}
+        lc.globalCompositeOperation='destination-in';lc.drawImage(mask,0,0);
+        if(biome.y>0){mk.clearRect(0,0,mask.width,mask.height);for(let col=0;col<layer.width;col+=8){const wobble=22*Math.sin((col+biome.x)/173);const top=mk.createLinearGradient(0,wobble-25,0,wobble+145);top.addColorStop(0,'#fff0');top.addColorStop(1,'#fff');mk.fillStyle=top;mk.fillRect(col,0,8,layer.height);}lc.drawImage(mask,0,0);}
         c.drawImage(layer,biome.x-65,biome.y===0?0:biome.y-65);
         for(let i=0;i<110;i++) {
           const x=biome.x+60+r()*(biome.w-80),y=biome.y+50+r()*(biome.h-70);
