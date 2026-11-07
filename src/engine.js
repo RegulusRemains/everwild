@@ -154,7 +154,9 @@
       }
       this.log(this.dead ? 'Your spirit awaits at the bindstone. Return to continue your adventure.' : 'Welcome to Willowmere. Summon an Earth Elemental from your spell bar, then explore east toward Briarwatch.');
       if (unsafeResume) this.log('Enemies reclaimed your saved camp. You resume safely at the bindstone with your progress intact. Press E to restore health and mana.');
-      this.log('Speak with Warden Rowan for your first patrol. The bindstone restores health and mana [E].');
+      this.log(this.questState('scout-road').status === 'available'
+        ? 'Speak with Warden Rowan for your first patrol. The bindstone restores health and mana [E].'
+        : 'Open your journal [J] to review your assignments. The bindstone restores health and mana [E].');
     }
 
     get selected() {
