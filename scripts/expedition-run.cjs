@@ -3,7 +3,7 @@
 // mob state, quest state, or resources are injected into the simulation.
 const assert = require('node:assert/strict');
 const { Game, SPELLS, ITEMS, WORLD } = require('../src/engine.js');
-function runExpedition(seed = 42, companion = 'Earth') {
+function runExpedition(seed = 42, companion = 'Earth', verifyRecovery = true, includeSave = false) {
   assert.ok(['Earth', 'Air'].includes(companion));
   const companionSpell = companion === 'Air' ? 5 : 0;
   let state = seed >>> 0;
@@ -21,10 +21,11 @@ function runExpedition(seed = 42, companion = 'Earth') {
   const cast = index => { const result=game.castSpell(index); if(!result.ok) return false; tick(SPELLS[index].cast+.05); return true; };
   const restore = () => { assert.ok(game.restoreAtBindstone().ok); if(game.pet) game.commandPet('follow'); assert.ok(cast(companionSpell)); };
   const gear = () => {
-    for (const slot of ['charm','focus','ring']) {
+    for (const slot of ['charm','focus','ring','garb']) {
       const available=game.player.inventory.filter(id=>ITEMS[id].slot===slot);
       const score = id => (ITEMS[id].stats.hp||0)+(ITEMS[id].stats.mp||0)+(ITEMS[id].stats.power||0)*5+(ITEMS[id].effect?20:0);
-      available.sort((a,b)=>score(b)-score(a)); if(available[0]) assert.ok(game.equip(available[0]).ok);
+      available.sort((a,b)=>score(b)-score(a));
+      if (slot === 'garb' && companion === 'Air' && available.includes('worn-linen-robe')) { available.splice(available.indexOf('worn-linen-robe'),1); available.unshift('worn-linen-robe'); } if(available[0]) assert.ok(game.equip(available[0]).ok);
     }
   };
   const fight = (mob, label) => {
@@ -62,6 +63,20 @@ function runExpedition(seed = 42, companion = 'Earth') {
   travel([[900,700],[480,650],[260,250],[180,320]]);assert.ok(game.turnInQuest('mossfang').ok);gear();
   report.milestones.push({quest:'mossfang',level:game.player.level,kills:game.player.kills,copper:game.player.gold});
   travel([[260,250]]);assert.ok(game.acceptQuest('crypt-proof').ok);restore();
+  if (verifyRecovery) {
+    const inventory = [...game.player.inventory], level = game.player.level;
+    game.commandPet('follow'); travel([[480,350],[590,350]]);
+    // Deliberately remain beside a live guard without fighting back. This is
+    // a normal gameplay death, not an injected HP value or private damage call.
+    for (let i=0;!game.dead && i<2400;i++)game.update(.05);
+    assert.equal(game.dead,true,'The unprotected player must be vulnerable to a guard');
+    const debt = game.player.debt;
+    assert.ok(debt>0);assert.ok(game.revive().ok);
+    assert.equal(game.player.level,level);assert.deepEqual(game.player.inventory,inventory);
+    assert.equal(game.questState('crypt-proof').status,'active');
+    report.recovery={validated:true,debtAdded:debt,levelRetained:level,itemsRetained:inventory.length};
+    restore();
+  }
   // Save/reload before leaving the village, then re-summon through normal casting.
   const saved=game.serialize();game=new Game({save:saved,random});assert.equal(game.questState('crypt-proof').status,'active');restore();
   travel([[480,650],[900,700],[1050,1120],[1294,1180]]);
@@ -71,6 +86,7 @@ function runExpedition(seed = 42, companion = 'Earth') {
   report.milestones.push({quest:'crypt-proof',level:game.player.level,kills:game.player.kills,copper:game.player.gold});
   report.completed=game.activeQuests.length===0 && game.questState('crypt-proof').status==='completed';
   report.final={level:game.player.level,kills:game.player.kills,gold:game.player.gold,equipment:game.player.equipment,inventory:game.player.inventory};
+  if (includeSave) report.save = game.serialize();
   return report;
 }
 if(require.main===module) console.log(JSON.stringify(runExpedition(),null,2));

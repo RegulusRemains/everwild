@@ -115,10 +115,11 @@
   syncPresentationButtons();
 
 
-  const itemArt = Object.fromEntries(Object.keys(ITEMS).map((id, index) => [id, index + 8]));
+  const itemArt = { ...Object.fromEntries(Object.keys(ITEMS).slice(0, 8).map((id, index) => [id, index + 8])), 'worn-linen-robe':20, 'waxed-travel-cloak':21, 'mosswoven-mantle':22, 'emberwoven-robe':23 };
   const spellArt = [0, 1, 2, 3, 4, 5, 6, 7, 16, 17];
   const spellRoles = ['Companion · endurance', 'Direct damage', 'Damage over time', 'Control · interrupt', 'Companion · recovery', 'Companion · offense', 'Protection', 'Recovery', 'Damage · slow', 'Area damage'];
   function arcanaIcon(index, extra = '') {
+    if (index >= 20) return `<span class="atlas-icon garb-art ${extra}" aria-hidden="true" style="background-position:${(index - 20) % 2 * 100}% ${Math.floor((index - 20) / 2) * 100}%"></span>`;
     if (index >= 16) return `<span class="atlas-icon extra-arcana ${extra}" aria-hidden="true" style="background-position:${(index - 16) % 2 * 100}% ${Math.floor((index - 16) / 2) * 100}%"></span>`;
     return `<span class="atlas-icon ${extra}" aria-hidden="true" style="background-position:${index % 4 * 100 / 3}% ${Math.floor(index / 4) * 100 / 3}%"></span>`;
   }
@@ -204,18 +205,6 @@
     updateUI();
   }
 
-  const iconPaths = [
-    '<path d="m6 10 6-6 7 4 3 9-6 6-11-4Z"/><path d="m6 10 7 4 6-6m-6 6 3 9M9 8l5-1m-6 10h3m5 0h2"/>',
-    '<path d="M15 3c1 7 7 8 7 14a8 8 0 0 1-16 0c0-4 3-6 5-8-1 6 2 5 3 3 2-3 1-6 1-9Z"/><path d="M14 16c-6 6 3 10 3 4"/>',
-    '<circle cx="14" cy="14" r="8"/><path d="m14 2 2 8 8 4-8 3-2 9-3-9-9-3 9-4Z"/>',
-    '<path d="M14 3v15m0-9-7-4m7 8 7-6M14 18l-8 7m8-7 8 7m-8-7-1 8M6 13l3 7m12-6-2 7"/>',
-    '<path d="m5 12 9-8 9 8-3 11H8Z"/><path d="M14 10v10m-5-5h10"/>',
-    '<path d="M4 10h15a4 4 0 1 0-4-4M3 15h18a3 3 0 1 1-3 3M7 20h5a3 3 0 1 1-3 3"/>',
-    '<path d="M14 3 5 7v8c0 5 9 10 9 10s9-5 9-10V7Z"/><path d="m9 14 3 4 7-8"/>',
-    '<path d="M14 24S3 17 3 10c0-7 9-8 11-2 3-6 11-5 11 2 0 7-11 14-11 14Z"/><path d="M14 11v8m-4-4h8"/>',
-    '<path d="M14 2v24M4 8l20 12M4 20 24 8M10 4l4 4 4-4M10 24l4-4 4 4M4 12l5-1-1-5M24 16l-5 1 1 5"/>',
-    '<circle cx="14" cy="14" r="5"/><path d="m14 1 2 7 7-4-3 7 7 3-7 3 3 7-7-4-2 7-2-7-7 4 3-7-7-3 7-3-3-7 7 4Z"/>'
-  ];
   const spellColors = ['#c5bc91', '#e2aa76', '#cf927c', '#b5acd1', '#b6c890', '#a6ced0', '#adc3d6', '#cabda3', '#b6d9e3', '#e7ad72'];
   for (let slot = 0; slot < 8; slot++) {
     const button = document.createElement('button');
@@ -384,8 +373,8 @@
       QUESTS.find(value => game.questState(value.id).status === 'active') ||
       QUESTS.find(value => game.questState(value.id).status === 'available');
     if (!quest) {
-      setText('objective-title', 'A road worth remembering');
-      setText('objective-text', 'Willowmere’s story continues. Hunt named foes, master your spells, and explore Othrek’s Vigil.');
+      setText('objective-title', 'The Eastern Road · complete');
+      setText('objective-text', 'Your first expedition is complete. Refine your equipment and spells, then prepare for Othrek’s Vigil when you are ready.');
       meter('objective-progress', 1, 1);
       return;
     }
@@ -406,6 +395,10 @@
 
   function nearNpc(npc) {
     return npc && Math.hypot(game.player.x - npc.x, game.player.y - npc.y) <= 90;
+  }
+
+  function completionCard() {
+    return `<section class="completion-card"><span class="eyebrow">FIRST EXPEDITION COMPLETE</span><h3>The eastern road is open.</h3><p>You answered Rowan’s call, broke Bramblemaw’s binding, and ended the Bonewarden’s watch. Willowmere has a reason to light its lanterns again.</p><div>Level ${game.player.level} magician · ${game.player.kills} victories · ${game.player.inventory.length} unique finds</div><button data-action="menu" data-menu="camps">Choose your next hunt →</button></section>`;
   }
 
   function rewardText(quest) {
@@ -482,12 +475,13 @@
       const npc = NPCS.find(value => value.id === currentNpcId);
       setText('dialog-title', npc.name);
       const assignments = QUESTS.filter(quest => quest.npcId === npc.id && game.questState(quest.id).status !== 'locked');
-      content.innerHTML = `<div class="npc-intro"><div class="npc-portrait ${npc.id}">${escape(npc.name.replace(/^(Warden|Elementalist|Quartermaster) /, '').charAt(0))}</div><div><span class="eyebrow">${escape(npc.role)}</span><p>${escape(npc.description)}</p></div></div><div class="npc-dialogue">${npc.dialogue.map(line => `<p>“${escape(line)}”</p>`).join('')}</div>`;
+      content.innerHTML = `<div class="npc-intro"><div class="npc-portrait ${npc.id}">${escape(npc.name.replace(/^(Warden|Elementalist|Quartermaster) /, '').charAt(0))}</div><div><span class="eyebrow">${escape(npc.role)}</span><p>${escape(npc.description)}</p></div></div><div class="npc-dialogue">${game.npcDialogue(npc.id).map(line => `<p>“${escape(line)}”</p>`).join('')}</div>`;
       if (npc.id === 'mara') {
         content.innerHTML += `<div class="journal-summary"><span>Supplies for the road</span><span>${player.gold} copper in your pack</span></div><div class="shop-list">` + Object.values(SUPPLIES).map(supply =>
           `<article class="shop-item"><span class="supply-symbol">${supply.id === 'health-tonic' ? '♧' : '◈'}</span><h3>${escape(supply.name)}</h3><p>${escape(supply.description)}</p><div class="owned">Carrying ${player.supplies[supply.id] || 0} · shared 20s recovery</div><button data-action="buy-supply" data-item="${supply.id}" ${player.gold < supply.cost ? 'disabled' : ''}>Buy · ${supply.cost} copper</button></article>`
         ).join('') + '</div>';
       }
+      if (npc.id === 'rowan' && game.questState('crypt-proof').status === 'completed') content.innerHTML += completionCard();
       if (assignments.length) content.innerHTML += '<div class="quest-list">' + assignments.map(quest => questCard(quest, npc.id)).join('') + '</div>';
       if (npc.id === 'liora') content.innerHTML += '<div class="npc-links"><button class="primary" data-action="menu" data-menu="spellbook">Study and arrange spells</button><button data-action="menu" data-menu="guide">Learn pet tactics</button></div>';
       else content.innerHTML += '<div class="npc-links"><button data-action="menu" data-menu="journal">Your assignments</button><button data-action="menu" data-menu="camps">Ask about the camps</button></div>';
@@ -495,13 +489,13 @@
     } else if (name === 'journal') {
       setText('dialog-title', 'The Eastern Road');
       const completed = QUESTS.filter(quest => game.questState(quest.id).status === 'completed').length;
-      content.innerHTML = menuTabs('journal') + `<p>Willowmere’s quiet roads have become dangerous. Help the people here, learn what the goblins are carrying, and trace the disturbance toward the crypt.</p><div class="journal-summary"><span>Your expedition</span><span>${completed} of ${QUESTS.length} assignments completed</span></div><div class="quest-list">` + QUESTS.map(quest => questCard(quest)).join('') + '</div><p class="muted" style="margin-top:17px">Accept an assignment before hunting its targets. Existing equipment can satisfy item evidence assignments, and you keep the equipment when you report back.</p>';
+      content.innerHTML = menuTabs('journal') + (completed === QUESTS.length ? completionCard() : '') + `<p>${completed === QUESTS.length ? 'The first expedition is recorded below. Revisit the camps, compare their relics, and prepare your next spell bar when you are ready.' : 'Willowmere’s quiet roads have become dangerous. Help the people here, learn what the goblins are carrying, and trace the disturbance toward the crypt.'}</p><div class="journal-summary"><span>Your expedition</span><span>${completed} of ${QUESTS.length} assignments completed</span></div><div class="quest-list">` + QUESTS.map(quest => questCard(quest)).join('') + '</div><p class="muted" style="margin-top:17px">Accept an assignment before hunting its targets. Existing equipment can satisfy item evidence assignments, and you keep the equipment when you report back.</p>';
     } else if (name === 'camps') {
       setText('dialog-title', 'Rumors from the road');
       content.innerHTML = menuTabs('camps') + '<p>Every camp has a reason to return. Learn the guards, watch for the named foe, and choose the piece of equipment you want to pursue.</p><div class="camp-list">' + CAMPS.map(camp => {
         const item = ITEMS[camp.rareItemId];
         const found = game.discovered.includes(camp.id);
-        return `<article class="camp-card"><div class="camp-heading"><h3>${escape(camp.name)}</h3><span class="camp-level">Lv. ${camp.level}–${camp.level + 1} · ${found ? 'Discovered' : 'Rumored'}</span></div><p>${escape(camp.description)}</p><p><strong>${escape(camp.namedName)}</strong> commands this camp.</p>${item ? `<div class="camp-loot"><span>✧</span><div><strong>${escape(item.name)}</strong><small>${escape(item.description)}</small></div></div>` : ''}<p class="camp-tip">${escape(camp.roleHint)}</p><p class="muted">Guards return after ${camp.delay}s. Named foes can appear again in their camp. Duplicate equipment becomes copper.</p></article>`;
+        return `<article class="camp-card"><div class="camp-heading"><h3>${escape(camp.name)}</h3><span class="camp-level">Lv. ${camp.level}–${camp.level + 1} · ${found ? 'Discovered' : 'Rumored'}</span></div><p>${escape(camp.description)}</p><p><strong>${escape(camp.namedName)}</strong> commands this camp.</p>${item ? `<div class="camp-loot">${arcanaIcon(itemArt[item.id])}<div><strong>${escape(item.name)}</strong><small>${escape(item.description)}</small>${item.effect ? `<small class="gear-magic">${escape(item.effectName)}: ${escape(item.effect)}</small>` : ''}</div></div>` : ''}${camp.bonusItemId ? `<div class="camp-loot bonus-loot">${arcanaIcon(itemArt[camp.bonusItemId])}<div><strong>${escape(ITEMS[camp.bonusItemId].name)}</strong><small>${Math.round(camp.bonusDropChance * 100)}% additional drop chance · ${escape(ITEMS[camp.bonusItemId].effect)}</small></div></div>` : ''}<p class="camp-tip">${escape(camp.roleHint)}</p><p class="muted">Guards return after ${camp.delay}s. Named foes can appear again in their camp. Duplicate equipment becomes copper.</p></article>`;
       }).join('') + '</div>';
     } else if (name === 'guide') {
       setText('dialog-title', 'Your first expedition');
@@ -509,13 +503,13 @@
         '<div class="guide-cards"><div class="guide-card"><span>01</span><b>Meet the warden</b><p>Click Warden Rowan by the road and take his first assignment. Summon an Earth Elemental with 1 before leaving Willowmere.</p></div><div class="guide-card"><span>02</span><b>Choose your fight</b><p>Follow the road east. Target a Briarwatch scout, press F, and let your pet engage. Add Fire Bolt with 2; use Q to have your pet taunt.</p></div><div class="guide-card"><span>03</span><b>Come home stronger</b><p>Equip loot with I and report to Rowan. Liora helps with spells, Mara sells tonics, and the bindstone restores your party.</p></div></div>' +
         '<h3>Read the fight</h3><p>Amber ground circles warn of an enemy’s special attack. Move outside the circle before it fills, or interrupt the enemy with Arcane Root. Rooted enemies can still strike anyone beside them. Your target card shows whether you or your elemental has its attention.</p>' +
         '<h3>A companion with commands</h3><p>Guard [C] tells your pet to defend you when you are hit. Attack [F] sends it to your chosen enemy. Follow [G] recalls it passively so it will not immediately start another fight. Taunt [Q] pulls a nearby enemy’s attention toward the elemental and recovers in 12 seconds.</p>' +
-        '<h3>Deliberate magic</h3><p>Moving interrupts a cast without spending mana. Spells keep the target chosen when casting began. Frost Lance unlocks at level 3 and slows a foe; Ember Nova unlocks at level 5 and hits nearby enemies. Open the spellbook [B] to assign any unlocked spell to one of your eight hotbar slots.</p>' +
+        '<div class="build-guides"><article><h3>Steady earth</h3><p>An Earth Pet holds attention while Burning Mark works. Save mana for Root and Pet Mend; a Mosswoven Mantle strengthens each mend, and the earth ring reduces incoming pet damage.</p></article><article><h3>Swift air</h3><p>An Air Pet deals more damage but needs closer care. A linen robe adds mana and spell power for a faster kill. Grik’s charm replenishes mana between fights; the Boneguard protects you when attention slips.</p></article></div><h3>Deliberate magic</h3><p>Moving interrupts a cast without spending mana. Spells keep the target chosen when casting began. Frost Lance unlocks at level 3 and slows a foe; Ember Nova unlocks at level 5 and hits nearby enemies. Open the spellbook [B] to assign any unlocked spell to one of your eight hotbar slots.</p>' +
         '<h3>Progress that stays with you</h3><p>Defeated enemies return after 45–75 seconds. Named enemies have a chance to return in their camp’s final guard position and carry rare gear. Duplicates become copper. At levels 2 and 5, buy spell ranks at the bindstone. Death adds 15% of your next level’s XP requirement as debt; you keep your level, items, and copper.</p>' +
         '<div class="controls-grid">' + [['WASD / ↑↓←→', 'Move (or click ground)'], ['Click / Space', 'Choose / nearest target'], ['Tab', 'Cycle targets while canvas focused'], ['1–8', 'Cast the assigned hotbar spell'], ['F / G', 'Pet attack / passive follow'], ['C / Q', 'Pet guard / taunt'], ['R', 'Meditate / stand'], ['E', 'Talk nearby / use bindstone'], ['Z / X', 'Health / mana tonic'], ['I / M', 'Pack / frontier map'], ['J / B', 'Quest journal / spellbook'], ['Esc', 'Stop moving / pause']].map(([key, text]) => `<div><kbd>${key}</kbd><span>${text}</span></div>`).join('') + '</div>' +
         '<p class="muted" style="margin-top:20px">On touch devices: tap ground to move, tap an enemy to target, then use the spell and pet buttons. Trees, water, and ruin walls are scenery in this prototype; they do not block movement.</p>';
     } else if (name === 'inventory') {
       setText('dialog-title', 'Your traveling pack');
-      const slots = ['charm', 'focus', 'ring'];
+      const slots = ['charm', 'focus', 'ring', 'garb'];
       const visibleItems = player.inventory.filter(id => inventoryFilter === 'all' || ITEMS[id].slot === inventoryFilter);
       visibleItems.sort((a, b) => Number(player.equipment[ITEMS[b].slot] === b) - Number(player.equipment[ITEMS[a].slot] === a) || Number(ITEMS[b].rarity === 'rare') - Number(ITEMS[a].rarity === 'rare'));
       content.innerHTML = `<div class="pack-summary"><div><span class="eyebrow">YOUR EQUIPMENT</span><p>${player.inventory.length} discoveries · ${player.gold} copper</p></div><div>${player.maxHp} health · ${player.maxMp} mana · +${player.power || 0} spell power</div></div><div class="gear-slots">` + slots.map(slot => {
@@ -524,9 +518,11 @@
       }).join('') + `</div><div class="menu-tabs" aria-label="Filter equipment">` + ['all', ...slots].map(filter => `<button data-action="filter-items" data-filter="${filter}" aria-pressed="${filter === inventoryFilter}" class="${filter === inventoryFilter ? 'current' : ''}">${filter === 'all' ? 'All finds' : filter}</button>`).join('') + '</div><div class="inventory-list">' +
         (visibleItems.length ? visibleItems.map(id => {
           const item = ITEMS[id], equipped = player.equipment[item.slot] === id;
-          const stats = Object.entries(item.stats).map(([key, value]) => `+${value} ${key === 'hp' ? 'health' : key === 'mp' ? 'mana' : 'spell power'}`).join(' · ');
-          const camp = CAMPS.find(camp => camp.rareItemId === id);
-          return `<article class="item-card ${item.rarity}">${arcanaIcon(itemArt[id], 'item-art')}<div class="item-details"><span class="eyebrow">${item.rarity.toUpperCase()} · ${item.slot.toUpperCase()}</span><strong>${escape(item.name)}</strong><p class="item-lore">“${escape(item.description)}”</p><p class="item-stats">${stats}</p>${item.effect ? `<div class="item-magic"><strong>✦ ${escape(item.effectName)}</strong><p>${escape(item.effect)}</p></div>` : ''}${itemComparison(item)}${camp ? `<small class="item-origin">Recovered from ${escape(camp.namedName)} · ${escape(camp.name)}</small>` : ''}</div><button data-action="equip" data-item="${id}" ${equipped || game.dead ? 'disabled' : ''}>${equipped ? 'Equipped' : 'Equip'}</button></article>`;
+          const stats = Object.entries(item.stats).map(([key, value]) => `${value < 0 ? '−' : '+'}${Math.abs(value)} ${key === 'hp' ? 'health' : key === 'mp' ? 'mana' : 'spell power'}`).join(' · ');
+          const camp = CAMPS.find(camp => camp.rareItemId === id || camp.id === item.campId);
+          const gift = QUESTS.find(quest => quest.reward.itemId === id);
+          const giver = gift && NPCS.find(npc => npc.id === gift.npcId);
+          return `<article class="item-card ${item.rarity}">${arcanaIcon(itemArt[id], 'item-art')}<div class="item-details"><span class="eyebrow">${item.rarity.toUpperCase()} · ${item.slot.toUpperCase()}</span><strong>${escape(item.name)}</strong><p class="item-lore">“${escape(item.description)}”</p><p class="item-stats">${stats}</p>${item.effect ? `<div class="item-magic"><strong>✦ ${escape(item.effectName)}</strong><p>${escape(item.effect)}</p></div>` : ''}${itemComparison(item)}${camp ? `<small class="item-origin">Recovered from ${escape(camp.namedName)} · ${escape(camp.name)}${id === camp.bonusItemId ? ' · ' + Math.round(camp.bonusDropChance * 100) + '% chance after victory' : ''}</small>` : gift ? `<small class="item-origin">Gift from ${escape(giver.name)} · ${escape(gift.title)}</small>` : id === 'worn-linen-robe' ? '<small class="item-origin">Your first ordinary victory guarantees this useful find.</small>' : ''}</div><button data-action="equip" data-item="${id}" ${equipped || game.dead ? 'disabled' : ''}>${equipped ? 'Equipped' : 'Equip'}</button></article>`;
         }).join('') : '<p class="empty-pack">No finds in this part of your pack yet. Your first victory awards equipment; named foes carry unique magic.</p>') + '</div><h3>Supplies for the road</h3><div class="supply-pack">' + Object.values(SUPPLIES).map(supply => `<button data-action="use-supply" data-item="${supply.id}" ${!player.supplies[supply.id] || game.dead || game.supplyReadyAt > game.clock ? 'disabled' : ''}>${escape(supply.name)} ×${player.supplies[supply.id] || 0} · Use</button>`).join('') + '</div><p class="supplies-note">Tonics share a 20-second recovery. Buy more from Mara in Willowmere. Duplicate equipment is salvaged into copper.</p><div class="menu-actions"><button data-action="menu" data-menu="spellbook">Study your spells →</button><button data-action="menu" data-menu="journal">Quest journal</button></div>';
     } else if (name === 'spellbook') {
       setText('dialog-title', 'The magician’s spellbook');
@@ -607,7 +603,7 @@
     if (!button) return;
     const action = button.dataset.action;
     if (action === 'filter-items') {
-      if (['all', 'charm', 'focus', 'ring'].includes(button.dataset.filter)) inventoryFilter = button.dataset.filter;
+      if (['all', 'charm', 'focus', 'ring', 'garb'].includes(button.dataset.filter)) inventoryFilter = button.dataset.filter;
       refreshMenu();
     } else if (action === 'menu') openMenu(button.dataset.menu);
     else if (action === 'visit-npc') requestNpc(button.dataset.npc);

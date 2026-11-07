@@ -32,11 +32,16 @@ Work across art, interface, gameplay, spells, equipment, sound, and onboarding. 
 - Contextual tactical guidance and companion target/damage/next-strike information are visible in play. Both fresh and staged scenes are inspected in desktop/mobile Chromium, including reduced motion.
 - 52 simulation tests pass. Browser smoke covers actual controls, menus, assignments, equipment, tonics, saves, and phone layouts; visual review covers all four camps and combat effects.
 
-## Active next checkpoint: useful clothing and completion audit
+## v0.6 checkpoint: useful clothing and a complete first expedition
 
-The first equipment find should include humble cloth worth equipping, with later garments offering a choice between personal spell reserves and companion sustain. Add that choice with matching inventory art, preserve old saves, then repeat the expedition and the full acceptance audit. Keep the expansion within Willowmere.
+- Four garb items add a fourth equipment slot: useful humble linen, a protective travel cloak, Liora’s companion-sustain mantle, and Othrek’s optional fire-specialist robe.
+- Clothing uses illustrated inventory art, source information, stat gains/losses, property comparisons and a compact phone equipment layout. Cloth remains useful even beside a rare mantle because mana/power and pet sustain are different choices.
+- Old saves retain their gear and quest progress; completed old Mossfang assignments receive the new item once without new experience/copper.
+- All six fresh-character journey runs now include a deliberate death to a live guard, normal revival, retention checks, and save/reload before finishing the crypt and reporting back. Earth uses the sustain mantle and Air keeps linen reserves. No progression, positions, resources or combat results are injected into these runs.
+- Villager dialogue responds to progress, and the journal closes the first expedition while offering an optional next hunt.
+- The first-expedition implementation criteria have been audited in FIRST_EXPEDITION_AUDIT.md. Human judgments of fun, difficulty and artistic taste remain playtest feedback rather than claims made by automated checks.
 
-## Following milestone: progression worth pursuing
+## Future scope: progression worth pursuing
 
 - Add encounter-specific item properties with real tradeoffs, rather than endless stat inflation. Revisit guaranteed first finds and duplicate salvage.
 - Develop equipment slots and visual identity only alongside useful item choices and a readable pack; add sorting and inspection as the collection grows.
@@ -50,4 +55,5 @@ Choose the highest-impact unfinished part of the goal, implement it in the playa
 
 ## Current limitations
 
+Clothing currently affects mechanics and inventory art, not the character outfit sprite. 
 The animation set uses mirrored right/left facing rather than eight authored directions. Named enemies use their unique sprite with attack leaning; death collapse/fade is rendered from the actor rather than a separate death-frame atlas. Audio is synthesized rather than a composed soundscape. The seeded journey verifies reproducible supported routes, not human comprehension, exploration time, or every possible combat choice. Online play and new regions remain outside this first-expedition goal.

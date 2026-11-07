@@ -6,6 +6,7 @@ const { once } = require('node:events');
 const net = require('node:net');
 const path = require('node:path');
 const fs = require('node:fs/promises');
+const { runExpedition } = require('../scripts/expedition-run.cjs');
 const { chromium } = require(path.join(process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES || '../node_modules','playwright'));
 (async()=>{
   let browser, server;
@@ -61,7 +62,44 @@ const { chromium } = require(path.join(process.env.CODEX_PRIMARY_RUNTIME_NODE_MO
     assert.equal(await page.evaluate(()=>window.everwild.renderer.reducedMotion),true);
     assert.equal(await page.evaluate(()=>window.everwild.renderer._pose('player',window.everwild.game.player,window.everwild.game,window.everwild.game.clock)),null);
     await page.screenshot({path:path.join(output,'reduced-motion-mobile.png'),fullPage:true});
+    // Staged clothing inspection checks actual tradeoff copy and four-slot layout.
+    await page.emulateMedia({reducedMotion:'no-preference'});
+    await page.setViewportSize({width:1440,height:1000});
+    await page.evaluate(()=>{
+      const game=window.everwild.game;
+      for(const id of ['worn-linen-robe','waxed-travel-cloak','mosswoven-mantle','emberwoven-robe'])game._loot(id);
+      game.equip('worn-linen-robe');window.everwild.openMenu('inventory');
+    });
+    await page.locator('[data-filter="garb"]').click();
+    assert.equal(await page.locator('.item-card').count(),4);
+    assert.ok((await page.locator('.comparison .loss').count())>0);
+    assert.ok((await page.locator('.comparison .gain').count())>0);
+    assert.equal((await page.locator('.item-stats').allTextContents()).some(text=>text.includes('+-')),false);
+    await page.screenshot({path:path.join(output,'clothing-desktop.png'),fullPage:true});
+    await page.setViewportSize({width:390,height:844});await page.waitForTimeout(100);
+    assert.ok(await page.locator('#dialog-content').evaluate(el=>el.scrollWidth<=el.clientWidth+1));
+    await page.screenshot({path:path.join(output,'clothing-mobile.png'),fullPage:true});
+    // Load the save produced by the no-injection journey, rather than inventing
+    // completed quest flags for the closing journal and villager reaction.
+    const journey=runExpedition(42,'Earth',true,true);
+    // A separate context imports the completed save before app initialization;
+    // pagehide autosave on the staged scene must not overwrite that fixture.
+    const completion=await browser.newPage({viewport:{width:390,height:844}});
+    completion.on('pageerror',e=>errors.push(e.message));
+    await completion.addInitScript(save=>localStorage.setItem('everwild_save',JSON.stringify(save)),journey.save);
+    await completion.goto('http://127.0.0.1:'+port);await completion.waitForFunction(()=>Boolean(window.everwild));
+    assert.equal(await completion.evaluate(()=>window.everwild.renderer.artReady),true);
+    await completion.waitForFunction(()=>document.getElementById('objective-title').textContent.includes('complete'));
+    await completion.evaluate(()=>window.everwild.openMenu('journal'));
+    assert.equal(await completion.locator('.completion-card').count(),1);
+    await completion.screenshot({path:path.join(output,'completed-journal-mobile.png'),fullPage:true});
+    await completion.setViewportSize({width:1440,height:1000});await completion.waitForTimeout(100);
+    await completion.screenshot({path:path.join(output,'completed-journal-desktop.png'),fullPage:true});
+    await completion.locator('#dialog-close').click();
+    await completion.evaluate(()=>window.everwild.openMenu('npc:rowan'));
+    assert.match(await completion.locator('.npc-dialogue').textContent(),/lanterns/);
+    assert.equal(await completion.locator('.completion-card').count(),1);
     assert.deepEqual(errors,[]);
-    console.log('Visual review passed: fresh village, four distinct camps, casting/shield/pet combat, reduced motion, desktop/mobile. Screenshots: '+output);
+    console.log('Visual review passed: fresh village, four camps, combat, reduced motion, clothing tradeoffs, and completed-journey journal/NPC reaction at desktop/mobile sizes. Screenshots: '+output);
   } finally {if(browser)await browser.close();if(server)server.kill('SIGTERM');}
 })().catch(e=>{console.error(e.stack);process.exitCode=1;});

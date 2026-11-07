@@ -3,7 +3,7 @@
 Production assets created with the built-in image generator and encoded to WebP with alpha preserved. These are integrated gameplay assets, not interface mockups. The original output was 1254 × 1254 pixels for each atlas. The renderer keeps procedural fallback artwork if the woodland asset cannot load.
 
 - `woodland-atlas.webp`: four rows of four sprites. Trees; lodge, market, study, bindstone; magician, earth elemental, air elemental, goblin; skeleton, Rowan, Liora, Mara. Source rectangles live in `Renderer._art` and align each sprite to its feet or trunk base.
-- `arcana-atlas.webp`: four rows of four icons. Eight opening spells followed by eight equipment items. Frost Lance currently shares the air icon and Ember Nova shares the fire icon; dedicated illustrations remain on the roadmap.
+- `arcana-atlas.webp`: four rows of four icons. Eight opening spells followed by eight equipment items. In the initial 0.4 pass Frost Lance shared the air icon and Ember Nova shared fire. Both now have dedicated illustrations in `extra-arcana.webp`, documented in ANIMATION_AND_ENVIRONMENT.md.
 
 ## Woodland prompt
 

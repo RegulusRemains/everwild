@@ -1,10 +1,18 @@
 # Everwild
 
-**Version 0.5.0 — encounters come alive**
+**Version 0.6.0 — a first expedition worth remembering**
 
 Everwild is a solo fantasy RPG about exploring a dangerous frontier with a summoned companion. Fight through Willowmere's forest and crypt camps, collect equipment, and grow an earth or air pet into the center of your combat strategy.
 
 The game runs entirely in your browser with HTML, CSS, and JavaScript. It has no runtime dependencies, account requirement, or server-side game state.
+
+## Clothing worth keeping
+
+Your first ordinary victory guarantees a **Worn Linen Robe**. It adds mana and spell power in a new **garb** slot. A **Waxed Travel Cloak** trades mana for health. Liora rewards the Mossfang assignment with a **Mosswoven Mantle**: more health and 25% stronger Pet Mend, at the cost of the linen robe’s mana and power. Older completed assignments receive the new item once without replaying experience or copper.
+
+Othrek can also drop an **Emberwoven Robe** with a 25% additional chance: 15% more fire-spell damage, mana and spell power, but 10 less maximum health. Camp notes show both his guaranteed focus and this optional robe. Comparisons explain negative stats and lost properties before you swap.
+
+The first expedition now has a closing journal card and villagers who react to your progress. The [completion audit](docs/FIRST_EXPEDITION_AUDIT.md) links each acceptance criterion to its verification, and the [development plan](docs/DEVELOPMENT_PLAN.md) records future scope.
 
 ## Encounters come alive
 
@@ -12,11 +20,11 @@ The world now includes illustrated camp tents, shaman totems, crypt entrances, r
 
 Summoning circles, a persistent shield, pet-mend connections, frost crystals, melee arcs, and final-pass attack warnings make combat easier to read. The action deck offers contextual tactical guidance and the companion panel shows damage, target, and time to its next strike.
 
-Combat tuning is based on a reproducible fresh-character run: sentries take about 7–9 seconds and named fights about 13–19 seconds using supported pet tactics, healing, interrupts, gear, and consumables. Both Earth and Air builds complete the entire quest chain across three seeded runs, including a save/reload before the crypt. These are simulation measurements, not a measure of how long a human expedition takes. Run `npm run test:journey` or inspect [the results](docs/EXPEDITION_BALANCE.json).
+Combat tuning is based on a reproducible fresh-character run: ordinary fights take about 6–9 seconds and named fights about 13–18 seconds using supported pet tactics, healing, interrupts, gear, and consumables. Both Earth and Air builds complete the entire quest chain across three seeded runs, including a deliberate unprotected death, revival with retained progression, and save/reload before the crypt. These are simulation measurements, not a measure of how long a human expedition takes. Run `npm run test:journey` or inspect [the results](docs/EXPEDITION_BALANCE.json).
 
 ## Illustrated Willowmere
 
-Trees, village buildings, villagers, enemies, and elemental companions now use integrated painterly pixel artwork. Spells and items share an illustrated icon atlas. The pack shows three equipped slots, filters, item lore, drop origins, and stat gains and losses when replacing gear. The spellbook shows actual current strength and next-rank benefits; previews use the same calculations as combat.
+Trees, village buildings, villagers, enemies, and elemental companions now use integrated painterly pixel artwork. Spells and items share an illustrated icon atlas. The pack shows four equipped slots, filters, item lore, drop origins, and stat gains and losses when replacing gear. The spellbook shows actual current strength and next-rank benefits; previews use the same calculations as combat.
 
 Named relics now change play:
 

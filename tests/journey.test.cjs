@@ -8,6 +8,8 @@ for (const companion of ['Earth', 'Air']) {
   for (const seed of [42, 73, 2026]) test(`fresh ${companion.toLowerCase()} journey reaches the crypt and reports back (seed ${seed})`, () => {
     const report = runExpedition(seed, companion);
     assert.equal(report.completed, true);
+    assert.equal(report.recovery.validated, true);
+    assert.equal(report.final.equipment.garb, companion === 'Air' ? 'worn-linen-robe' : 'mosswoven-mantle');
     assert.equal(report.final.kills, 6);
     assert.ok(report.final.level >= 4);
     assert.ok(report.interruptions >= 2, 'Named enemies must survive long enough for control to matter');

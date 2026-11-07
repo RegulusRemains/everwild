@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = await realpath(fileURLToPath(new URL('../', import.meta.url)));
 const publicFiles = new Map([
+  ['/assets/garb-atlas.webp', ['assets/garb-atlas.webp', 'image/webp']],
   ['/assets/floor-atlas.webp', ['assets/floor-atlas.webp', 'image/webp']],
   ['/assets/environment-atlas.webp', ['assets/environment-atlas.webp', 'image/webp']],
   ['/assets/walk-atlas.webp', ['assets/walk-atlas.webp', 'image/webp']],

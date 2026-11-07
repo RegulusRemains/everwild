@@ -24,6 +24,10 @@ Integrated painterly pixel atlases replace the trees, village buildings, charact
 
 Illustrated environments and ground textures, four-frame walk/action cycles for ordinary actors, distinct named enemies, death remains, spell auras/connections, tactical coaching, and visible pet attack rhythm. Encounter health and damage now leave room for mechanics to matter. The full fresh-character quest chain passes with both companions across three seeded runs each, with recorded balance evidence. The active development plan tracks the next equipment and completion pass.
 
+## 0.6: clothing and the first-expedition close
+
+A fourth equipment slot adds a guaranteed first linen robe, a defensive cloak, a healing mantle reward and a fire-specialist robe to pursue at Othrek. Comparisons explain tradeoffs and older completed quests migrate the new reward without duplicating currency. Both companion builds finish across three seeds, including deliberate death/revival and save/reload. Villagers react to completed work and the journal marks the ending. FIRST_EXPEDITION_AUDIT.md records the scoped completion evidence and remaining limitations.
+
 ## Next: make repeated expeditions richer
 
 - Tune progression, tonic prices, pet durability, spell choices, and recovery time using observed play sessions.

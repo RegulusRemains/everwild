@@ -298,7 +298,7 @@ async function main() {
       assert.equal(await page.locator('#menu-dialog').evaluate(dialog => dialog.open), true);
       assert.ok((await page.locator('#dialog-content').textContent()).trim().length > 0);
       if (menu === 'inventory') {
-        assert.equal(await page.locator('.gear-slot').count(), 3);
+        assert.equal(await page.locator('.gear-slot').count(), 4);
         await page.locator('[data-filter="focus"]').click();
         const names = await page.locator('.item-card .eyebrow').allTextContents();
         assert.ok(names.every(name => name.includes('FOCUS')));

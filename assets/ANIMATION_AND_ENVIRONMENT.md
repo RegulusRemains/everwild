@@ -1,6 +1,6 @@
 # Encounter artwork and animation
 
-Created using the built-in image generator, encoded to WebP with original alpha. Sprite animation rows share their bounding rectangles across four frames, so body scale and feet registration remain stable. The model-generated RGB background under alpha zero is ignored by the renderer; it is not drawn into the world. An alternate background extraction was evaluated and discarded because the original already had genuine alpha.
+Created using the built-in image generator, encoded to WebP with original alpha. Sprite animation rows share their bounding rectangles across four frames, so body scale and feet registration remain stable. The model-generated RGB background under alpha zero is ignored by the renderer; it is not drawn into the world.
 
 - `environment-atlas.webp`: 4×4; camp props, ground decoration, and four distinct named enemies.
 - `walk-atlas.webp`: 4×6; magician, earth pet, air pet, goblin, skeletal guardian, skeletal caster. Four frames per row.
@@ -63,3 +63,9 @@ Consistent upperleft lighting, crisp clusters of tiny pixels, tactile material d
 ## Ground texture atlas
 
 `floor-atlas.webp` contains 2×2 opaque swatches: forest, path, crypt limestone, ritual slate. They are sampled into repeating ground patterns; terrain and map textures rebuild once after this image loads.
+
+## Clothing atlas
+
+`garb-atlas.webp` is a transparent 2×2 sheet: worn linen robe, waxed travel cloak, mosswoven mantle, emberwoven robe. Source artwork was generated with the built-in image generator and encoded to WebP with alpha preserved. Garments are inventory illustrations; the character outfit sprite does not change on equip.
+
+Prompt specification: four isolated clothing icons, exact 2×2 grid, transparent gutters, no mannequin, body, head, labels, borders, UI, background or watermark. Painterly pixel fantasy, upper-left lighting, moss green and antique gold accents. A humble frayed blue-gray linen robe with stitched sleeves and cloth belt; a sturdy waxed moss-green cloak with leather shoulder patch and brass leaf clasp; a rare layered-leaf and silver-linen mantle with jade clasp and subtle healing-green hem; a rare burgundy robe with gold embroidery, amber runic stitching and delicate embers. Natural fabric construction, tiny pixel clusters and tactile cloth texture, legible at 50 pixels.

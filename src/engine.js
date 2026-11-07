@@ -7,13 +7,13 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '0.5.0';
+  const VERSION = '0.6.0';
   const WORLD = Object.freeze({ w: 1900, h: 1350, spawn: Object.freeze({ x: 260, y: 250 }), bindstone: Object.freeze({ x: 202, y: 214 }) });
   const CAMPS = Object.freeze([
     { id: 'briar', name: 'Briarwatch', x: 710, y: 350, type: 'goblin', n: 4, level: 1, delay: 45, namedName: 'Grik the Hoarder', rareItemId: 'griks-lucky-charm', description: 'A ragged goblin lookout watches the old trade road.', roleHint: 'Pull the western scout alone. Move out of Grik’s marked ground slam.' },
     { id: 'mossfang', name: 'Mossfang Camp', x: 1090, y: 410, type: 'goblin', n: 5, level: 3, delay: 55, namedName: 'Bramblemaw', rareItemId: 'ring-of-bound-earth', description: 'Thorn-twined totems surround the goblin shaman’s refuge.', roleHint: 'Dodge shaman hexes. Root Bramblemaw to interrupt his healing ritual.' },
     { id: 'crypt', name: 'Willowmere Crypt', x: 1330, y: 890, type: 'skeleton', n: 5, level: 5, delay: 65, namedName: 'The Bonewarden', rareItemId: 'warden-boneguard', description: 'The fallen guardians of Willowmere still keep their watch.', roleHint: 'Recall your pet from a guardian’s marked slam, or interrupt it with Root.' },
-    { id: 'vigil', name: 'Othrek’s Vigil', x: 1570, y: 1040, type: 'skeleton', n: 4, level: 7, delay: 75, namedName: 'Graveminder Othrek', rareItemId: 'othreks-focus', description: 'Old magic gathers around the keeper of the deepest graves.', roleHint: 'Keep moving when Othrek marks the ground. Save mana for healing and control.' }
+    { id: 'vigil', name: 'Othrek’s Vigil', x: 1570, y: 1040, type: 'skeleton', n: 4, level: 7, delay: 75, namedName: 'Graveminder Othrek', rareItemId: 'othreks-focus', bonusItemId: 'emberwoven-robe', bonusDropChance: 0.25, description: 'Old magic gathers around the keeper of the deepest graves.', roleHint: 'Keep moving when Othrek marks the ground. Save mana for healing and control.' }
   ].map(Object.freeze));
   const NPCS = Object.freeze([
     { id: 'rowan', name: 'Warden Rowan', role: 'Frontier warden', x: 330, y: 210, description: 'The warden keeps the eastern road open, one patrol at a time.', dialogue: ['The road used to carry lanterns all the way to the crypt. Help me make it safe again.', 'Bring your elemental. Watch the ground when an enemy gathers its strength.'] },
@@ -23,7 +23,7 @@
   const QUESTS = Object.freeze([
     { id: 'scout-road', npcId: 'rowan', title: 'Patrol the Eastern Road', description: 'Thin the Briarwatch lookout so travelers can leave Willowmere safely.', objectiveText: 'Defeat 4 Briarwatch goblins after accepting the patrol.', required: 4, countType: 'kill', campId: 'briar', reward: { xp: 70, gold: 30, itemId: 'apprentice-focus' } },
     { id: 'griks-talisman', npcId: 'rowan', title: 'Grik’s Lucky Talisman', description: 'Rowan wants to examine Grik’s charm. If you already found it, show it to him; you will keep it.', objectiveText: 'Obtain Grik’s Lucky Charm and show it to Rowan.', required: 1, countType: 'item', itemId: 'griks-lucky-charm', prerequisite: 'scout-road', reward: { xp: 110, gold: 45 } },
-    { id: 'mossfang', npcId: 'liora', title: 'A Thorn in the Wilds', description: 'Bramblemaw is binding the forest’s strength into his totems. Liora needs his ritual stopped.', objectiveText: 'Defeat Bramblemaw at Mossfang Camp after accepting the task.', required: 1, countType: 'named', campId: 'mossfang', targetName: 'Bramblemaw', prerequisite: 'griks-talisman', reward: { xp: 180, gold: 65 } },
+    { id: 'mossfang', npcId: 'liora', title: 'A Thorn in the Wilds', description: 'Bramblemaw is binding the forest’s strength into his totems. Liora needs his ritual stopped.', objectiveText: 'Defeat Bramblemaw at Mossfang Camp after accepting the task.', required: 1, countType: 'named', campId: 'mossfang', targetName: 'Bramblemaw', prerequisite: 'griks-talisman', reward: { xp: 180, gold: 65, itemId: 'mosswoven-mantle' } },
     { id: 'crypt-proof', npcId: 'rowan', title: 'Proof from the Crypt', description: 'The Bonewarden bars the old crypt road. Break its watch and return with word of your victory.', objectiveText: 'Defeat The Bonewarden at Willowmere Crypt after accepting the task.', required: 1, countType: 'named', campId: 'crypt', targetName: 'The Bonewarden', prerequisite: 'mossfang', reward: { xp: 250, gold: 90 } }
   ].map(quest => Object.freeze({ ...quest, reward: Object.freeze(quest.reward) })));
   const SUPPLIES = Object.freeze({
@@ -50,14 +50,18 @@
     'ring-of-bound-earth': Object.freeze({ id: 'ring-of-bound-earth', effectName: 'Stonebound', effect: 'Your elemental takes 20% less damage while this ring is equipped.', name: 'Ring of Bound Earth', slot: 'ring', rarity: 'rare', description: 'A quiet pulse of elemental magic lives inside the stone.', stats: Object.freeze({ hp: 10, mp: 18 }) }),
     'othreks-focus': Object.freeze({ id: 'othreks-focus', effectName: 'Gravebinding', effect: 'Arcane Root and Frost Lance hold their effects for 3 additional seconds.', name: 'Othrek’s Runebone Focus', slot: 'focus', rarity: 'rare', description: 'A rune-carved relic recovered from the heart of the crypt.', stats: Object.freeze({ power: 7, mp: 16 }) }),
     'warden-boneguard': Object.freeze({ id: 'warden-boneguard', effectName: 'Warden’s Resolve', effect: 'Magic Shield absorbs 55% of incoming damage instead of 45%.', name: 'Warden’s Boneguard', slot: 'charm', rarity: 'rare', description: 'The Bonewarden’s carved ward carries the resolve of the old crypt guardians.', stats: Object.freeze({ hp: 32, power: 4 }) }),
-    'apprentice-focus': Object.freeze({ id: 'apprentice-focus', name: 'Apprentice’s Willow Focus', slot: 'focus', rarity: 'common', description: 'Rowan’s thanks for a safer road: a simple focus carved from Willowmere timber.', stats: Object.freeze({ power: 2, mp: 6 }) })
+    'apprentice-focus': Object.freeze({ id: 'apprentice-focus', name: 'Apprentice’s Willow Focus', slot: 'focus', rarity: 'common', description: 'Rowan’s thanks for a safer road: a simple focus carved from Willowmere timber.', stats: Object.freeze({ power: 2, mp: 6 }) }),
+    'worn-linen-robe': Object.freeze({ id: 'worn-linen-robe', name: 'Worn Linen Robe', slot: 'garb', rarity: 'common', description: 'Frayed blue linen, mended by someone who refused to waste a single thread. A faint warmth remains in the seams.', stats: Object.freeze({ mp: 16, power: 2 }) }),
+    'waxed-travel-cloak': Object.freeze({ id: 'waxed-travel-cloak', name: 'Waxed Travel Cloak', slot: 'garb', rarity: 'common', description: 'Stiff green cloth and a battered leaf clasp. Less room for spellwork, more protection from the wilds.', stats: Object.freeze({ hp: 18, mp: -4 }) }),
+    'mosswoven-mantle': Object.freeze({ id: 'mosswoven-mantle', name: 'Mosswoven Mantle', slot: 'garb', rarity: 'rare', description: 'Liora’s living threads stir when your companion is wounded. The cloth smells of rain on warm stone.', effectName: 'Living Thread', effect: 'Pet Mend restores 25% more health. Trades the linen robe’s mana and spell power for endurance.', stats: Object.freeze({ hp: 16 }) }),
+    'emberwoven-robe': Object.freeze({ id: 'emberwoven-robe', name: 'Emberwoven Robe', slot: 'garb', rarity: 'rare', campId: 'vigil', description: 'Runic embers breathe along the hem. Its thread is exquisite, and dangerously thin.', effectName: 'Cinderweave', effect: 'Fire Bolt, Burning Mark, and Ember Nova deal 15% more damage. Its fragile cloth reduces maximum health by 10.', stats: Object.freeze({ hp: -10, mp: 24, power: 3 }) })
   });
   const MAX_LEVEL = 20;
   const CAST_RANGE = 330;
   const SAFE_RADIUS = 150;
   const NPC_RANGE = 90;
   const SUPPLY_COOLDOWN = 20;
-  const EQUIPMENT_SLOTS = ['charm', 'focus', 'ring'];
+  const EQUIPMENT_SLOTS = ['charm', 'focus', 'ring', 'garb'];
   const TARGETED_SPELLS = [1, 2, 3, 8, 9];
   const ITEM_NAMES = Object.fromEntries(Object.values(ITEMS).map(item => [item.name.replace(/’/g, "'"), item.id]));
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -131,6 +135,12 @@
       };
       this.player.hotbar = this._readHotbar(source.hotbar);
       this.player.quests = this._readQuests(source.quests);
+      // The mantle became a reward in 0.6. Completed older quests receive only
+      // the newly added item, once; copper and experience are never replayed.
+      if (this.player.quests.mossfang?.status === 'completed' && !this.player.inventory.includes('mosswoven-mantle')) {
+        this.player.inventory.push('mosswoven-mantle');
+        this.log('Liora’s Mosswoven Mantle has been added for your completed Mossfang assignment. Inspect it in your pack.', 'rare');
+      }
       this.supplyReadyAt = numeric(data.supplyCooldownRemaining, 0, 0, SUPPLY_COOLDOWN);
       this._refreshStats();
       this.player.hp = numeric(source.hp, this.player.maxHp, 0, this.player.maxHp);
@@ -232,6 +242,7 @@
       rank = whole(rank, 1, 1, 3);
       const level = this.player.level, power = this.player.power, bonus = 1 + (rank - 1) * 0.15;
       const binding = this.hasEquipped('othreks-focus') ? 3 : 0;
+      const fireBonus = this.hasEquipped('emberwoven-robe') ? 1.15 : 1;
       const profile = { rank };
       if (index === 0 || index === 5) {
         const earth = index === 0;
@@ -239,17 +250,17 @@
         profile.petDamage = Math.round((earth ? 10 + level * 4 : 14 + level * 5) * (1 + (rank - 1) * 0.12));
         profile.summary = `${profile.petHp} pet health · ${profile.petDamage} damage per strike · ${earth ? '1.65' : '1.45'}s between strikes`;
       } else if ([1, 8, 9].includes(index)) {
-        profile.damage = Math.round((index === 1 ? 24 + level * 9 + power : index === 8 ? 18 + level * 8 + power : 20 + level * 6 + power) * bonus);
+        profile.damage = Math.round((index === 1 ? 24 + level * 9 + power : index === 8 ? 18 + level * 8 + power : 20 + level * 6 + power) * bonus * (index === 8 ? 1 : fireBonus));
         profile.slow = 6 + binding;
         profile.summary = `${profile.damage} damage${index === 8 ? ' · slows movement for ' + profile.slow + 's' : index === 9 ? ' per enemy within 100 paces' : ' to one enemy'}`;
       } else if (index === 2) {
-        profile.tickDamage = Math.round((7 + level * 2 + power * 0.4) * bonus);
+        profile.tickDamage = Math.round((7 + level * 2 + power * 0.4) * bonus * fireBonus);
         profile.summary = `${profile.tickDamage} damage every 2s for 14s · reapplying refreshes the mark`;
       } else if (index === 3) {
         profile.root = 9 + (rank - 1) * 2 + binding;
         profile.summary = `${profile.root}s root · interrupts special attacks · may be resisted`;
       } else if (index === 4 || index === 7) {
-        profile.heal = Math.round((index === 4 ? 60 + level * 10 + power : 35 + level * 9 + power) * bonus);
+        profile.heal = Math.round((index === 4 ? 60 + level * 10 + power : 35 + level * 9 + power) * bonus * (index === 4 && this.hasEquipped('mosswoven-mantle') ? 1.25 : 1));
         profile.summary = `Restores up to ${profile.heal} ${index === 4 ? 'pet' : 'personal'} health`;
       } else if (index === 6) {
         profile.shield = this.hasEquipped('warden-boneguard') ? 55 : 45;
@@ -366,6 +377,33 @@
       if (entry) return { status: entry.status, progress: entry.progress, required: quest.required };
       const available = !quest.prerequisite || this.player.quests[quest.prerequisite]?.status === 'completed';
       return { status: available ? 'available' : 'locked', progress: 0, required: quest.required };
+    }
+
+    npcDialogue(id) {
+      const npc = NPCS.find(value => value.id === id);
+      if (!npc) return [];
+      const complete = this.questState('crypt-proof').status === 'completed';
+      if (id === 'rowan' && complete) return [
+        'The Bonewarden’s watch is broken. Tonight we will hang lanterns along the eastern road again. You brought our people home a little safer.',
+        'Your first expedition is complete. If you choose to face Othrek’s Vigil, prepare with Liora and Mara. That older darkness can wait until you are ready.'
+      ];
+      if (id === 'rowan' && this.questState('mossfang').status === 'completed') return [
+        'Liora says the roots have loosened their grip. One watch remains: the guardians beneath Willowmere’s old crypt.',
+        'The Bonewarden strikes hard. Keep your elemental mended, watch the ground, and leave yourself mana for control.'
+      ];
+      if (id === 'rowan' && this.questState('scout-road').status === 'completed') return [
+        'Travelers are using the eastern road again. A humble willow focus is small thanks for that kind of courage.',
+        'Grik’s charm may tell us what binds the camps together. Keep it when I have examined it; its luck belongs to you now.'
+      ];
+      if (id === 'liora' && this.questState('mossfang').status === 'completed') return [
+        'The forest is breathing more easily. I wove that mantle for the bond between you and your companion. Wear it when keeping your elemental alive matters most.',
+        'A linen robe leaves more strength for your own spells. Neither choice is always right. Study your pack, then decide how you want to fight.'
+      ];
+      if (id === 'mara' && complete) return [
+        'You should have seen the faces when the warden ordered the lanterns lit. There is a place by the fire for you tonight.',
+        'And when you are ready to leave again, I will have tonics. Brave does not have to mean unprepared.'
+      ];
+      return [...npc.dialogue];
     }
 
     acceptQuest(id) {
@@ -836,8 +874,14 @@
       // First named defeat per item guarantees a usable rare; later copies turn into copper.
       if (mob.named) {
         this._loot(CAMPS[mob._slot.campIndex].rareItemId);
-      } else if (this.player.kills === 1 || this._roll() < 0.3) {
-        this._loot(mob.type === 'skeleton' ? 'cracked-bone-wand' : (this._roll() < 0.65 ? 'goblin-talisman' : 'copperleaf-ring'));
+        const camp = CAMPS[mob._slot.campIndex];
+        if (camp.bonusItemId && this._roll() < camp.bonusDropChance) this._loot(camp.bonusItemId);
+      } else if (!this.player.inventory.includes('worn-linen-robe')) {
+        this._loot('worn-linen-robe');
+      } else if (this._roll() < 0.3) {
+        const table = mob.type === 'skeleton' ? ['cracked-bone-wand', 'waxed-travel-cloak', 'copperleaf-ring']
+          : ['goblin-talisman', 'copperleaf-ring', 'worn-linen-robe', 'waxed-travel-cloak'];
+        this._loot(table[Math.floor(this._roll() * table.length)]);
       }
     }
 
