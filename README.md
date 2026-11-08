@@ -202,3 +202,7 @@ The source files already work at the repository root. Hosting is not enabled by 
 
 This release is a playable starting point with a top-down presentation and a local roster of solo characters. It is not a complete production RPG: there is no multiplayer service, shared persistent world, or cloud account system. Encounter balance, art, audio, and the breadth of content will continue to evolve. See [the roadmap](docs/ROADMAP.md) for the next development areas.
 
+
+## Wildspell action experiment
+
+Branch `experiment/action-combat` adds `/action.html`: a standalone Three.js woodland combat blockout. Run `npm start` and open that path. WASD moves, mouse aims, left click fires, Q roots, E places a storm, F shatters rooted targets for bonus damage, Space dashes, and R restarts. Clear nine enemies and the guardian. This is a mechanics prototype with geometric placeholder art; it does not yet integrate classic progression, pets, audio, or persistent loot. Three.js r170 is vendored with its MIT license.
