@@ -1,13 +1,14 @@
-/* Tonal, choir-led fantasy instruments. No noise sources or crackle layers. */
+/* Soft chimes and quiet sine pads. No noise sources or crackle layers. */
 (function(root){
  'use strict';
  const TAU=Math.PI*2;
- const lengths={'step-grass':.18,'step-water':.24,'step-snow':.2,'step-stone':.2,fire:1.6,'fire-hit':.85,frost:1.65,'frost-hit':1.05,grave:1.85,'grave-hit':.95,'nature-hit':.8,nature:1.6,flesh:.28,stone:.4,wood:.34,melee:.3,nova:2.2,summon:2.5,root:1.6,heal:2.1,shield:1.7,taunt:.9};
+ const lengths={'step-grass':.18,'step-water':.24,'step-snow':.2,'step-stone':.2,fire:.72,'fire-hit':.85,frost:.85,'frost-hit':1.05,grave:.8,'grave-hit':.45,'nature-hit':.45,nature:.75,flesh:.28,stone:.4,wood:.34,melee:.3,nova:1.3,summon:1.8,root:.8,heal:.95,shield:.85,taunt:.45,'pet-strike':.22};
  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
  function soundFor(e){
   const dark=['necromancer','shadowknight'].includes(e.school),wild=['druid','ranger','shaman'].includes(e.school);
   if(e.kind==='step')return e.surface==='mire'?'step-water':e.surface==='rime'?'step-snow':e.surface==='cinder'?'step-stone':'step-grass';
   if(e.kind==='cast')return dark?'charge-grave':wild?'charge-nature':'charge-arcane';
+  if(e.kind==='bolt'&&e.sourceId?.startsWith('pet-'))return 'pet-strike';
   if(e.kind==='bolt')return e.spellIndex===8?'frost':dark?'grave':wild?'nature':'fire';
   if(e.kind==='impact')return e.source==='enemy'?'flesh':e.source==='pet'?(dark?'stone':wild?'wood':'stone'):e.spellIndex===8?'frost-hit':e.spellIndex===1?(dark?'grave-hit':wild?'nature-hit':'fire-hit'):'flesh';
   if(e.kind==='melee')return 'melee';
@@ -22,32 +23,23 @@
   function addVoice(frequency,start,length,amplitude,type='choir'){
    const first=Math.max(0,Math.floor(start*sampleRate)),last=Math.min(data.length,Math.ceil((start+length)*sampleRate));
    const choir=type==='choir',weights=[];
-   if(choir){
-    let sum=0;
-    // Harmonic vocal source shaped by broad /ah/ formants. Periodic energy,
-    // unlike the broadband random signal that made the previous bank hiss.
-    for(let h=1;h<=24;h++){
-     const f=frequency*h;
-     const formant=.12+1.5*Math.exp(-.5*((f-720)/180)**2)+1.05*Math.exp(-.5*((f-1120)/220)**2)+.23*Math.exp(-.5*((f-2450)/330)**2);
-     const w=formant/Math.pow(h,.85)*Math.exp(-f/4800);weights.push(w);sum+=w;
-    }
-    for(let i=0;i<weights.length;i++)weights[i]/=sum;
-   }
+   // Three gently weighted partials: no formant stack, brass buzz, or pitch scoop.
+   if(choir)weights.push(.94,.05,.01);
    for(let i=first;i<last;i++){
     const t=(i-first)/sampleRate,u=t/length;
     const attack=choir?Math.min(.2,length*.22):type==='bell'?.022:.012;
     const fadeIn=Math.sin(clamp(t/attack,0,1)*Math.PI/2)**2;
     const fadeOut=Math.sin(clamp((length-t)/(choir?Math.min(.7,length*.6):.12),0,1)*Math.PI/2)**2;
     const f=frequency*tuning;
-    const phase=TAU*f*(t-.012*.16*(1-Math.exp(-t/.16)))+.0018*f/4.7*Math.sin(TAU*4.7*t);
+    const phase=TAU*f*t;
     let voice;
     if(choir){
      const c=2*Math.cos(phase);let previous=0,current=Math.sin(phase),total=0;
      for(let h=0;h<weights.length;h++){total+=current*weights[h];const next=c*current-previous;previous=current;current=next;}
      voice=total*(.86+.14*Math.sin(Math.PI*u));
     }else if(type==='bell'){
-     const fm=.42*Math.exp(-t*6)*Math.sin(phase*2.005);
-     voice=(Math.sin(phase+fm)+.12*Math.sin(phase*2.01)+.025*Math.sin(phase*3.005))*Math.exp(-t/(length*.42));
+     const fm=.08*Math.exp(-t*6)*Math.sin(phase*2.005);
+     voice=(Math.sin(phase+fm)+.025*Math.sin(phase*2.01))*Math.exp(-t/(length*.42));
     }else{
      voice=(Math.sin(phase)+.22*Math.sin(phase*2)+.045*Math.sin(phase*3))*Math.exp(-t/(length*.22));
     }
@@ -57,34 +49,29 @@
   const ah=(notes,amp=.4,length=duration)=>notes.forEach((f,i)=>addVoice(f,i*.025,length-i*.025,amp/Math.sqrt(notes.length),'choir'));
   const bell=(f,at,amp=.07,length=.85)=>addVoice(f,at,Math.min(length,duration-at),amp,'bell');
   if(charging){
-   ah(name==='charge-grave'?[110,164.814]:name==='charge-nature'?[130.813,196]:[130.813,164.814,196],.34);
+   // One nearly subliminal note, not a repeated chord or fanfare.
+   addVoice(name==='charge-grave'?164.814:196,0,duration,.018,'choir');
   }else if(name.startsWith('step-')){
-   addVoice(name==='step-water'?174.614:name==='step-snow'?196:name==='step-stone'?110:130.813,0,duration,.055,'pluck');
+   addVoice(name==='step-water'?174.614:name==='step-snow'?196:name==='step-stone'?110:130.813,0,duration,.025,'pluck');
+  }else if(name==='summon'||name==='nova'){
+   ah(name==='summon'?[196,293.665]:[261.626,392],.03);
+   bell(659.255,.08,.065,1);bell(783.991,.28,.035,1);
   }else if(name==='fire'){
-   ah([164.814,196],.43);bell(523.251,.12,.065);bell(659.255,.25,.045);
+   bell(523.251,0,.085,.65);bell(659.255,.11,.035,.55);
   }else if(name==='frost'){
-   ah([196,261.626],.37);bell(783.991,.06,.07,1.1);bell(1046.502,.2,.045,1);
+   bell(783.991,0,.075,.75);bell(1046.502,.1,.03,.65);
   }else if(name==='grave'){
-   ah([110,130.813,164.814],.44);bell(329.628,.18,.05,1.1);
+   bell(329.628,0,.08,.7);bell(493.883,.12,.03,.55);
   }else if(name==='nature'||name==='root'){
-   ah([130.813,196],.39);bell(392,.09,.065);bell(523.251,.23,.05);
-  }else if(name==='summon'){
-   ah([130.813,164.814,196],.46);[523.251,659.255,783.991].forEach((f,i)=>bell(f,.38+i*.15,.055,1.35));
-  }else if(name==='nova'){
-   ah([130.813,196,261.626],.46);bell(523.251,.12,.07,1.25);bell(783.991,.3,.045,1.25);
-  }else if(name==='heal'){
-   ah([164.814,196,261.626],.36);[523.251,659.255,783.991].forEach((f,i)=>bell(f,.08+i*.11,.065,1.2));
-  }else if(name==='shield'){
-   ah([130.813,196],.4);bell(392,.08,.07,1.05);bell(783.991,.18,.04,1.05);
-  }else if(name==='fire-hit'||name==='frost-hit'){
-   bell(name==='frost-hit'?783.991:392,0,.13,.7);bell(name==='frost-hit'?1046.502:523.251,.06,.055,.7);
-  }else if(name==='grave-hit'||name==='nature-hit'){
-   addVoice(name==='grave-hit'?130.813:196,0,duration,.14,'choir');bell(name==='grave-hit'?329.628:523.251,.04,.055,.65);
+   bell(392,0,.08,.65);bell(587.33,.1,.035,.6);
+  }else if(name==='heal'||name==='shield'){
+   bell(name==='heal'?659.255:392,0,.075,.8);bell(783.991,.16,.03,.7);
+  }else if(name.endsWith('-hit')){
+   bell(name==='frost-hit'?783.991:name==='grave-hit'?329.628:523.251,0,.045,.4);
   }else if(name==='taunt'){
-   addVoice(196,0,.55,.17,'pluck');addVoice(261.626,.11,.65,.12,'choir');
-  }else if(name==='flesh'||name==='wood'||name==='stone'||name==='melee'){
-   addVoice(name==='stone'?98:name==='wood'?164.814:name==='melee'?196:130.813,0,duration,.15,'pluck');
-   if(name!=='melee')addVoice(261.626,.015,duration-.015,.035,'pluck');
+   addVoice(196,0,duration,.045,'pluck');
+  }else if(name==='pet-strike'||name==='flesh'||name==='wood'||name==='stone'||name==='melee'){
+   addVoice(name==='stone'?98:name==='wood'?164.814:name==='melee'?196:130.813,0,duration,name==='pet-strike'?.018:.055,'pluck');
   }
   // Gentle bandwidth and edges: no clipping/distortion is used to make sounds louder.
   const coefficient=1-Math.exp(-TAU*3800/sampleRate);let low=0,second=0,peak=0;
