@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const output = path.join(root, 'dist');
-const files = ['action.html', 'src/action.js', 'src/action.bundle.js', 'vendor/three.module.js', 'vendor/THREE-LICENSE.txt', 'index.html', 'styles.css', 'src/engine.js', 'src/roster.js', 'src/render.js', 'src/app.js', 'src/audio.js', 'assets/woodland-atlas.webp', 'assets/arcana-atlas.webp', 'assets/environment-atlas.webp', 'assets/walk-atlas.webp', 'assets/action-atlas.webp', 'assets/extra-arcana.webp', 'assets/floor-atlas.webp', 'assets/garb-atlas.webp', 'assets/frontier-atlas.webp', 'assets/frontier-floor.webp', 'assets/journey-atlas.webp', 'assets/class-motion.webp', 'assets/roster-atlas.webp', 'assets/companions-atlas.webp', '.nojekyll'];
+const files = ['action.html', 'src/painted-assets.js', 'src/action.js', 'src/action.bundle.js', 'vendor/three.module.js', 'vendor/THREE-LICENSE.txt', 'index.html', 'styles.css', 'src/engine.js', 'src/roster.js', 'src/render.js', 'src/app.js', 'src/audio.js', 'assets/woodland-atlas.webp', 'assets/arcana-atlas.webp', 'assets/environment-atlas.webp', 'assets/walk-atlas.webp', 'assets/action-atlas.webp', 'assets/extra-arcana.webp', 'assets/floor-atlas.webp', 'assets/garb-atlas.webp', 'assets/frontier-atlas.webp', 'assets/frontier-floor.webp', 'assets/journey-atlas.webp', 'assets/class-motion.webp', 'assets/roster-atlas.webp', 'assets/companions-atlas.webp', '.nojekyll'];
 
 // Validate every input before touching a previous successful build.
 for (const file of files) {
