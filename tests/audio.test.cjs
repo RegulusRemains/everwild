@@ -1,12 +1,31 @@
-'use strict';const test=require('node:test'),assert=require('node:assert/strict');const{renderSound,soundFor}=require('../src/audio.js');
-function rms(d,start=0,end=.25){let s=0,n=0;for(let i=Math.floor(start*48000);i<Math.min(d.length,end*48000);i++){s+=d[i]*d[i];n++;}return Math.sqrt(s/Math.max(1,n));}
-test('attack instruments retain audible bodies instead of only a short chirp',()=>{
- for(const name of ['fire','fire-hit','frost','frost-hit','grave','nature','flesh','stone','wood','nova']){const d=renderSound(name);assert.ok(rms(d)>.18,name+' attack body');assert.ok(rms(d,.04,.14)>.12,name+' sustained weight');assert.ok(d.every(Number.isFinite));assert.ok(Math.max(...d.map(Math.abs))<.94,'bounded '+name);}
+'use strict';
+const test=require('node:test'),assert=require('node:assert/strict');
+const{renderSound,soundFor}=require('../src/audio.js');
+function rms(d,start=0,end=d.length/48000){let sum=0,n=0;for(let i=Math.floor(start*48000);i<Math.min(d.length,end*48000);i++){sum+=d[i]*d[i];n++;}return Math.sqrt(sum/Math.max(1,n));}
+function spectrum(data){
+ const n=8192,re=new Float64Array(n),im=new Float64Array(n),start=7200;
+ for(let i=0;i<n;i++)re[i]=(data[start+i]||0)*(.5-.5*Math.cos(2*Math.PI*i/(n-1)));
+ for(let i=1,j=0;i<n;i++){let bit=n>>1;for(;j&bit;bit>>=1)j^=bit;j^=bit;if(i<j)[re[i],re[j]]=[re[j],re[i]];}
+ for(let len=2;len<=n;len<<=1){const angle=-2*Math.PI/len;for(let i=0;i<n;i+=len)for(let j=0;j<len/2;j++){const c=Math.cos(angle*j),s=Math.sin(angle*j),a=i+j,b=a+len/2,tr=re[b]*c-im[b]*s,ti=re[b]*s+im[b]*c;re[b]=re[a]-tr;im[b]=im[a]-ti;re[a]+=tr;im[a]+=ti;}}
+ const power=Array.from({length:n/2},(_,i)=>re[i]*re[i]+im[i]*im[i]);
+ const band=(lo,hi)=>power.slice(Math.ceil(lo*n/48000),Math.floor(hi*n/48000)).reduce((a,b)=>a+b,0);
+ const bins=power.slice(Math.ceil(150*n/48000),Math.floor(7000*n/48000)),mean=bins.reduce((a,b)=>a+b,0)/bins.length;
+ const flatness=Math.exp(bins.reduce((a,b)=>a+Math.log(b+mean*1e-14),0)/bins.length)/mean;
+ return{flatness,high:band(4200,22000)/band(50,22000),vowel:band(500,1500)/band(50,22000)};
+}
+test('spell sounds are sustained tonal ah-choirs, without a broadband hiss bed',()=>{
+ for(const key of ['fire','frost','grave','nature','summon','nova','root','heal','shield']){
+  const d=renderSound(key),s=spectrum(d);assert.ok(d.length>=48000,key+' has a lingering phrase');assert.ok(rms(d)>.025&&rms(d)<.15,key+' has a calm audible body');assert.ok(rms(d,.5,.9)>.02,key+' sustains its vowel');
+  assert.ok(s.flatness<.025,key+' must be pitched, not static: '+s.flatness);assert.ok(s.high<.012,key+' must avoid abrasive high-frequency energy');assert.ok(s.vowel>.3,key+' must retain vocal formants');
+  let peak=0;for(const v of d){assert.ok(Number.isFinite(v));peak=Math.max(peak,Math.abs(v));}assert.ok(peak<=.621);
+ }
 });
-test('fire, frost, grave and nature have distinct spectra and small repeat variations',()=>{
- const sounds=['fire','frost','grave','nature'].map(n=>renderSound(n));const roughness=d=>{let x=0,y=0;for(let i=1;i<12000;i++){x+=(d[i]-d[i-1])**2;y+=d[i]**2;}return x/y;};const values=sounds.map(roughness);assert.ok(Math.max(...values)-Math.min(...values)>.1,'different sonic textures');
- const a=renderSound('fire',48000,0),b=renderSound('fire',48000,1);assert.notDeepEqual(a,b);assert.deepEqual(a,renderSound('fire',48000,0),'reproducible instruments');
+test('class phrases remain distinct, gently detuned, and reproducible',()=>{
+ const a=renderSound('fire'),b=renderSound('grave'),c=renderSound('nature');assert.notDeepEqual(a,b);assert.notDeepEqual(a,c);assert.notDeepEqual(a,renderSound('fire',48000,1));assert.deepEqual(a,renderSound('fire'));
 });
-test('event mapping distinguishes hostile hits, pet strikes, frost, fire, and class casting',()=>{
- assert.equal(soundFor({kind:'impact',source:'enemy'}),'flesh');assert.equal(soundFor({kind:'impact',source:'pet'}),'stone');assert.equal(soundFor({kind:'bolt',school:'magician',spellIndex:8}),'frost');assert.equal(soundFor({kind:'bolt',school:'magician',spellIndex:1}),'fire');assert.equal(soundFor({kind:'bolt',school:'necromancer'}),'grave');assert.equal(soundFor({kind:'bolt',school:'druid'}),'nature');assert.equal(soundFor({kind:'cast',school:'necromancer'}),'charge-grave');
+test('round footsteps and combat cues remain quieter than the spell choir',()=>{
+ const choir=rms(renderSound('fire'));for(const key of ['flesh','stone','wood','melee','step-grass','step-water','step-snow','step-stone'])assert.ok(rms(renderSound(key))<choir*.65,key+' stays understated');
+});
+test('events retain distinct class, companion, cold and ward identities',()=>{
+ assert.equal(soundFor({kind:'impact',source:'enemy'}),'flesh');assert.equal(soundFor({kind:'impact',source:'pet'}),'stone');assert.equal(soundFor({kind:'bolt',school:'magician',spellIndex:8}),'frost');assert.equal(soundFor({kind:'bolt',school:'necromancer'}),'grave');assert.equal(soundFor({kind:'bolt',school:'druid'}),'nature');assert.equal(soundFor({kind:'cast',school:'necromancer'}),'charge-grave');assert.equal(soundFor({kind:'heal',spellIndex:6}),'shield');
 });

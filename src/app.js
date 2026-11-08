@@ -56,7 +56,7 @@
   let lastVisualId = 0, discoveryUntil = 0;
   const discoveryQueue = [];
   let lastFootstepDistance=0;
-  let soundscape=null,volumePreference=.8;
+  let soundscape=null,volumePreference=.65;
   let audioContext = null, soundEnabled = true, lastImpactSound = -Infinity,lastHostileImpactSound=-Infinity;
   let hudScalePreference = 'auto';
   try {
@@ -101,7 +101,7 @@
   }
   function tone(frequency, delay, duration, volume, endFrequency, type = 'sine') {
     if (!soundEnabled || !audioContext || audioContext.state !== 'running') return;
-    soundscape?.tone(frequency,delay,duration,volume*4,endFrequency||frequency,type);
+    soundscape?.tone(frequency,delay,duration,volume*2,endFrequency||frequency,type);
   }
 
   function presentationFeedback(now) {
@@ -165,7 +165,8 @@
   const itemArt = { ...Object.fromEntries(Object.keys(ITEMS).slice(0, 8).map((id, index) => [id, index + 8])), 'worn-linen-robe':20, 'waxed-travel-cloak':21, 'mosswoven-mantle':22, 'emberwoven-robe':23 };
   for(const item of Object.values(ITEMS))if(item.frontierArt!==undefined)itemArt[item.id]=item.rarity==='rare'?24+item.frontierArt:({charm:8,ring:10,focus:9,garb:21}[item.slot]);
   const spellArt = [0, 1, 2, 3, 4, 5, 6, 7, 16, 17];
-  const spellRoles = ['Companion · endurance', 'Direct damage', 'Damage over time', 'Control · interrupt', 'Companion · recovery', 'Companion · offense', 'Protection', 'Recovery', 'Damage · slow', 'Area damage'];
+  const spellRoleLabels={'durable-companion':'Companion · endurance',strike:'Direct damage',affliction:'Damage over time',root:'Control · interrupt','companion-heal':'Companion · recovery','swift-companion':'Companion · ranged or swift',ward:'Protection',heal:'Recovery','slow-strike':'Damage · slow',burst:'Area damage','resource-conversion':'Health → mana',mobility:'Movement',regeneration:'Recovery over time',sanctuary:'Area healing · control'};
+  const spellIcon=index=>game.player.classId==='necromancer'&&index===7?2:game.player.classId==='druid'&&index===9?4:spellArt[index];
   function arcanaIcon(index, extra = '') {
     if(index>=24)return `<span class="atlas-icon frontier-art ${extra}" aria-hidden="true" style="background-position:${(index-24)*100/3}% 100%"></span>`;
     if (index >= 20) return `<span class="atlas-icon garb-art ${extra}" aria-hidden="true" style="background-position:${(index - 20) % 2 * 100}% ${Math.floor((index - 20) / 2) * 100}%"></span>`;
@@ -281,7 +282,7 @@
       button.title = `${spell.name} [${slot + 1}] — ${game.spellProfile(index).summary}. ${spell.description} ${spell.cast}s cast, ${spell.cost} mana.`;
       button.setAttribute('aria-label', button.title);
       button.dataset.spellIndex = String(index);
-      button.innerHTML = `${arcanaIcon(spellArt[index])}<kbd>${slot + 1}</kbd><span class="rank-dot">${game.player.spellRanks[index] > 1 ? 'ⅡⅢ'[game.player.spellRanks[index] - 2] : ''}</span>`;
+      button.innerHTML = `${arcanaIcon(spellIcon(index))}<kbd>${slot + 1}</kbd><span class="rank-dot">${game.player.spellRanks[index] > 1 ? 'ⅡⅢ'[game.player.spellRanks[index] - 2] : ''}</span>`;
     });
   }
 
@@ -316,7 +317,8 @@
     const petTarget = pet && game.mobs.find(mob => mob.id === pet.targetId && mob.alive && !mob.returning);
     if (pet) {
       setText('pet-type', pet.name||pet.type);
-      setText('pet-order', petTarget ? (Math.hypot(pet.x-petTarget.x,pet.y-petTarget.y)>35 ? 'Approaching' : 'Attacking') : pet.mode === 'guard' ? 'Guard' : 'Follow');
+      const order=petTarget?(Math.hypot(pet.x-petTarget.x,pet.y-petTarget.y)>(pet.attackRange||35)?'Approaching':'Attacking'):pet.mode==='guard'?'Guard':'Follow';
+      setText('pet-order',order+(pet.expiresAt?' · '+Math.ceil(pet.expiresAt-game.clock)+'s':''));
       meter('petbar', pet.hp, pet.maxHp);
       $('pet-frame').title = `${pet.name||pet.type} · ${Math.ceil(pet.hp)} / ${pet.maxHp} HP · ${pet.damage} damage per strike${petTarget ? ' · ' + petTarget.name : ''}`;
     }
@@ -342,7 +344,9 @@
     setText('cast-time', game.cast ? Math.max(0,game.cast.done-game.clock).toFixed(1)+'s' : '');
     for (let slot = 0; slot < 8; slot++) {
       const index = player.hotbar[slot], button = $('spell'+slot);
-      button.disabled = game.dead || player.mp < game.spells[index].cost || isPaused();
+      const cooldown=game.spellCooldownRemaining(index),profile=game.spellProfile(index);
+      button.dataset.cooldown=cooldown>0?String(Math.ceil(cooldown)):'';
+      button.disabled = game.dead || player.mp < game.spells[index].cost || isPaused() || cooldown>0 || (game.spells[index].role==='resource-conversion'&&(player.hp<=profile.healthCost||player.mp>=player.maxMp));
       button.classList.toggle('casting', Boolean(game.cast && game.cast.i===index));
       button.classList.toggle('unaffordable', player.mp < game.spells[index].cost);
     }
@@ -464,7 +468,7 @@
       }).join('')+'</div><div class="menu-actions"><button class="primary" data-action="enter-character" '+(!selectedCharacterId?'disabled':'')+'>Enter the frontier</button><button data-action="new-character">Create character</button></div>';
     } else if(name==='create') {
       const cls=CLASSES[selectedClassId];setText('dialog-title','Begin a new story');
-      content.innerHTML=`<div class="character-creation"><div class="class-showcase"><span class="class-portrait portrait-${cls.id}"></span><h3>${cls.name}</h3><span class="eyebrow">${cls.role}</span><p>${escape(cls.description)}</p><small>${cls.hp} health · ${cls.mp} mana<br>${cls.primaryPet} / ${cls.secondaryPet}</small></div><div><div class="class-choices">`+Object.values(CLASSES).map(c=>`<button data-action="choose-class" data-class="${c.id}" aria-pressed="${c.id===selectedClassId}" class="${c.id===selectedClassId?'selected':''}"><strong>${c.name}</strong><small>${c.role}</small></button>`).join('')+`</div><label class="name-label" for="new-character-name">Character name</label><input id="new-character-name" maxlength="24" autocomplete="off" placeholder="Your name" value="${escape(creationName)}"><p class="character-note">New characters begin in Willowmere. Your other characters stay saved.</p><div class="menu-actions"><button class="primary" data-action="create-character">Begin adventure</button>${characters.length?'<button data-action="menu" data-menu="characters">Back to characters</button>':''}</div></div></div>`;
+      content.innerHTML=`<div class="character-creation"><div class="class-showcase"><span class="class-portrait portrait-${cls.id}"></span><h3>${cls.name}</h3><span class="eyebrow">${cls.role}</span><p>${escape(cls.description)}</p><small>${cls.hp} health · ${cls.mp} mana<br>${cls.companionStyle||cls.primaryPet+' / '+cls.secondaryPet}</small></div><div><div class="class-choices">`+Object.values(CLASSES).map(c=>`<button data-action="choose-class" data-class="${c.id}" aria-pressed="${c.id===selectedClassId}" class="${c.id===selectedClassId?'selected':''}"><strong>${c.name}</strong><small>${c.role}</small></button>`).join('')+`</div><label class="name-label" for="new-character-name">Character name</label><input id="new-character-name" maxlength="24" autocomplete="off" placeholder="Your name" value="${escape(creationName)}"><p class="character-note">New characters begin in Willowmere. Your other characters stay saved.</p><div class="menu-actions"><button class="primary" data-action="create-character">Begin adventure</button>${characters.length?'<button data-action="menu" data-menu="characters">Back to characters</button>':''}</div></div></div>`;
     } else if (name === 'system') {
       setText('dialog-title', 'Everwild');
       content.innerHTML = `<button class="primary" data-action="resume-game">Resume</button><div class="menu-grid">` + [['characters','Characters',''],['inventory','Inventory','I'],['character','Character','V'],['spellbook','Spellbook','B'],['journal','Journal','J'],['map','Map','M'],['log','Combat log',''],['guide','Field guide','?'],['save','Save / export','']].map(([menu,label,key])=>`<button data-action="menu" data-menu="${menu}">${label}<kbd>${key}</kbd></button>`).join('') + `</div><section class="settings"><div class="settings-row"><span>Display</span><button id="fullscreen-button" data-setting="fullscreen">Fullscreen</button></div><div class="settings-row"><label for="hud-scale">HUD size</label><select id="hud-scale" data-setting="hud-scale">` + [['auto','Automatic'],['0.85','Compact'],['1','100%'],['1.25','125%'],['1.5','150%']].map(([value,label])=>`<option value="${value}" ${hudScalePreference===value?'selected':''}>${label}</option>`).join('') + `</select></div><div class="settings-row"><label for="view-zoom">Camera zoom</label><input id="view-zoom" data-setting="zoom" type="range" min="0.75" max="1.5" step="0.05" value="${renderer.zoomFactor||1}"></div><div class="settings-row"><span>Artwork</span><button id="art-style" data-setting="art" aria-pressed="${renderer.pixelArt}"></button></div><div class="settings-row"><label for="effects-volume">Effects volume</label><input id="effects-volume" data-setting="volume" type="range" min="0" max="1" step="0.05" value="${volumePreference}"></div><div class="settings-row"><span>Effects</span><button data-setting="sound-preview">Test effects</button><button id="sound" data-setting="sound" aria-pressed="${soundEnabled}"></button></div></section><div class="system-footer"><span>Willowmere · ${VERSION}</span><span id="save-status">${storageAvailable?'Autosave enabled':'Storage unavailable · export your save'}</span></div>`;
@@ -525,7 +529,7 @@
           const camp = CAMPS.find(camp => camp.rareItemId === id || camp.id === item.campId);
           const gift = QUESTS.find(quest => quest.reward.itemId === id);
           const giver = gift && NPCS.find(npc => npc.id === gift.npcId);
-          return `<article class="item-card ${item.rarity}">${arcanaIcon(itemArt[id], 'item-art')}<div class="item-details"><span class="eyebrow">${item.rarity.toUpperCase()} · ${item.slot.toUpperCase()}</span><strong>${escape(item.name)}</strong><p class="item-lore">“${escape(item.description)}”</p><p class="item-stats">${stats}</p>${item.effect ? `<div class="item-magic"><strong>✦ ${escape(item.effectName)}</strong><p>${escape(item.effect)}</p></div>` : ''}${itemComparison(item)}${camp ? `<small class="item-origin">Recovered from ${escape(camp.namedName)} · ${escape(camp.name)}${id === camp.bonusItemId ? ' · ' + Math.round(camp.bonusDropChance * 100) + '% chance after victory' : ''}</small>` : gift ? `<small class="item-origin">Gift from ${escape(giver.name)} · ${escape(gift.title)}</small>` : id === 'worn-linen-robe' ? '<small class="item-origin">Your first ordinary victory guarantees this useful find.</small>' : ''}</div><button data-action="equip" data-item="${id}" ${equipped || game.dead ? 'disabled' : ''}>${equipped ? 'Equipped' : 'Equip'}</button></article>`;
+          return `<article class="item-card ${item.rarity}">${arcanaIcon(itemArt[id], 'item-art')}<div class="item-details"><span class="eyebrow">${item.rarity.toUpperCase()} · ${item.slot.toUpperCase()}</span><strong>${escape(item.name)}</strong><p class="item-lore">“${escape(item.description)}”</p><p class="item-stats">${stats}</p>${item.effect ? `<div class="item-magic"><strong>✦ ${escape(item.effectName)}</strong><p>${escape(item.effect)}</p></div>` : ''}${itemComparison(item)}${item.damageRoles?`<small class="item-origin">Applies to: ${game.spells.filter(s=>item.damageRoles.includes(s.role)).map(s=>escape(s.name)).join(' · ')}</small>`:''}${camp ? `<small class="item-origin">Recovered from ${escape(camp.namedName)} · ${escape(camp.name)}${id === camp.bonusItemId ? ' · ' + Math.round(camp.bonusDropChance * 100) + '% chance after victory' : ''}</small>` : gift ? `<small class="item-origin">Gift from ${escape(giver.name)} · ${escape(gift.title)}</small>` : id === 'worn-linen-robe' ? '<small class="item-origin">Your first ordinary victory guarantees this useful find.</small>' : ''}</div><button data-action="equip" data-item="${id}" ${equipped || game.dead ? 'disabled' : ''}>${equipped ? 'Equipped' : 'Equip'}</button></article>`;
         }).join('') : '<p class="empty-pack">No finds in this part of your pack yet. Your first victory awards equipment; named foes carry unique magic.</p>') + '</div><h3>Supplies for the road</h3><div class="supply-pack">' + Object.values(SUPPLIES).map(supply => `<button data-action="use-supply" data-item="${supply.id}" ${!player.supplies[supply.id] || game.dead || game.supplyReadyAt > game.clock ? 'disabled' : ''}>${escape(supply.name)} ×${player.supplies[supply.id] || 0} · Use</button>`).join('') + '</div><p class="supplies-note">Tonics share a 20-second recovery. Buy more from Mara in Willowmere. Duplicate equipment is salvaged into copper.</p><div class="menu-actions"><button data-action="menu" data-menu="spellbook">Study your spells →</button><button data-action="menu" data-menu="journal">Quest journal</button></div>';
     } else if (name === 'spellbook') {
       setText('dialog-title', game.characterClass.name+' spellbook');
@@ -538,7 +542,7 @@
         const label = !unlocked ? `Unlocks at level ${spell.unlockLevel}` : rank >= 3 ? 'Mastered' : player.level < required ? `Needs level ${required}` : `Upgrade · ${game.upgradeCost(index)}c`;
         const assigned = player.hotbar.indexOf(index);
         const choices = '<option value="-1">Choose a slot…</option>' + player.hotbar.map((currentIndex, slot) => `<option value="${slot}" ${assigned === slot ? 'selected' : ''}>${slot + 1} · ${escape(game.spells[currentIndex].name)}</option>`).join('');
-        return `<div class="spell-card ${unlocked ? '' : 'locked'}">${arcanaIcon(spellArt[index], 'spellbook-art')}<div class="spell-details"><span class="eyebrow">${spellRoles[index]}</span><strong>${escape(spell.name)} · ${unlocked ? 'Rank ' + rank : 'Unlearned'}</strong><p>${escape(spell.description)}</p><p>${spell.cost} mana · ${spell.cast}s cast</p><div class="spell-numbers"><small>AT YOUR LEVEL</small><p>${escape(game.spellProfile(index).summary)}</p>${unlocked && rank < 3 ? `<small>NEXT RANK</small><p>${escape(game.spellProfile(index, rank + 1).summary)}</p>` : ''}</div>${spell.unlockLevel > 1 ? `<p class="unlock-note">${unlocked ? 'Unlocked at' : 'Requires'} level ${spell.unlockLevel}</p>` : ''}</div><div class="spell-card-controls"><button data-action="upgrade" data-index="${index}" ${canBuy ? '' : 'disabled'}>${label}</button><label class="spell-bind">Action bar slot<select aria-label="Assign ${escape(spell.name)} to a hotbar slot" data-spell-index="${index}" ${!unlocked || game.dead ? 'disabled' : ''}>${choices}</select></label></div></div>`;
+        return `<div class="spell-card ${unlocked ? '' : 'locked'}">${arcanaIcon(spellIcon(index), 'spellbook-art')}<div class="spell-details"><span class="eyebrow">${spellRoleLabels[spell.role]||spell.role}</span><strong>${escape(spell.name)} · ${unlocked ? 'Rank ' + rank : 'Unlearned'}</strong><p>${escape(spell.description)}</p><p>${spell.cost} mana · ${spell.cast}s cast</p><div class="spell-numbers"><small>AT YOUR LEVEL</small><p>${escape(game.spellProfile(index).summary)}</p>${unlocked && rank < 3 ? `<small>NEXT RANK</small><p>${escape(game.spellProfile(index, rank + 1).summary)}</p>` : ''}</div>${spell.unlockLevel > 1 ? `<p class="unlock-note">${unlocked ? 'Unlocked at' : 'Requires'} level ${spell.unlockLevel}</p>` : ''}</div><div class="spell-card-controls"><button data-action="upgrade" data-index="${index}" ${canBuy ? '' : 'disabled'}>${label}</button><label class="spell-bind">Action bar slot<select aria-label="Assign ${escape(spell.name)} to a hotbar slot" data-spell-index="${index}" ${!unlocked || game.dead ? 'disabled' : ''}>${choices}</select></label></div></div>`;
       }).join('') + '</div><p class="muted" style="margin-top:15px">Spell ranks improve strength or duration. Summon a new elemental after upgrading its spell to receive the new rank’s benefits.</p>';
     } else if (name === 'map') {
       setText('dialog-title', 'The Willowmere frontier');
@@ -554,7 +558,7 @@
     syncPresentationButtons();
     if (!dialog.open) dialog.showModal();
     content.scrollTop = 0;
-    if(name==='guide'&&game.player.classId!=='magician'){const walker=document.createTreeWalker(content,NodeFilter.SHOW_TEXT);let node;while(node=walker.nextNode())node.nodeValue=classLanguage(node.nodeValue);}
+    if(name==='guide'&&game.player.classId!=='magician'){const builds=content.querySelector('.build-guides');if(builds)builds.innerHTML=game.player.classId==='necromancer'?'<article><h3>Life and mana</h3><p>Dark Pact trades health for mana. Recover health through Siphon Life; avoid using the pact while exposed. Boneguard tanks nearby, while Shade can attack rooted foes from range.</p></article><article><h3>Decay, then detonate</h3><p>Grave Rot wears a foe down. Blight Bloom cashes out the remaining rot for an early burst and removes it. Reapply rot if the foe survives.</p></article>':'<article><h3>Keep moving</h3><p>Entangling Roots and Wild Stride create distance. Your Briar Stag is a temporary guardian, not a permanent tank. Watch its remaining time.</p></article><article><h3>Recover through nature</h3><p>Rejuvenation heals over time. Barkskin retaliates when you are struck. Verdant Sanctuary heals allies who stay inside its circle and roots nearby foes when created.</p></article>'; const magic=[...content.querySelectorAll('p')].find(p=>p.textContent.includes('Frost Lance unlocks'));if(magic)magic.textContent=game.spells[8].name+' unlocks at level 3 and slows a foe. '+game.spells[9].name+' unlocks at level 5. '+game.spells[9].description+' Open the spellbook [B] to prepare your skills.';const walker=document.createTreeWalker(content,NodeFilter.SHOW_TEXT);let node;while(node=walker.nextNode())node.nodeValue=classLanguage(node.nodeValue);}
     if (name === 'map') renderer.drawMap($('world-map'), game, true);
     updateUI();
   }

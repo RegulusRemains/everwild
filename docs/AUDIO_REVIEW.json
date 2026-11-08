@@ -1,62 +1,106 @@
 {
-  "version": "0.10.0",
-  "method": "Chromium OfflineAudioContext, stereo 48000 Hz, same effects volume 0.65, first 250 ms left-channel RMS and peak. Magician school, spell index 1, hostile impact. Compared with v0.9.1. Measures signal energy, not listening preference.",
+  "version": "0.11.0",
+  "method": "Deterministic mono PCM at 48000Hz; 8192-point Hann-window FFT starting at 150ms. flatness measures broadband versus pitched energy; high is energy above 4200Hz, vowel is energy at 500–1500Hz. Source and filtered delay reverb contain no noise generator. Measurements verify signal behavior, not human listening preference. Supersedes the noise-heavy v0.10 report.",
   "effects": [
     {
-      "effect": "bolt",
-      "before": {
-        "kind": "bolt",
-        "peak": 0.21787549555301666,
-        "attackRms": 0.04212442651307911
-      },
-      "after": {
-        "kind": "bolt",
-        "peak": 0.5027360916137695,
-        "attackRms": 0.1634414007504413
-      },
-      "attackBodyChangeDb": 11.78
+      "key": "fire",
+      "duration": 1.6,
+      "peak": 0.42540159821510315,
+      "rms": 0.08487967849542528,
+      "sustainedRms": 0.10523468116550816,
+      "flatness": 1.4985599018347495e-8,
+      "high": 0.0000049400791179795986,
+      "vowel": 0.8528007087487011
     },
     {
-      "effect": "impact",
-      "before": {
-        "kind": "impact",
-        "peak": 0.2572852671146393,
-        "attackRms": 0.0630452394312013
-      },
-      "after": {
-        "kind": "impact",
-        "peak": 0.3512387275695801,
-        "attackRms": 0.11755042376756057
-      },
-      "attackBodyChangeDb": 5.41
+      "key": "frost",
+      "duration": 1.65,
+      "peak": 0.3953759968280792,
+      "rms": 0.08898856875791906,
+      "sustainedRms": 0.130047335752861,
+      "flatness": 9.445970648653742e-8,
+      "high": 0.00001964925215094304,
+      "vowel": 0.9112267100056906
     },
     {
-      "effect": "nova",
-      "before": {
-        "kind": "nova",
-        "peak": 0.42992255091667175,
-        "attackRms": 0.11941048408269062
-      },
-      "after": {
-        "kind": "nova",
-        "peak": 0.485848605632782,
-        "attackRms": 0.16888513302731034
-      },
-      "attackBodyChangeDb": 3.01
+      "key": "grave",
+      "duration": 1.85,
+      "peak": 0.44903403520584106,
+      "rms": 0.07707490028220182,
+      "sustainedRms": 0.08861312842938139,
+      "flatness": 3.5994412689177316e-9,
+      "high": 8.199225032713661e-16,
+      "vowel": 0.7721913712056638
     },
     {
-      "effect": "summon",
-      "before": {
-        "kind": "summon",
-        "peak": 0.4205274283885956,
-        "attackRms": 0.15092326355328078
-      },
-      "after": {
-        "kind": "summon",
-        "peak": 0.5125674605369568,
-        "attackRms": 0.14574863071415087
-      },
-      "attackBodyChangeDb": -0.3
+      "key": "nature",
+      "duration": 1.6,
+      "peak": 0.3978417217731476,
+      "rms": 0.07552953319192582,
+      "sustainedRms": 0.09827237594440007,
+      "flatness": 8.016986706162488e-9,
+      "high": 0.000005284864873298956,
+      "vowel": 0.8128727291673393
+    },
+    {
+      "key": "summon",
+      "duration": 2.5,
+      "peak": 0.5165387392044067,
+      "rms": 0.09402433999920139,
+      "sustainedRms": 0.11474306319282661,
+      "flatness": 1.5994321009246242e-8,
+      "high": 0.00000382101507871674,
+      "vowel": 0.8782564197578312
+    },
+    {
+      "key": "nova",
+      "duration": 2.2000208333333333,
+      "peak": 0.536693811416626,
+      "rms": 0.10821154569369247,
+      "sustainedRms": 0.14266232560305533,
+      "flatness": 1.0847413260808117e-7,
+      "high": 0.000010860880979921922,
+      "vowel": 0.8756843682546868
+    },
+    {
+      "key": "root",
+      "duration": 1.6,
+      "peak": 0.3978417217731476,
+      "rms": 0.07552953319192582,
+      "sustainedRms": 0.09827237594440007,
+      "flatness": 8.016986706162488e-9,
+      "high": 0.000005284864873298956,
+      "vowel": 0.8128727291673393
+    },
+    {
+      "key": "heal",
+      "duration": 2.1,
+      "peak": 0.43064242601394653,
+      "rms": 0.0834190914465515,
+      "sustainedRms": 0.11574854939334756,
+      "flatness": 4.619528421534558e-7,
+      "high": 0.000013591787620726495,
+      "vowel": 0.837979677130252
+    },
+    {
+      "key": "shield",
+      "duration": 1.7,
+      "peak": 0.37895873188972473,
+      "rms": 0.07563881404295505,
+      "sustainedRms": 0.0948909762360787,
+      "flatness": 1.3391323218888478e-8,
+      "high": 0.000006864101870491414,
+      "vowel": 0.8836354504181065
+    },
+    {
+      "key": "flesh",
+      "duration": 0.28002083333333333,
+      "peak": 0.13059228658676147,
+      "rms": 0.03356263376110821,
+      "sustainedRms": 0,
+      "flatness": 6.036369307309437e-13,
+      "high": 5.74733694408627e-16,
+      "vowel": 0.0025363383605896423
     }
   ]
 }

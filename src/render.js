@@ -480,6 +480,7 @@
     }
 
     _groundDetails(c, game, time) {
+      const zone=game.sanctuary;if(zone&&zone.expiresAt>time){c.save();c.lineWidth=1.4;const fade=Math.min(1,zone.expiresAt-time);c.globalAlpha=fade;ellipse(c,zone.x,zone.y,zone.radius,zone.radius,'#a9d4960c','#abd69788');for(let i=0;i<8;i++){const a=i*TAU/8;ellipse(c,zone.x+Math.cos(a)*zone.radius,zone.y+Math.sin(a)*zone.radius,2,4,'#c9deb3');}if(!this.reducedMotion){const pulse=1-clamp((zone.nextPulse-time)/2,0,1);c.globalAlpha=fade*(1-pulse)*.25;ellipse(c,zone.x,zone.y,zone.radius*pulse,zone.radius*pulse,null,'#c7e4a9');}c.restore();}
       const motionTime = this.reducedMotion ? 0 : time;
       ellipse(c, bindstone.x, bindstone.y + 3, 50, 22, '#c9cc7d0b', '#c1cb8a21');
       for (let i = 0; i < 12; i++) {
@@ -1036,7 +1037,7 @@
         if (entity.dotUntil > time) {
           for (let i = 0; i < 3; i++) {
             const phase = (motionTime * 1.1 + i / 3) % 1;
-            ellipse(c, Math.sin(i * 2 + motionTime) * 10, -7 - phase * 28, 2 * (1 - phase) + 0.5, 4 * (1 - phase) + 1, `rgba(239,169,85,${1 - phase})`);
+            const x=Math.sin(i*2+motionTime)*10,y=-7-phase*28;c.save();c.globalAlpha=1-phase;if(entity.dotSchool==='druid')polygon(c,[[x,y-4],[x+3,y],[x,y+3],[x-2,y]],'#a9cd8d');else ellipse(c,x,y,2*(1-phase)+.5,entity.dotSchool==='necromancer'?2:4*(1-phase)+1,entity.dotSchool==='necromancer'?'#c2a3dc':'#efa955');c.restore();
           }
         }
         if (entity.slowUntil > time) {

@@ -7,7 +7,7 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '0.10.0';
+  const VERSION = '0.11.0';
   const WORLD = Object.freeze({ w: 4200, h: 2600, spawn: Object.freeze({ x: 260, y: 250 }), bindstone: Object.freeze({ x: 202, y: 214 }) });
   const BIOMES = Object.freeze([
     { id:'willowmere', name:'Willowmere Woodland', x:0, y:0, w:1850, h:2600, color:'#46633e', level:1 },
@@ -70,13 +70,27 @@
     { id: 'minor-heal', name: 'Minor Heal', cost: 32, cast: 2.5, key: '8', description: 'Restore your health. Being hit does not interrupt a spell; moving does.' },
     { id: 'frost-lance', name: 'Frost Lance', cost: 24, cast: 1.9, key: '', unlockLevel: 3, description: 'Strike an enemy with ice and slow its movement by 45%. Gravebinding extends the chill. Range: 330 paces.' },
     { id: 'ember-nova', name: 'Ember Nova', cost: 38, cast: 2.6, key: '', unlockLevel: 5, description: 'Burst into flame around your selected enemy, damaging foes within 100 paces. Nearby allies may join the fight.' }
-  ].map(spell => Object.freeze({ unlockLevel: 1, ...spell })));
+  ].map((spell,index) => Object.freeze({ unlockLevel: 1, target:[1,2,3,8,9].includes(index)?'enemy':index===4?'companion':'self', role:['durable-companion','strike','affliction','root','companion-heal','swift-companion','ward','heal','slow-strike','burst'][index], ...spell })));
   const CLASSES = Object.freeze({
     magician:Object.freeze({id:'magician',name:'Magician',role:'Elemental command',description:'Powerful direct spells and sturdy elementals. The original balanced pet caster.',color:'#c4b174',hp:110,mp:160,hpStep:13,mpStep:18,direct:1,dot:1,healing:1,root:0,petHp:1,petDamage:1,drain:0,primaryPet:'Earth Elemental',secondaryPet:'Air Elemental'}),
-    necromancer:Object.freeze({id:'necromancer',name:'Necromancer',role:'Attrition and life drain',description:'Grave Rot deals 35% more damage over time. Siphon Life restores 30% of damage dealt. Fragile undead companions strike harder.',color:'#b999c9',hp:92,mp:175,hpStep:11,mpStep:20,direct:.85,dot:1.35,healing:.85,root:0,petHp:.8,petDamage:1.12,drain:.3,primaryPet:'Boneguard',secondaryPet:'Shade'}),
-    druid:Object.freeze({id:'druid',name:'Druid',role:'Roots and restoration',description:'Roots last 4 seconds longer and healing is 30% stronger. Sturdy wild companions trade damage for endurance; direct magic is gentler.',color:'#a9bf82',hp:120,mp:145,hpStep:14,mpStep:17,direct:.85,dot:1,healing:1.3,root:4,petHp:1.15,petDamage:.88,drain:0,primaryPet:'Briar Stag',secondaryPet:'Amber Wolf'})
+    necromancer:Object.freeze({id:'necromancer',name:'Necromancer',role:'Attrition and life drain',description:'Drain life to recover health, trade health for mana with Dark Pact, and consume Grave Rot with Blight Bloom. Boneguard tanks; Shade attacks at range.',color:'#b999c9',hp:92,mp:175,hpStep:11,mpStep:20,direct:.85,dot:1.35,healing:.85,root:0,petHp:.8,petDamage:1.12,drain:.3,primaryPet:'Boneguard',secondaryPet:'Shade'}),
+    druid:Object.freeze({id:'druid',name:'Druid',role:'Roots and restoration',description:'Kite with roots and Wild Stride, recover through Rejuvenation, and defend a healing sanctuary. Your Briar Stag is a temporary guardian; Barkskin retaliates with thorns.',color:'#a9bf82',hp:120,mp:145,hpStep:14,mpStep:17,direct:.85,dot:1,healing:1.3,root:4,petHp:1.15,petDamage:.88,drain:0,primaryPet:'Briar Stag',secondaryPet:'Wild Stride',companionStyle:'Briar Stag · temporary guardian'})
   });
-  const classSpellNames={necromancer:['Raise Boneguard','Siphon Life','Grave Rot','Grave Shackles','Stitch Bones','Call Shade','Bone Ward','Dark Renewal','Gravechill','Blight Bloom'],druid:['Call Briar Stag','Sunlance','Creeping Briars','Entangling Roots','Wild Mend','Call Amber Wolf','Barkskin','Nature’s Balm','Winterthorn','Briar Bloom']};
+  const classSpellNames={necromancer:['Raise Boneguard','Siphon Life','Grave Rot','Grave Shackles','Stitch Bones','Call Shade','Bone Ward','Dark Pact','Gravechill','Blight Bloom'],druid:['Call Briar Stag','Sunlance','Creeping Briars','Entangling Roots','Wild Mend','Wild Stride','Barkskin','Rejuvenation','Winterthorn','Verdant Sanctuary']};
+  const classOverrides={
+    necromancer:{
+      5:{description:'Summon a fragile ranged Shade. It can strike rooted foes from 180 paces.'},
+      7:{id:'dark-pact',role:'resource-conversion',cost:0,cast:1.4,description:'Trade 18% of maximum health for mana. Cannot kill you. Ten-second cooldown; your life-drain strike can recover the health.'},
+      9:{id:'blight-bloom',description:'Consume your selected foe’s remaining rot. Burst damage includes 60% of its remaining rot damage. Requires an active damage-over-time effect.'}
+    },
+    druid:{
+      0:{description:'Summon a Briar Stag for 30 seconds, plus 5 seconds per rank beyond the first. It guards, taunts, and follows while present.'},
+      5:{id:'wild-stride',role:'mobility',target:'self',cost:18,cast:.6,description:'Move 45% faster for 8 seconds. Twenty-second cooldown. Useful for kiting; movement still interrupts ordinary casting.'},
+      6:{description:'Barkskin absorbs incoming damage and retaliates with thorns against attackers.'},
+      7:{id:'rejuvenation',role:'regeneration',cost:30,description:'Restore health every 2 seconds for 10 seconds. Refreshing replaces the old regeneration; it does not stack.'},
+      9:{id:'verdant-sanctuary',role:'sanctuary',target:'self',cost:38,description:'Create a stationary 10-second sanctuary at your feet. It heals you and your companion every 2 seconds while inside. Nearby foes are rooted when it forms.'}
+    }
+  };
   const CLASS_SPELLS=Object.freeze(Object.fromEntries(Object.values(CLASSES).map(cls=>[cls.id,cls.id==='magician'?SPELLS:Object.freeze(SPELLS.map((spell,i)=>Object.freeze({...spell,name:classSpellNames[cls.id][i],description:[
     'Summon your durable '+cls.primaryPet+'. Order it to attack with F; recall it with G.',
     cls.id==='necromancer'?'Drain life from your enemy, restoring 30% of damage dealt as health. Range: 330 paces.':'Strike your enemy with focused sunlight. Range: 330 paces.',
@@ -85,23 +99,23 @@
     'Restore your companion’s health. Range: 360 paces.',
     'Summon a swift '+cls.secondaryPet+' with more damage and less health.',
     'Create a protective ward that absorbs incoming damage.',
-    'Restore your health with '+(cls.id==='necromancer'?'dark magic.':'restorative nature magic.'),
+    'Restore your health.',
     'Strike with cold and slow enemy movement by 45%. Range: 330 paces.',
     'Burst around your target, damaging nearby foes. Wider bursts may draw allies.'
-  ][i]})))])));
+  ][i],...(classOverrides[cls.id]?.[i]||{})})))])));
   const ITEMS = Object.freeze({
     'goblin-talisman': Object.freeze({ id: 'goblin-talisman', name: 'Goblin Talisman', slot: 'charm', rarity: 'common', description: 'A surprisingly warm knot of polished roots.', stats: Object.freeze({ hp: 12 }) }),
     'cracked-bone-wand': Object.freeze({ id: 'cracked-bone-wand', name: 'Cracked Bone Wand', slot: 'focus', rarity: 'common', description: 'A splintered focus that still remembers its magic.', stats: Object.freeze({ power: 3, mp: 8 }) }),
     'copperleaf-ring': Object.freeze({ id: 'copperleaf-ring', name: 'Copperleaf Ring', slot: 'ring', rarity: 'common', description: 'A copper band etched with tiny leaves.', stats: Object.freeze({ mp: 10 }) }),
-    'griks-lucky-charm': Object.freeze({ id: 'griks-lucky-charm', effectName: 'Second Wind', effect: 'Restore 6 mana after each kill credited to you or your elemental.', name: 'Grik’s Lucky Charm', slot: 'charm', rarity: 'rare', description: 'Grik carried this charm through a hundred narrow escapes.', stats: Object.freeze({ hp: 24, power: 2 }) }),
-    'ring-of-bound-earth': Object.freeze({ id: 'ring-of-bound-earth', effectName: 'Stonebound', effect: 'Your elemental takes 20% less damage while this ring is equipped.', name: 'Ring of Bound Earth', slot: 'ring', rarity: 'rare', description: 'A quiet pulse of elemental magic lives inside the stone.', stats: Object.freeze({ hp: 10, mp: 18 }) }),
-    'othreks-focus': Object.freeze({ id: 'othreks-focus', effectName: 'Gravebinding', effect: 'Arcane Root and Frost Lance hold their effects for 3 additional seconds.', name: 'Othrek’s Runebone Focus', slot: 'focus', rarity: 'rare', description: 'A rune-carved relic recovered from the heart of the crypt.', stats: Object.freeze({ power: 7, mp: 16 }) }),
-    'warden-boneguard': Object.freeze({ id: 'warden-boneguard', effectName: 'Warden’s Resolve', effect: 'Magic Shield absorbs 55% of incoming damage instead of 45%.', name: 'Warden’s Boneguard', slot: 'charm', rarity: 'rare', description: 'The Bonewarden’s carved ward carries the resolve of the old crypt guardians.', stats: Object.freeze({ hp: 32, power: 4 }) }),
+    'griks-lucky-charm': Object.freeze({ id: 'griks-lucky-charm', effectName: 'Second Wind', effect: 'Restore 6 mana after each kill credited to you or your companion.', name: 'Grik’s Lucky Charm', slot: 'charm', rarity: 'rare', description: 'Grik carried this charm through a hundred narrow escapes.', stats: Object.freeze({ hp: 24, power: 2 }) }),
+    'ring-of-bound-earth': Object.freeze({ id: 'ring-of-bound-earth', effectName: 'Stonebound', effect: 'Your companion takes 20% less damage while this ring is equipped.', name: 'Ring of Bound Earth', slot: 'ring', rarity: 'rare', description: 'A quiet pulse of elemental magic lives inside the stone.', stats: Object.freeze({ hp: 10, mp: 18 }) }),
+    'othreks-focus': Object.freeze({ id: 'othreks-focus', effectName: 'Gravebinding', effect: 'Your root and slowing strike last 3 additional seconds.', name: 'Othrek’s Runebone Focus', slot: 'focus', rarity: 'rare', description: 'A rune-carved relic recovered from the heart of the crypt.', stats: Object.freeze({ power: 7, mp: 16 }) }),
+    'warden-boneguard': Object.freeze({ id: 'warden-boneguard', effectName: 'Warden’s Resolve', effect: 'Your protective ward absorbs 55% of incoming damage instead of 45%.', name: 'Warden’s Boneguard', slot: 'charm', rarity: 'rare', description: 'The Bonewarden’s carved ward carries the resolve of the old crypt guardians.', stats: Object.freeze({ hp: 32, power: 4 }) }),
     'apprentice-focus': Object.freeze({ id: 'apprentice-focus', name: 'Apprentice’s Willow Focus', slot: 'focus', rarity: 'common', description: 'Rowan’s thanks for a safer road: a simple focus carved from Willowmere timber.', stats: Object.freeze({ power: 2, mp: 6 }) }),
     'worn-linen-robe': Object.freeze({ id: 'worn-linen-robe', name: 'Worn Linen Robe', slot: 'garb', rarity: 'common', description: 'Frayed blue linen, mended by someone who refused to waste a single thread. A faint warmth remains in the seams.', stats: Object.freeze({ mp: 16, power: 2 }) }),
     'waxed-travel-cloak': Object.freeze({ id: 'waxed-travel-cloak', name: 'Waxed Travel Cloak', slot: 'garb', rarity: 'common', description: 'Stiff green cloth and a battered leaf clasp. Less room for spellwork, more protection from the wilds.', stats: Object.freeze({ hp: 18, mp: -4 }) }),
-    'mosswoven-mantle': Object.freeze({ id: 'mosswoven-mantle', name: 'Mosswoven Mantle', slot: 'garb', rarity: 'rare', description: 'Liora’s living threads stir when your companion is wounded. The cloth smells of rain on warm stone.', effectName: 'Living Thread', effect: 'Pet Mend restores 25% more health. Trades the linen robe’s mana and spell power for endurance.', stats: Object.freeze({ hp: 16 }) }),
-    'emberwoven-robe': Object.freeze({ id: 'emberwoven-robe', name: 'Emberwoven Robe', slot: 'garb', rarity: 'rare', campId: 'vigil', description: 'Runic embers breathe along the hem. Its thread is exquisite, and dangerously thin.', effectName: 'Cinderweave', effect: 'Fire Bolt, Burning Mark, and Ember Nova deal 15% more damage. Its fragile cloth reduces maximum health by 10.', stats: Object.freeze({ hp: -10, mp: 24, power: 3 }) })
+    'mosswoven-mantle': Object.freeze({ id: 'mosswoven-mantle', name: 'Mosswoven Mantle', slot: 'garb', rarity: 'rare', description: 'Liora’s living threads stir when your companion is wounded. The cloth smells of rain on warm stone.', effectName: 'Living Thread', effect: 'Companion healing restores 25% more health. Trades the linen robe’s mana and spell power for endurance.', stats: Object.freeze({ hp: 16 }) }),
+    'emberwoven-robe': Object.freeze({ id: 'emberwoven-robe', damageRoles:Object.freeze(['strike','affliction','burst']),damageMultiplier:1.15, name: 'Emberwoven Robe', slot: 'garb', rarity: 'rare', campId: 'vigil', description: 'Runic embers breathe along the hem. Its thread is exquisite, and dangerously thin.', effectName: 'Cinderweave', effect: 'Your primary strike, damage-over-time spell, and area burst deal 15% more damage. Its fragile cloth reduces maximum health by 10.', stats: Object.freeze({ hp: -10, mp: 24, power: 3 }) })
 ,
     "amber-fang": Object.freeze({"id": "amber-fang", "name": "Amber Fang", "slot": "charm", "stats": Object.freeze({"power": 3, "hp": -4}), "description": "A honey-colored fang bound in plain twine.", "campId": "amber-den", "frontierArt": 0, "rarity": "common"}),
     "hunter-wrap": Object.freeze({"id": "hunter-wrap", "name": "Hunter’s Wool Wrap", "slot": "garb", "stats": Object.freeze({"hp": 24, "mp": -8}), "description": "Weathered wool that has survived many cold watches.", "campId": "amber-den", "frontierArt": 3, "rarity": "common"}),
@@ -111,10 +125,10 @@
     "snowthread-robe": Object.freeze({"id": "snowthread-robe", "name": "Snowthread Robe", "slot": "garb", "stats": Object.freeze({"mp": 32, "hp": -8}), "description": "Pale cloth light enough to carry on a whisper.", "campId": "rime-spire", "frontierArt": 3, "rarity": "common"}),
     "basalt-focus": Object.freeze({"id": "basalt-focus", "name": "Basalt Focus", "slot": "focus", "stats": Object.freeze({"power": 10, "mp": -12}), "description": "Heavy volcanic glass; powerful, but taxing.", "campId": "cinder-forge", "frontierArt": 2, "rarity": "common"}),
     "ember-scale": Object.freeze({"id": "ember-scale", "name": "Ember Scale", "slot": "charm", "stats": Object.freeze({"hp": 38, "mp": -8}), "description": "A drake’s scale that remains warm in the rain.", "campId": "cinder-forge", "frontierArt": 1, "rarity": "common"}),
-    "crownfang-ring": Object.freeze({"id": "crownfang-ring", "name": "Crownfang’s Signet", "slot": "ring", "stats": Object.freeze({"mp": 8}), "description": "An amber fang set in a narrow silver circle.", "campId": "amber-den", "frontierArt": 0, "rarity": "rare", "effectName": "Packbond", "effect": "Your elemental deals 12% more damage. Trades Stonebound’s protection for offense."}),
-    "lanternheart": Object.freeze({"id": "lanternheart", "name": "Lanternheart", "slot": "charm", "stats": Object.freeze({"mp": 12, "hp": 10}), "description": "A tiny green light beats beneath the shell.", "campId": "lantern-shrine", "frontierArt": 1, "rarity": "rare", "effectName": "Fen Renewal", "effect": "Restore 8 health after each kill credited to you or your elemental."}),
-    "rimeglass-focus": Object.freeze({"id": "rimeglass-focus", "name": "Rimeglass Focus", "slot": "focus", "stats": Object.freeze({"power": 4, "mp": -8}), "description": "A shard humming with a distant choir.", "campId": "rime-spire", "frontierArt": 2, "rarity": "rare", "effectName": "Winter’s Edge", "effect": "Frost Lance deals 25% more damage. Gives up the Runebone Focus’s longer control."}),
-    "ashwake-mantle": Object.freeze({"id": "ashwake-mantle", "name": "Ashwake Mantle", "slot": "garb", "stats": Object.freeze({"hp": -12, "mp": 16}), "description": "Black cloth carries the glow of an ancient forge.", "campId": "cinder-forge", "frontierArt": 3, "rarity": "rare", "effectName": "Spreading Cinders", "effect": "Ember Nova reaches 135 paces instead of 100. A wider burst may awaken more enemies."})
+    "crownfang-ring": Object.freeze({"id": "crownfang-ring", "name": "Crownfang’s Signet", "slot": "ring", "stats": Object.freeze({"mp": 8}), "description": "An amber fang set in a narrow silver circle.", "campId": "amber-den", "frontierArt": 0, "rarity": "rare", "effectName": "Packbond", "effect": "Your companion’s strikes deal 12% more damage. Trades Stonebound’s protection for offense."}),
+    "lanternheart": Object.freeze({"id": "lanternheart", "name": "Lanternheart", "slot": "charm", "stats": Object.freeze({"mp": 12, "hp": 10}), "description": "A tiny green light beats beneath the shell.", "campId": "lantern-shrine", "frontierArt": 1, "rarity": "rare", "effectName": "Fen Renewal", "effect": "Restore 8 health after each kill credited to you or your companion."}),
+    "rimeglass-focus": Object.freeze({"id": "rimeglass-focus", "damageRoles":Object.freeze(['slow-strike']),"damageMultiplier":1.25, "name": "Rimeglass Focus", "slot": "focus", "stats": Object.freeze({"power": 4, "mp": -8}), "description": "A shard humming with a distant choir.", "campId": "rime-spire", "frontierArt": 2, "rarity": "rare", "effectName": "Winter’s Edge", "effect": "Your slowing strike deals 25% more damage. Gives up the Runebone Focus’s longer control."}),
+    "ashwake-mantle": Object.freeze({"id": "ashwake-mantle", "name": "Ashwake Mantle", "slot": "garb", "stats": Object.freeze({"hp": -12, "mp": 16}), "description": "Black cloth carries the glow of an ancient forge.", "campId": "cinder-forge", "frontierArt": 3, "rarity": "rare", "effectName": "Spreading Cinders", "effect": "Your area skills reach 135 paces instead of 100. A wider burst may awaken more enemies."})
   });
   const MAX_LEVEL = 20;
   const CAST_RANGE = 330;
@@ -122,7 +136,6 @@
   const NPC_RANGE = 90;
   const SUPPLY_COOLDOWN = 20;
   const EQUIPMENT_SLOTS = ['charm', 'focus', 'ring', 'garb'];
-  const TARGETED_SPELLS = [1, 2, 3, 8, 9];
   const ITEM_NAMES = Object.fromEntries(Object.values(ITEMS).map(item => [item.name.replace(/’/g, "'"), item.id]));
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
   const numeric = (value, fallback, min, max) => typeof value === 'number' && Number.isFinite(value) ? clamp(value, min, max) : fallback;
@@ -147,7 +160,7 @@
       this.moveTarget = null;
       this.meditate = false;
       this.shieldUntil = 0;
-      this.supplyReadyAt = 0;
+      this.supplyReadyAt = 0;this.pactReadyAt=0;this.strideReadyAt=0;this.strideUntil=0;this.regeneration=null;this.sanctuary=null;
       this.logs = [];
       this.effects = [];
       this.visuals = [];
@@ -204,6 +217,7 @@
         this.log('Liora’s Mosswoven Mantle has been added for your completed Mossfang assignment. Inspect it in your pack.', 'rare');
       }
       this.supplyReadyAt = numeric(data.supplyCooldownRemaining, 0, 0, SUPPLY_COOLDOWN);
+      this.pactReadyAt=numeric(data.pactCooldownRemaining,0,0,10);this.strideReadyAt=numeric(data.strideCooldownRemaining,0,0,20);
       this._refreshStats();
       this.player.hp = numeric(source.hp, this.player.maxHp, 0, this.player.maxHp);
       this.player.mp = numeric(source.mp, this.player.maxMp, 0, this.player.maxMp);
@@ -302,27 +316,48 @@
       return Object.values(this.player.equipment).includes(id);
     }
 
+    spellDamageMultiplier(index){
+      const role=this.spells[index]?.role;
+      return Object.values(this.player.equipment).reduce((bonus,id)=>{
+        const item=ITEMS[id];return item?.damageRoles?.includes(role)?bonus*item.damageMultiplier:bonus;
+      },1);
+    }
+
+    spellCooldownRemaining(index){
+      const role=this.spells[index]?.role;return Math.max(0,(role==='mobility'?this.strideReadyAt:role==='resource-conversion'?this.pactReadyAt:0)-this.clock);
+    }
+
     spellProfile(index, rank = this.player.spellRanks[index]) {
       if (!Number.isInteger(index) || index < 0 || index >= this.spells.length) return null;
       rank = whole(rank, 1, 1, 3);
       const cls=this.characterClass;
       const level = this.player.level, power = this.player.power, bonus = 1 + (rank - 1) * 0.15;
       const binding = this.hasEquipped('othreks-focus') ? 3 : 0;
-      const fireBonus = cls.id==='magician' && this.hasEquipped('emberwoven-robe') ? 1.15 : 1;
+      const damageBonus=this.spellDamageMultiplier(index);
       const profile = { rank };
+      const role=this.spells[index].role;
+      if(role==='resource-conversion'){
+        profile.healthCost=Math.ceil(this.player.maxHp*.18);profile.mana=Math.round((35+level*4)*bonus);profile.summary=`Trade ${profile.healthCost} health for up to ${profile.mana} mana · 10s cooldown`;return profile;
+      }
+      if(role==='mobility'){profile.duration=8+(rank-1)*2;profile.summary=`45% faster movement for ${profile.duration}s · 20s cooldown`;return profile;}
+      if(role==='regeneration'){profile.healTick=Math.round((6+level*2+power*.25)*bonus*cls.healing);profile.duration=10;profile.summary=`${profile.healTick} health every 2s for 10s · ${profile.healTick*5} total · refreshes, does not stack`;return profile;}
+      if(role==='sanctuary'){
+        profile.radius=this.hasEquipped('ashwake-mantle')?135:100;profile.duration=10;profile.root=3+cls.root+binding;profile.healTick=Math.round((4+level*1.3+power*.2)*bonus*cls.healing);profile.petHealTick=Math.round(profile.healTick*(this.hasEquipped('mosswoven-mantle')?1.25:1));profile.summary=`${profile.radius}-pace sanctuary for 10s · every 2s: ${profile.healTick} personal / ${profile.petHealTick} companion healing · ${profile.root}s root on formation`;return profile;
+      }
       if (index === 0 || index === 5) {
         const earth = index === 0;
         profile.petHp = Math.round((earth ? 95 + level * 19 : 65 + level * 14) * bonus * cls.petHp);
         profile.petDamage = Math.round((earth ? 10 + level * 4 : 14 + level * 5) * (1 + (rank - 1) * 0.12) * cls.petDamage);
-        profile.summary = `${profile.petHp} pet health · ${Math.round(profile.petDamage*(this.hasEquipped('crownfang-ring')?1.12:1))} damage per strike · ${earth ? '1.65' : '1.45'}s between strikes`;
+        profile.petRange=cls.id==='necromancer'&&!earth?180:35;profile.petInterval=cls.id==='necromancer'&&!earth?2.4:earth?1.65:1.45;profile.petDuration=cls.id==='druid'?30+(rank-1)*5:0;
+        profile.summary = `${profile.petHp} pet health · ${Math.round(profile.petDamage*(this.hasEquipped('crownfang-ring')?1.12:1))} damage per strike · ${profile.petInterval}s between strikes${profile.petRange>35?' · 180-pace range':''}${profile.petDuration?' · lasts '+profile.petDuration+'s':''}`;
       } else if ([1, 8, 9].includes(index)) {
-        profile.damage = Math.round((index === 1 ? 24 + level * 9 + power : index === 8 ? 18 + level * 8 + power : 20 + level * 6 + power) * bonus * cls.direct * (index === 8 ? (this.hasEquipped('rimeglass-focus') ? 1.25 : 1) : fireBonus));
-        profile.lifeDrain=index===1?cls.drain:0;
+        profile.damage = Math.round((index === 1 ? 24 + level * 9 + power : index === 8 ? 18 + level * 8 + power : 20 + level * 6 + power) * bonus * cls.direct * damageBonus);
+        profile.lifeDrain=index===1?cls.drain:0;profile.detonate=cls.id==='necromancer'&&index===9?.6:0;
         profile.slow = 6 + binding;
         profile.radius = this.hasEquipped('ashwake-mantle') ? 135 : 100;
-        profile.summary = `${profile.damage} damage${index === 8 ? ' · slows movement for ' + profile.slow + 's' : index === 9 ? ' per enemy within ' + profile.radius + ' paces' : ' to one enemy'}${profile.lifeDrain?' · restores '+Math.round(profile.lifeDrain*100)+'% of damage dealt as health':''}`;
+        profile.summary = `${profile.damage} damage${index === 8 ? ' · slows movement for ' + profile.slow + 's' : index === 9 ? ' per enemy within ' + profile.radius + ' paces' : ' to one enemy'}${profile.detonate?' + 60% of remaining rot · consumes the rot':''}${profile.lifeDrain?' · restores '+Math.round(profile.lifeDrain*100)+'% of damage dealt as health':''}`;
       } else if (index === 2) {
-        profile.tickDamage = Math.round((7 + level * 2 + power * 0.4) * bonus * fireBonus * cls.dot);
+        profile.tickDamage = Math.round((7 + level * 2 + power * 0.4) * bonus * damageBonus * cls.dot);
         profile.summary = `${profile.tickDamage} damage every 2s for 14s · reapplying refreshes the mark`;
       } else if (index === 3) {
         profile.root = 9 + (rank - 1) * 2 + binding + cls.root;
@@ -333,7 +368,8 @@
       } else if (index === 6) {
         profile.shield = this.hasEquipped('warden-boneguard') ? 55 : 45;
         profile.duration = 24 + (rank - 1) * 6;
-        profile.summary = `Absorbs ${profile.shield}% of incoming damage for ${profile.duration}s`;
+        profile.thorns=cls.id==='druid'?Math.round((5+level*1.7+power*.3)*bonus):0;
+        profile.summary = `Absorbs ${profile.shield}% of incoming damage for ${profile.duration}s${profile.thorns?' · retaliates for '+profile.thorns+' damage per hit':''}`;
       }
       return profile;
     }
@@ -462,14 +498,14 @@
       ];
       if (id === 'rowan' && this.questState('mossfang').status === 'completed') return [
         'Liora says the roots have loosened their grip. One watch remains: the guardians beneath Willowmere’s old crypt.',
-        'The Bonewarden strikes hard. Keep your elemental mended, watch the ground, and leave yourself mana for control.'
+        'The Bonewarden strikes hard. Keep your companion mended, watch the ground, and leave yourself mana for control.'
       ];
       if (id === 'rowan' && this.questState('scout-road').status === 'completed') return [
         'Travelers are using the eastern road again. A humble willow focus is small thanks for that kind of courage.',
         'Grik’s charm may tell us what binds the camps together. Keep it when I have examined it; its luck belongs to you now.'
       ];
       if (id === 'liora' && this.questState('mossfang').status === 'completed') return [
-        'The forest is breathing more easily. I wove that mantle for the bond between you and your companion. Wear it when keeping your elemental alive matters most.',
+        'The forest is breathing more easily. I wove that mantle for the bond between you and your companion. Wear it when keeping your companion alive matters most.',
         'A linen robe leaves more strength for your own spells. Neither choice is always right. Study your pack, then decide how you want to fight.'
       ];
       if (id === 'mara' && complete) return [
@@ -608,9 +644,12 @@
       if (this.cast) return this._result(false, 'Finish your current spell or move to interrupt it.', 'warning');
       if (this._moving || this.moveTarget) return this._result(false, 'Stand still to cast. Press Esc to stop traveling.', 'warning');
       const spell = this.spells[index];
+      if(this.spellCooldownRemaining(index)>0)return this._result(false,spell.name+' is recovering for '+Math.ceil(this.spellCooldownRemaining(index))+' seconds.','warning');
+      if(spell.role==='resource-conversion'){const p=this.spellProfile(index);if(this.player.hp<=p.healthCost)return this._result(false,'You need more health for Dark Pact.','warning');if(this.player.mp>=this.player.maxMp)return this._result(false,'Your mana is already full.','warning');}
+      if(this.player.classId==='necromancer'&&index===9&&(!this.selected||this.selected.dotUntil<=this.clock))return this._result(false,'Apply Grave Rot before using Blight Bloom.','warning');
       if (this.player.mp < spell.cost) return this._result(false, 'Not enough mana for ' + spell.name + '. Meditate [R] or return to the bindstone.', 'warning');
       let targetId = null;
-      if (TARGETED_SPELLS.includes(index)) {
+      if (this.spells[index].target==='enemy') {
         const target = this.selected;
         if (!target) return this._result(false, 'Select an enemy first. Click one or press Space.', 'warning');
         if (target.returning) return this._result(false, target.name + ' is returning home and cannot be attacked.', 'warning');
@@ -618,8 +657,8 @@
         targetId = target.id;
       }
       if (index === 4) {
-        if (!this.pet) return this._result(false, 'Summon an elemental before using Pet Mend.', 'warning');
-        if (distance(this.pet, this.player) > 360) return this._result(false, 'Your elemental is too far away to mend.', 'warning');
+        if (!this.pet) return this._result(false, 'Summon a companion before using companion healing.', 'warning');
+        if (distance(this.pet, this.player) > 360) return this._result(false, 'Your companion is too far away to mend.', 'warning');
         targetId = this.pet.id;
       }
       this.meditate = false;
@@ -635,21 +674,25 @@
       const spell = this.spells[pending.i];
       const rank = this.player.spellRanks[pending.i];
       const target = this.mobs.find(mob => mob.id === pending.targetId && mob.alive);
-      if (TARGETED_SPELLS.includes(pending.i) && (!target || target.returning || distance(target, this.player) > CAST_RANGE)) {
+      if (this.spells[pending.i].target==='enemy' && (!target || target.returning || distance(target, this.player) > CAST_RANGE)) {
         this.log('Your original target is gone or out of range. Mana was not spent.', 'warning');
         return;
       }
       if (pending.i === 4 && (!this.pet || this.pet.id !== pending.targetId || distance(this.pet, this.player) > 360)) {
-        this.log('Your elemental is gone or out of range. Mana was not spent.', 'warning');
+        this.log('Your companion is gone or out of range. Mana was not spent.', 'warning');
         return;
       }
       if (this.player.mp < spell.cost) return;
+      if(spell.role==='resource-conversion'&&this.player.hp<=this.spellProfile(pending.i,rank).healthCost){this.log('Not enough health for Dark Pact. Nothing was spent.','warning');return;}
+      if(this.player.classId==='necromancer'&&pending.i===9&&target.dotUntil<=this.clock){this.log('The rot faded. Mana was not spent.','warning');return;}
       this.player.mp -= spell.cost;
       const profile = this.spellProfile(pending.i, rank);
       this._spellVisualIndex=pending.i;
       this.player.castReleaseUntil=this.clock+.22;
       switch (pending.i) {
-        case 0: case 5: this._summon(pending.i === 0 ? 'Earth' : 'Air', rank); break;
+        case 0: case 5:
+          if(spell.role==='mobility'){this.strideUntil=this.clock+profile.duration;this.strideReadyAt=this.clock+20;this._visual('heal',this.player,{color:'#b7d4a0',radius:38});this.log('Wild Stride quickens your movement.','success');}
+          else this._summon(pending.i === 0 ? 'Earth' : 'Air', rank);break;
         case 1: {
           const drained=Math.min(target.hp,profile.damage);
           this._visual('bolt', target, { fromX: this.player.x, fromY: this.player.y, radius: 24, color: this.player.classId==='necromancer'?'#c493df':this.player.classId==='druid'?'#e0d092':'#f3a05e', life: 0.5 });
@@ -661,7 +704,7 @@
         case 2:
           target.dotUntil = this.clock + 14;
           target.dotAt = this.clock + 2;
-          target.dotDamage = profile.tickDamage;
+          target.dotDamage = profile.tickDamage;target.dotSchool=this.player.classId;
           this._engage(target, 'player', 8, true);
           this._visual('bolt', target, { fromX: this.player.x, fromY: this.player.y, radius: 24, color: this.player.classId==='necromancer'?'#ac83d1':this.player.classId==='druid'?'#a0c67f':'#d88b7a', life: 0.65 });
           this._effect(target, this.player.classId==='magician'?'Burning':'Afflicted', '#efa17a');
@@ -691,7 +734,7 @@
           const restored = this._heal(this.pet, profile.heal);
           this._visual('heal', this.pet, { fromX: this.player.x, fromY: this.player.y, radius: 35, color: '#aecf9e' });
           this._healingThreat(restored * 0.2);
-          this.log('Pet Mend restores ' + restored + ' health to your elemental.', 'success');
+          this.log(this.spells[4].name+' restores ' + restored + ' health to your companion.', 'success');
           break;
         }
         case 6:
@@ -701,6 +744,8 @@
           this.log('A magic shield surrounds you.', 'success');
           break;
         case 7: {
+          if(spell.role==='resource-conversion'){this.player.hp-=profile.healthCost;const gain=Math.min(profile.mana,this.player.maxMp-this.player.mp);this.player.mp+=gain;this.pactReadyAt=this.clock+10;this._effect(this.player,'−'+profile.healthCost+' HP / +'+gain+' MP','#c7aedc');this._visual('heal',this.player,{radius:35,color:'#c4a7da'});this.log('Dark Pact trades health for '+gain+' mana.','combat');break;}
+          if(spell.role==='regeneration'){this.regeneration={expiresAt:this.clock+profile.duration,nextPulse:this.clock+2,heal:profile.healTick};this._visual('heal',this.player,{radius:35,color:'#b2d398'});this.log('Rejuvenation restores health over time.','success');break;}
           const restored = this._heal(this.player, profile.heal);
           this._visual('heal', this.player, { radius: 32, color: '#aecf9e' });
           this._healingThreat(restored * 0.25);
@@ -714,10 +759,13 @@
           this.log(this.spells[8].name+' chills ' + target.name + ' for ' + profile.slow + ' seconds.', 'combat');
           break;
         case 9: {
+          if(spell.role==='sanctuary'){this.sanctuary={x:this.player.x,y:this.player.y,radius:profile.radius,expiresAt:this.clock+10,nextPulse:this.clock+2,heal:profile.healTick,petHeal:profile.petHealTick};for(const m of this.mobs)if(m.alive&&!m.returning&&distance(m,this.player)<=profile.radius){this._engage(m,'player',5,true);m.rootUntil=Math.max(m.rootUntil,this.clock+profile.root);m.intent=null;}this._visual('heal',this.player,{radius:profile.radius,color:'#acd69c',life:1});this.log('Verdant Sanctuary takes root. Stay inside for healing.','success');break;}
           const center = { x: target.x, y: target.y };
           const victims = this.mobs.filter(mob => mob.alive && !mob.returning && distance(mob, center) <= profile.radius);
           this._visual('nova', center, { radius: profile.radius, color: '#edaa70', life: 0.85 });
-          const damage = profile.damage;
+          const remainingRot=profile.detonate?Math.max(0,Math.floor((target.dotUntil-Math.max(this.clock,target.dotAt))/2)+1)*target.dotDamage:0;
+          const damage = profile.damage+Math.round(remainingRot*(profile.detonate||0));
+          if(profile.detonate){target.dotUntil=0;target.dotDamage=0;target.dotAt=0;}
           for (const victim of victims) this._damageMob(victim, damage, 'player');
           this.log(this.spells[9].name+' strikes ' + victims.length + (victims.length === 1 ? ' enemy.' : ' enemies.'), 'combat');
           break;
@@ -754,7 +802,7 @@
       this.pet = {
         id: 'pet-' + ++this._uid, type, classId:this.player.classId, name: earth?this.characterClass.primaryPet:this.characterClass.secondaryPet, x: this.player.x - 32, y: this.player.y + 28,
         hp: maxHp, maxHp, targetId: null, attackAt: this.clock, mode: 'guard', tauntReadyAt: this.clock,
-        damage: profile.petDamage,
+        damage: profile.petDamage,attackRange:profile.petRange,attackInterval:profile.petInterval,expiresAt:profile.petDuration?this.clock+profile.petDuration:0,
         speed: earth ? 152 : 185
       };
       this._visual('summon', this.pet, { radius: 42, color: earth ? '#c0c599' : '#a6d3da', life: 1.2 });
@@ -770,37 +818,37 @@
 
     commandPet(command) {
       if (this.dead) return { ok: false };
-      if (!this.pet) return this._result(false, 'Summon an Earth or Air Elemental from your spell bar first.', 'warning');
+      if (!this.pet) return this._result(false, 'Summon a companion from your spell bar first.', 'warning');
       if (command === 'follow') {
         this.pet.targetId = null;
         this.pet.mode = 'follow';
-        return this._result(true, 'Your elemental stops attacking and follows passively. Enemies may still pursue it.');
+        return this._result(true, 'Your companion stops attacking and follows passively. Enemies may still pursue it.');
       }
       if (command === 'guard') {
         this.pet.mode = 'guard';
-        return this._result(true, 'Your elemental will assist your attack spells and defend you when struck.');
+        return this._result(true, 'Your companion will assist your attack spells and defend you when struck.');
       }
       if (command === 'taunt') {
         const target = this.mobs.find(mob => mob.id === this.pet.targetId && mob.alive && !mob.returning);
-        if (!target) return this._result(false, 'Order your elemental to attack a target before taunting.', 'warning');
-        if (this.pet.tauntReadyAt > this.clock) return this._result(false, 'Your elemental can taunt again in ' + Math.ceil(this.pet.tauntReadyAt - this.clock) + ' seconds.', 'warning');
-        if (distance(this.pet, target) > 85) return this._result(false, 'Your elemental must be within 85 paces of its target to taunt.', 'warning');
+        if (!target) return this._result(false, 'Order your companion to attack a target before taunting.', 'warning');
+        if (this.pet.tauntReadyAt > this.clock) return this._result(false, 'Your companion can taunt again in ' + Math.ceil(this.pet.tauntReadyAt - this.clock) + ' seconds.', 'warning');
+        if (distance(this.pet, target) > 85) return this._result(false, 'Your companion must be within 85 paces of its target to taunt.', 'warning');
         this._engage(target, 'pet', 1, true);
         target.threatPet = Math.max(target.threatPet, target.threatPlayer + 40 + this.player.level * 6);
         target.targetId = this.pet.id;
         this.pet.tauntReadyAt = this.clock + 12;
         this._visual('taunt', this.pet, { radius: 60, color: '#dcc18b', life: 0.8 });
         this._effect(target, 'Taunted', '#dcc18b');
-        return this._result(true, 'Your elemental draws ' + target.name + '’s attention.', 'combat');
+        return this._result(true, 'Your companion draws ' + target.name + '’s attention.', 'combat');
       }
       if (command !== 'attack') return { ok: false };
       const target = this.selected;
       if (!target) return this._result(false, 'Select an enemy for your pet.', 'warning');
       if (target.returning) return this._result(false, 'That enemy is returning home.', 'warning');
-      if (distance(target, this.player) > 360) return this._result(false, 'Move closer before sending your elemental. Command range is 360 paces.', 'warning');
+      if (distance(target, this.player) > 360) return this._result(false, 'Move closer before sending your companion. Command range is 360 paces.', 'warning');
       this.pet.targetId = target.id;
       // Threat begins when the elemental reaches its enemy, so distant allies do not pull remotely.
-      return this._result(true, 'Your elemental advances on ' + target.name + '.');
+      return this._result(true, 'Your companion advances on ' + target.name + '.');
     }
 
     toggleMeditate() {
@@ -855,7 +903,7 @@
       if (this.pet) this.pet.hp = this.pet.maxHp;
       this._effect(this.player, 'Restored', '#cce0b6');
       this._visual('heal', this.player, { color: '#cce0b6', radius: 48, life: 0.9 });
-      return this._result(true, 'The Willowmere bindstone restores you and your elemental. Spell upgrades become available at levels 2 and 5.', 'success');
+      return this._result(true, 'The Willowmere bindstone restores you and your companion. Spell upgrades become available at levels 2 and 5.', 'success');
     }
 
     interact() {
@@ -917,7 +965,7 @@
       attacker.strikeAt = this.clock;
       attacker.strikeUntil = this.clock + 0.55;
       if (Math.abs(target.x - attacker.x) > 1) attacker.facing = target.x > attacker.x ? 1 : -1;
-      this._visual(attacker.type==='wisp'?'bolt':'melee', target, { fromX: attacker.x, fromY: attacker.y, sourceId: attacker.id,
+      this._visual(attacker.type==='wisp'||attacker.attackRange>35?'bolt':'melee', target, { fromX: attacker.x, fromY: attacker.y, sourceId: attacker.id,
         color: attacker.type === 'wisp' ? '#afdce9' : attacker.type === 'Air' ? '#b0e4ed' : attacker.type === 'Earth' ? '#d2c594' : '#efbd92', life: 0.35 });
     }
 
@@ -1032,6 +1080,7 @@
       this.player.hp = Math.max(0, this.player.hp - damage);
       this._impact(this.player, damage, 'enemy');
       this._effect(this.player, '−' + damage, '#ef9c90');
+      if(!this.dead&&this.player.hp>0&&this.player.classId==='druid'&&this.shieldUntil>this.clock&&attacker?.alive&&!attacker.returning){this._damageMob(attacker,this.spellProfile(6).thorns,'player');}
       if (this.player.hp <= 0) this._die();
       else if (attacker && this.pet && this.pet.mode === 'guard' && !this.pet.targetId && distance(attacker, this.player) <= 230) this._assistPet(attacker);
     }
@@ -1045,7 +1094,7 @@
       this._effect(pet, '−' + amount, '#efb691');
       if (pet.hp <= 0) {
         this._fall(pet, 'pet');
-        this.log('Your ' + pet.type.toLowerCase() + ' elemental crumbles. Summon another or retreat.', 'danger');
+        this.log((pet.name||'Your companion')+' falls. Summon another or retreat.','danger');
         this.pet = null;
         this._clearPetThreat();
       }
@@ -1072,7 +1121,7 @@
       if (!this.dead) return { ok: false, message: 'You are already alive.' };
       this.dead = false;
       Object.assign(this.player, { x: WORLD.spawn.x, y: WORLD.spawn.y, hp: this.player.maxHp, mp: this.player.maxMp });
-      this.pet = null;
+      this.pet = null;this.regeneration=null;this.sanctuary=null;this.strideUntil=0;
       this.cast = null;
       this.meditate = false;
       this.shieldUntil = 0;
@@ -1125,13 +1174,14 @@
         return;
       }
 
+      this._updateClassEffects();
       const inputLength = Math.hypot(input.dx, input.dy);
       if (inputLength > 0) {
         this.moveTarget = null;
         this._interruptCast();
         this.meditate = false;
         const oldX=this.player.x,oldY=this.player.y;
-        const speed = 175 * dt;
+        const speed = 175 * (this.strideUntil>this.clock?1.45:1) * dt;
         if (input.dx) this.player.facing = input.dx > 0 ? 1 : -1;
         this.player.walkUntil = this.clock + 0.1;
         this.player.x = clamp(this.player.x + input.dx / inputLength * speed, 24, WORLD.w - 24);
@@ -1141,7 +1191,7 @@
       } else if (this.moveTarget) {
         this._interruptCast();
         this.meditate = false;
-        this._moving = this._walk(this.player, this.moveTarget, 175, dt);
+        this._moving = this._walk(this.player, this.moveTarget, 175*(this.strideUntil>this.clock?1.45:1), dt);
         if (distance(this.player, this.moveTarget) < 1) this.moveTarget = null;
       }
       // Movement is resolved first, including a movement input on a cast's final frame.
@@ -1167,17 +1217,18 @@
 
     _updatePet(dt) {
       const pet = this.pet;
+      if(pet.expiresAt&&this.clock>=pet.expiresAt){this._fall(pet,'pet');this.pet=null;this._clearPetThreat();this.log('Your guardian returns to the wilds.','info');return;}
       let target = this.mobs.find(mob => mob.id === pet.targetId && mob.alive && !mob.returning);
       if (target && (distance(target, this.player) > 1000 || distance(pet, this.player) > 900)) {
         pet.targetId = null;
         target = null;
-        this.log('Your elemental returns; its target is too far away.', 'warning');
+        this.log('Your companion returns; its target is too far away.', 'warning');
       }
       if (target) {
         pet.followTrail=[{x:this.player.x,y:this.player.y}];pet.following=false;
-        this._walk(pet, target, pet.speed, dt, 29);
-        if (distance(pet, target) <= 35 && this.clock >= pet.attackAt) {
-          pet.attackAt = this.clock + (pet.type === 'Air' ? 1.45 : 1.65);
+        this._walk(pet, target, pet.speed, dt, Math.max(29,(pet.attackRange||35)-6));
+        if (distance(pet, target) <= (pet.attackRange||35) && this.clock >= pet.attackAt) {
+          pet.attackAt = this.clock + (pet.attackInterval||(pet.type === 'Air' ? 1.45 : 1.65));
           this._strike(pet, target);
           this._damageMob(target, Math.round(pet.damage * (this.hasEquipped('crownfang-ring') ? 1.12 : 1)), 'pet');
         }
@@ -1185,6 +1236,13 @@
         pet.targetId = null;
         this._followParty(pet,dt);
       }
+    }
+
+    _updateClassEffects(){
+      const regen=this.regeneration;
+      if(regen){if(this.clock+1e-6>=regen.nextPulse&&regen.nextPulse<=regen.expiresAt+1e-6){regen.nextPulse+=2;const restored=this.player.hp<this.player.maxHp?this._heal(this.player,regen.heal):0;this._healingThreat(restored*.25);}if(this.clock>regen.expiresAt)this.regeneration=null;}
+      const zone=this.sanctuary;
+      if(zone){if(this.clock+1e-6>=zone.nextPulse&&zone.nextPulse<=zone.expiresAt+1e-6){zone.nextPulse+=2;let healed=0;if(this.player.hp<this.player.maxHp&&distance(this.player,zone)<=zone.radius)healed+=this._heal(this.player,zone.heal);if(this.pet&&this.pet.hp<this.pet.maxHp&&distance(this.pet,zone)<=zone.radius)healed+=this._heal(this.pet,zone.petHeal);this._healingThreat(healed*.25);}if(this.clock>zone.expiresAt)this.sanctuary=null;}
     }
 
     _followParty(pet,dt){
@@ -1313,6 +1371,7 @@
       return {
         version: VERSION, dead: this.dead, discovered: [...this.discovered],
         supplyCooldownRemaining: Math.max(0, this.supplyReadyAt - this.clock),
+        pactCooldownRemaining:Math.max(0,this.pactReadyAt-this.clock),strideCooldownRemaining:Math.max(0,this.strideReadyAt-this.clock),
         player: {
           classId:player.classId,name:player.name,
           x: player.x, y: player.y, hp: this.dead ? 0 : player.hp, maxHp: player.maxHp,

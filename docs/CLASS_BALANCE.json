@@ -1,6 +1,6 @@
 {
-  "version": "0.9.0",
-  "method": "Fresh characters; normal controls, deliberate death/revival, save/reload, original village-to-crypt quest chain. No injected levels, inventory, positions or combat results.",
+  "version": "0.11.0",
+  "method": "15 fresh-character class/build/seed journeys through the original expedition, using normal controls, death/revival and save/reload. Druid uses its temporary Stag; Necromancer uses Dark Pact when needed. See runner for strategy.",
   "runs": [
     {
       "fights": [
@@ -23,8 +23,8 @@
           "startingHealth": 110,
           "endingHealth": 110,
           "startingMana": 140,
-          "endingMana": 108,
-          "lowestPetHp": 87
+          "endingMana": 89,
+          "lowestPetHp": 96
         },
         {
           "label": "Goblin Shaman",
@@ -145,8 +145,8 @@
           "startingHealth": 110,
           "endingHealth": 110,
           "startingMana": 140,
-          "endingMana": 108,
-          "lowestPetHp": 87
+          "endingMana": 89,
+          "lowestPetHp": 96
         },
         {
           "label": "Goblin Shaman",
@@ -267,8 +267,8 @@
           "startingHealth": 110,
           "endingHealth": 110,
           "startingMana": 140,
-          "endingMana": 108,
-          "lowestPetHp": 87
+          "endingMana": 89,
+          "lowestPetHp": 96
         },
         {
           "label": "Goblin Shaman",
@@ -394,12 +394,12 @@
         {
           "label": "Goblin Shaman",
           "level": 1,
-          "seconds": 5.6,
+          "seconds": 6.85,
           "startingLevel": 1,
           "startingHealth": 110,
           "endingHealth": 110,
           "startingMana": 141,
-          "endingMana": 106,
+          "endingMana": 108,
           "lowestPetHp": 61
         },
         {
@@ -456,7 +456,7 @@
           "copper": 226
         }
       ],
-      "interruptions": 4,
+      "interruptions": 5,
       "travelSeconds": 61.14999999999866,
       "seed": 42,
       "companion": "Air",
@@ -515,12 +515,12 @@
         {
           "label": "Goblin Shaman",
           "level": 1,
-          "seconds": 5.6,
+          "seconds": 6.85,
           "startingLevel": 1,
           "startingHealth": 110,
           "endingHealth": 110,
           "startingMana": 141,
-          "endingMana": 106,
+          "endingMana": 108,
           "lowestPetHp": 61
         },
         {
@@ -577,7 +577,7 @@
           "copper": 229
         }
       ],
-      "interruptions": 3,
+      "interruptions": 4,
       "travelSeconds": 61.14999999999866,
       "seed": 73,
       "companion": "Air",
@@ -637,12 +637,12 @@
         {
           "label": "Goblin Shaman",
           "level": 1,
-          "seconds": 5.6,
+          "seconds": 6.85,
           "startingLevel": 1,
           "startingHealth": 110,
           "endingHealth": 110,
           "startingMana": 141,
-          "endingMana": 106,
+          "endingMana": 108,
           "lowestPetHp": 61
         },
         {
@@ -699,7 +699,7 @@
           "copper": 233
         }
       ],
-      "interruptions": 3,
+      "interruptions": 4,
       "travelSeconds": 61.14999999999866,
       "seed": 2026,
       "companion": "Air",
@@ -752,8 +752,8 @@
           "startingHealth": 92,
           "endingHealth": 92,
           "startingMana": 155,
-          "endingMana": 123,
-          "lowestPetHp": 64
+          "endingMana": 104,
+          "lowestPetHp": 73
         },
         {
           "label": "Goblin Shaman",
@@ -874,8 +874,8 @@
           "startingHealth": 92,
           "endingHealth": 92,
           "startingMana": 155,
-          "endingMana": 123,
-          "lowestPetHp": 64
+          "endingMana": 104,
+          "lowestPetHp": 73
         },
         {
           "label": "Goblin Shaman",
@@ -996,8 +996,8 @@
           "startingHealth": 92,
           "endingHealth": 92,
           "startingMana": 155,
-          "endingMana": 123,
-          "lowestPetHp": 64
+          "endingMana": 104,
+          "lowestPetHp": 73
         },
         {
           "label": "Goblin Shaman",
@@ -1101,67 +1101,67 @@
         {
           "label": "Goblin Scout",
           "level": 1,
-          "seconds": 5.6,
+          "seconds": 7.35,
           "startingLevel": 1,
           "startingHealth": 92,
           "endingHealth": 92,
           "startingMana": 132,
-          "endingMana": 97,
+          "endingMana": 80,
           "lowestPetHp": 45
         },
         {
           "label": "Goblin Raider",
           "level": 1,
-          "seconds": 5.6,
+          "seconds": 7.35,
           "startingLevel": 1,
           "startingHealth": 92,
           "endingHealth": 92,
           "startingMana": 152,
-          "endingMana": 117,
+          "endingMana": 120,
           "lowestPetHp": 45
         },
         {
           "label": "Goblin Shaman",
           "level": 1,
-          "seconds": 5.6,
+          "seconds": 9.4,
           "startingLevel": 1,
           "startingHealth": 92,
-          "endingHealth": 92,
+          "endingHealth": 75,
           "startingMana": 156,
-          "endingMana": 121,
-          "lowestPetHp": 45
+          "endingMana": 74,
+          "lowestPetHp": 28
         },
         {
           "label": "Grik the Hoarder",
           "level": 1,
-          "seconds": 17.2,
+          "seconds": 17.7,
           "startingLevel": 1,
           "startingHealth": 92,
           "endingHealth": 92,
-          "startingMana": 155,
-          "endingMana": 82,
+          "startingMana": 165,
+          "endingMana": 37,
           "lowestPetHp": 8
         },
         {
           "label": "Bramblemaw",
           "level": 3,
-          "seconds": 12.9,
+          "seconds": 15.45,
           "startingLevel": 2,
           "startingHealth": 127,
           "endingHealth": 138,
-          "startingMana": 188,
-          "endingMana": 237,
+          "startingMana": 198,
+          "endingMana": 219,
           "lowestPetHp": 42
         },
         {
           "label": "The Bonewarden",
           "level": 4,
-          "seconds": 15.45,
+          "seconds": 18,
           "startingLevel": 3,
           "startingHealth": 148,
           "endingHealth": 159,
           "startingMana": 235,
-          "endingMana": 275,
+          "endingMana": 247,
           "lowestPetHp": 31
         }
       ],
@@ -1170,19 +1170,19 @@
           "quest": "griks-talisman",
           "level": 2,
           "kills": 4,
-          "copper": 107
+          "copper": 112
         },
         {
           "quest": "mossfang",
           "level": 3,
           "kills": 5,
-          "copper": 108
+          "copper": 113
         },
         {
           "quest": "crypt-proof",
           "level": 4,
           "kills": 6,
-          "copper": 225
+          "copper": 231
         }
       ],
       "interruptions": 4,
@@ -1194,13 +1194,13 @@
         "validated": true,
         "debtAdded": 41,
         "levelRetained": 3,
-        "itemsRetained": 5
+        "itemsRetained": 6
       },
       "completed": true,
       "final": {
         "level": 4,
         "kills": 6,
-        "gold": 225,
+        "gold": 231,
         "equipment": {
           "charm": "warden-boneguard",
           "focus": "apprentice-focus",
@@ -1209,6 +1209,7 @@
         },
         "inventory": [
           "worn-linen-robe",
+          "copperleaf-ring",
           "griks-lucky-charm",
           "apprentice-focus",
           "ring-of-bound-earth",
@@ -1222,67 +1223,67 @@
         {
           "label": "Goblin Scout",
           "level": 1,
-          "seconds": 5.6,
+          "seconds": 7.35,
           "startingLevel": 1,
           "startingHealth": 92,
           "endingHealth": 92,
           "startingMana": 132,
-          "endingMana": 97,
+          "endingMana": 80,
           "lowestPetHp": 45
         },
         {
           "label": "Goblin Raider",
           "level": 1,
-          "seconds": 5.6,
+          "seconds": 7.35,
           "startingLevel": 1,
           "startingHealth": 92,
           "endingHealth": 92,
           "startingMana": 152,
-          "endingMana": 117,
+          "endingMana": 120,
           "lowestPetHp": 45
         },
         {
           "label": "Goblin Shaman",
           "level": 1,
-          "seconds": 5.6,
+          "seconds": 9.4,
           "startingLevel": 1,
           "startingHealth": 92,
-          "endingHealth": 92,
+          "endingHealth": 75,
           "startingMana": 156,
-          "endingMana": 121,
-          "lowestPetHp": 45
+          "endingMana": 74,
+          "lowestPetHp": 28
         },
         {
           "label": "Grik the Hoarder",
           "level": 1,
-          "seconds": 12.9,
+          "seconds": 18.5,
           "startingLevel": 1,
-          "startingHealth": 104,
-          "endingHealth": 104,
+          "startingHealth": 92,
+          "endingHealth": 61,
           "startingMana": 155,
-          "endingMana": 40,
-          "lowestPetHp": 21
+          "endingMana": 69,
+          "lowestPetHp": 8
         },
         {
           "label": "Bramblemaw",
           "level": 3,
-          "seconds": 12.9,
+          "seconds": 15.45,
           "startingLevel": 2,
           "startingHealth": 127,
           "endingHealth": 138,
           "startingMana": 188,
-          "endingMana": 237,
+          "endingMana": 209,
           "lowestPetHp": 42
         },
         {
           "label": "The Bonewarden",
           "level": 4,
-          "seconds": 15.45,
+          "seconds": 18,
           "startingLevel": 3,
           "startingHealth": 148,
           "endingHealth": 159,
           "startingMana": 235,
-          "endingMana": 275,
+          "endingMana": 247,
           "lowestPetHp": 31
         }
       ],
@@ -1291,7 +1292,7 @@
           "quest": "griks-talisman",
           "level": 2,
           "kills": 4,
-          "copper": 114
+          "copper": 113
         },
         {
           "quest": "mossfang",
@@ -1303,10 +1304,10 @@
           "quest": "crypt-proof",
           "level": 4,
           "kills": 6,
-          "copper": 232
+          "copper": 229
         }
       ],
-      "interruptions": 3,
+      "interruptions": 4,
       "travelSeconds": 61.14999999999866,
       "seed": 73,
       "companion": "Air",
@@ -1321,7 +1322,7 @@
       "final": {
         "level": 4,
         "kills": 6,
-        "gold": 232,
+        "gold": 229,
         "equipment": {
           "charm": "warden-boneguard",
           "focus": "apprentice-focus",
@@ -1330,7 +1331,7 @@
         },
         "inventory": [
           "worn-linen-robe",
-          "goblin-talisman",
+          "waxed-travel-cloak",
           "griks-lucky-charm",
           "apprentice-focus",
           "ring-of-bound-earth",
@@ -1344,67 +1345,67 @@
         {
           "label": "Goblin Scout",
           "level": 1,
-          "seconds": 5.6,
+          "seconds": 7.35,
           "startingLevel": 1,
           "startingHealth": 92,
           "endingHealth": 92,
           "startingMana": 132,
-          "endingMana": 97,
+          "endingMana": 80,
           "lowestPetHp": 45
         },
         {
           "label": "Goblin Raider",
           "level": 1,
-          "seconds": 5.6,
+          "seconds": 7.35,
           "startingLevel": 1,
           "startingHealth": 92,
           "endingHealth": 92,
           "startingMana": 152,
-          "endingMana": 117,
+          "endingMana": 120,
           "lowestPetHp": 45
         },
         {
           "label": "Goblin Shaman",
           "level": 1,
-          "seconds": 5.6,
+          "seconds": 9.4,
           "startingLevel": 1,
           "startingHealth": 92,
-          "endingHealth": 92,
+          "endingHealth": 75,
           "startingMana": 156,
-          "endingMana": 121,
-          "lowestPetHp": 45
+          "endingMana": 74,
+          "lowestPetHp": 28
         },
         {
           "label": "Grik the Hoarder",
           "level": 1,
-          "seconds": 12.9,
+          "seconds": 18.5,
           "startingLevel": 1,
           "startingHealth": 92,
-          "endingHealth": 92,
+          "endingHealth": 61,
           "startingMana": 155,
-          "endingMana": 40,
-          "lowestPetHp": 21
+          "endingMana": 69,
+          "lowestPetHp": 8
         },
         {
           "label": "Bramblemaw",
           "level": 3,
-          "seconds": 12.9,
+          "seconds": 15.45,
           "startingLevel": 2,
           "startingHealth": 127,
           "endingHealth": 138,
           "startingMana": 188,
-          "endingMana": 237,
+          "endingMana": 209,
           "lowestPetHp": 42
         },
         {
           "label": "The Bonewarden",
           "level": 4,
-          "seconds": 15.45,
+          "seconds": 18,
           "startingLevel": 3,
           "startingHealth": 148,
           "endingHealth": 159,
           "startingMana": 235,
-          "endingMana": 275,
+          "endingMana": 247,
           "lowestPetHp": 31
         }
       ],
@@ -1413,22 +1414,22 @@
           "quest": "griks-talisman",
           "level": 2,
           "kills": 4,
-          "copper": 117
+          "copper": 113
         },
         {
           "quest": "mossfang",
           "level": 3,
           "kills": 5,
-          "copper": 118
+          "copper": 110
         },
         {
           "quest": "crypt-proof",
           "level": 4,
           "kills": 6,
-          "copper": 235
+          "copper": 225
         }
       ],
-      "interruptions": 3,
+      "interruptions": 4,
       "travelSeconds": 61.14999999999866,
       "seed": 2026,
       "companion": "Air",
@@ -1443,7 +1444,7 @@
       "final": {
         "level": 4,
         "kills": 6,
-        "gold": 235,
+        "gold": 225,
         "equipment": {
           "charm": "warden-boneguard",
           "focus": "apprentice-focus",
@@ -1482,7 +1483,7 @@
           "endingHealth": 120,
           "startingMana": 125,
           "endingMana": 74,
-          "lowestPetHp": 104
+          "lowestPetHp": 113
         },
         {
           "label": "Goblin Shaman",
@@ -1552,7 +1553,7 @@
       "interruptions": 4,
       "travelSeconds": 61.14999999999866,
       "seed": 42,
-      "companion": "Earth",
+      "companion": "Stag",
       "classId": "druid",
       "recovery": {
         "validated": true,
@@ -1604,7 +1605,7 @@
           "endingHealth": 120,
           "startingMana": 125,
           "endingMana": 74,
-          "lowestPetHp": 104
+          "lowestPetHp": 113
         },
         {
           "label": "Goblin Shaman",
@@ -1674,7 +1675,7 @@
       "interruptions": 4,
       "travelSeconds": 61.14999999999866,
       "seed": 73,
-      "companion": "Earth",
+      "companion": "Stag",
       "classId": "druid",
       "recovery": {
         "validated": true,
@@ -1726,7 +1727,7 @@
           "endingHealth": 120,
           "startingMana": 125,
           "endingMana": 74,
-          "lowestPetHp": 104
+          "lowestPetHp": 113
         },
         {
           "label": "Goblin Shaman",
@@ -1796,7 +1797,7 @@
       "interruptions": 4,
       "travelSeconds": 61.14999999999866,
       "seed": 2026,
-      "companion": "Earth",
+      "companion": "Stag",
       "classId": "druid",
       "recovery": {
         "validated": true,
@@ -1814,370 +1815,6 @@
           "focus": "apprentice-focus",
           "ring": "ring-of-bound-earth",
           "garb": "mosswoven-mantle"
-        },
-        "inventory": [
-          "worn-linen-robe",
-          "griks-lucky-charm",
-          "apprentice-focus",
-          "ring-of-bound-earth",
-          "mosswoven-mantle",
-          "warden-boneguard"
-        ]
-      }
-    },
-    {
-      "fights": [
-        {
-          "label": "Goblin Scout",
-          "level": 1,
-          "seconds": 7.35,
-          "startingLevel": 1,
-          "startingHealth": 120,
-          "endingHealth": 120,
-          "startingMana": 102,
-          "endingMana": 69,
-          "lowestPetHp": 73
-        },
-        {
-          "label": "Goblin Raider",
-          "level": 1,
-          "seconds": 7.35,
-          "startingLevel": 1,
-          "startingHealth": 120,
-          "endingHealth": 120,
-          "startingMana": 122,
-          "endingMana": 90,
-          "lowestPetHp": 64
-        },
-        {
-          "label": "Goblin Shaman",
-          "level": 1,
-          "seconds": 6.85,
-          "startingLevel": 1,
-          "startingHealth": 120,
-          "endingHealth": 120,
-          "startingMana": 126,
-          "endingMana": 92,
-          "lowestPetHp": 73
-        },
-        {
-          "label": "Grik the Hoarder",
-          "level": 1,
-          "seconds": 14.15,
-          "startingLevel": 1,
-          "startingHealth": 120,
-          "endingHealth": 120,
-          "startingMana": 125,
-          "endingMana": 68,
-          "lowestPetHp": 36
-        },
-        {
-          "label": "Bramblemaw",
-          "level": 3,
-          "seconds": 14.65,
-          "startingLevel": 2,
-          "startingHealth": 158,
-          "endingHealth": 172,
-          "startingMana": 155,
-          "endingMana": 201,
-          "lowestPetHp": 57
-        },
-        {
-          "label": "The Bonewarden",
-          "level": 4,
-          "seconds": 16.4,
-          "startingLevel": 3,
-          "startingHealth": 182,
-          "endingHealth": 196,
-          "startingMana": 199,
-          "endingMana": 236,
-          "lowestPetHp": 70
-        }
-      ],
-      "milestones": [
-        {
-          "quest": "griks-talisman",
-          "level": 2,
-          "kills": 4,
-          "copper": 107
-        },
-        {
-          "quest": "mossfang",
-          "level": 3,
-          "kills": 5,
-          "copper": 108
-        },
-        {
-          "quest": "crypt-proof",
-          "level": 4,
-          "kills": 6,
-          "copper": 226
-        }
-      ],
-      "interruptions": 5,
-      "travelSeconds": 61.14999999999866,
-      "seed": 42,
-      "companion": "Air",
-      "classId": "druid",
-      "recovery": {
-        "validated": true,
-        "debtAdded": 41,
-        "levelRetained": 3,
-        "itemsRetained": 5
-      },
-      "completed": true,
-      "final": {
-        "level": 4,
-        "kills": 6,
-        "gold": 226,
-        "equipment": {
-          "charm": "warden-boneguard",
-          "focus": "apprentice-focus",
-          "ring": "ring-of-bound-earth",
-          "garb": "worn-linen-robe"
-        },
-        "inventory": [
-          "worn-linen-robe",
-          "griks-lucky-charm",
-          "apprentice-focus",
-          "ring-of-bound-earth",
-          "mosswoven-mantle",
-          "warden-boneguard"
-        ]
-      }
-    },
-    {
-      "fights": [
-        {
-          "label": "Goblin Scout",
-          "level": 1,
-          "seconds": 7.35,
-          "startingLevel": 1,
-          "startingHealth": 120,
-          "endingHealth": 120,
-          "startingMana": 102,
-          "endingMana": 69,
-          "lowestPetHp": 73
-        },
-        {
-          "label": "Goblin Raider",
-          "level": 1,
-          "seconds": 7.35,
-          "startingLevel": 1,
-          "startingHealth": 120,
-          "endingHealth": 120,
-          "startingMana": 122,
-          "endingMana": 90,
-          "lowestPetHp": 64
-        },
-        {
-          "label": "Goblin Shaman",
-          "level": 1,
-          "seconds": 6.85,
-          "startingLevel": 1,
-          "startingHealth": 120,
-          "endingHealth": 120,
-          "startingMana": 126,
-          "endingMana": 92,
-          "lowestPetHp": 73
-        },
-        {
-          "label": "Grik the Hoarder",
-          "level": 1,
-          "seconds": 14.65,
-          "startingLevel": 1,
-          "startingHealth": 132,
-          "endingHealth": 132,
-          "startingMana": 125,
-          "endingMana": 93,
-          "lowestPetHp": 49
-        },
-        {
-          "label": "Bramblemaw",
-          "level": 3,
-          "seconds": 14.65,
-          "startingLevel": 2,
-          "startingHealth": 158,
-          "endingHealth": 172,
-          "startingMana": 155,
-          "endingMana": 201,
-          "lowestPetHp": 57
-        },
-        {
-          "label": "The Bonewarden",
-          "level": 4,
-          "seconds": 16.4,
-          "startingLevel": 3,
-          "startingHealth": 182,
-          "endingHealth": 196,
-          "startingMana": 199,
-          "endingMana": 236,
-          "lowestPetHp": 70
-        }
-      ],
-      "milestones": [
-        {
-          "quest": "griks-talisman",
-          "level": 2,
-          "kills": 4,
-          "copper": 114
-        },
-        {
-          "quest": "mossfang",
-          "level": 3,
-          "kills": 5,
-          "copper": 114
-        },
-        {
-          "quest": "crypt-proof",
-          "level": 4,
-          "kills": 6,
-          "copper": 229
-        }
-      ],
-      "interruptions": 4,
-      "travelSeconds": 61.14999999999866,
-      "seed": 73,
-      "companion": "Air",
-      "classId": "druid",
-      "recovery": {
-        "validated": true,
-        "debtAdded": 41,
-        "levelRetained": 3,
-        "itemsRetained": 6
-      },
-      "completed": true,
-      "final": {
-        "level": 4,
-        "kills": 6,
-        "gold": 229,
-        "equipment": {
-          "charm": "warden-boneguard",
-          "focus": "apprentice-focus",
-          "ring": "ring-of-bound-earth",
-          "garb": "worn-linen-robe"
-        },
-        "inventory": [
-          "worn-linen-robe",
-          "goblin-talisman",
-          "griks-lucky-charm",
-          "apprentice-focus",
-          "ring-of-bound-earth",
-          "mosswoven-mantle",
-          "warden-boneguard"
-        ]
-      }
-    },
-    {
-      "fights": [
-        {
-          "label": "Goblin Scout",
-          "level": 1,
-          "seconds": 7.35,
-          "startingLevel": 1,
-          "startingHealth": 120,
-          "endingHealth": 120,
-          "startingMana": 102,
-          "endingMana": 69,
-          "lowestPetHp": 73
-        },
-        {
-          "label": "Goblin Raider",
-          "level": 1,
-          "seconds": 7.35,
-          "startingLevel": 1,
-          "startingHealth": 120,
-          "endingHealth": 120,
-          "startingMana": 122,
-          "endingMana": 90,
-          "lowestPetHp": 64
-        },
-        {
-          "label": "Goblin Shaman",
-          "level": 1,
-          "seconds": 6.85,
-          "startingLevel": 1,
-          "startingHealth": 120,
-          "endingHealth": 120,
-          "startingMana": 126,
-          "endingMana": 92,
-          "lowestPetHp": 73
-        },
-        {
-          "label": "Grik the Hoarder",
-          "level": 1,
-          "seconds": 14.65,
-          "startingLevel": 1,
-          "startingHealth": 120,
-          "endingHealth": 120,
-          "startingMana": 125,
-          "endingMana": 93,
-          "lowestPetHp": 49
-        },
-        {
-          "label": "Bramblemaw",
-          "level": 3,
-          "seconds": 14.65,
-          "startingLevel": 2,
-          "startingHealth": 158,
-          "endingHealth": 172,
-          "startingMana": 155,
-          "endingMana": 201,
-          "lowestPetHp": 57
-        },
-        {
-          "label": "The Bonewarden",
-          "level": 4,
-          "seconds": 16.4,
-          "startingLevel": 3,
-          "startingHealth": 182,
-          "endingHealth": 196,
-          "startingMana": 199,
-          "endingMana": 236,
-          "lowestPetHp": 70
-        }
-      ],
-      "milestones": [
-        {
-          "quest": "griks-talisman",
-          "level": 2,
-          "kills": 4,
-          "copper": 117
-        },
-        {
-          "quest": "mossfang",
-          "level": 3,
-          "kills": 5,
-          "copper": 118
-        },
-        {
-          "quest": "crypt-proof",
-          "level": 4,
-          "kills": 6,
-          "copper": 233
-        }
-      ],
-      "interruptions": 4,
-      "travelSeconds": 61.14999999999866,
-      "seed": 2026,
-      "companion": "Air",
-      "classId": "druid",
-      "recovery": {
-        "validated": true,
-        "debtAdded": 41,
-        "levelRetained": 3,
-        "itemsRetained": 5
-      },
-      "completed": true,
-      "final": {
-        "level": 4,
-        "kills": 6,
-        "gold": 233,
-        "equipment": {
-          "charm": "warden-boneguard",
-          "focus": "apprentice-focus",
-          "ring": "ring-of-bound-earth",
-          "garb": "worn-linen-robe"
         },
         "inventory": [
           "worn-linen-robe",

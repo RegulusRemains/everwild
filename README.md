@@ -1,8 +1,8 @@
 # Everwild
 
-**Version 0.10.0 — motion and impact**
+**Version 0.11.0 — distinct paths and choir magic**
 
-Everwild is a solo fantasy RPG about exploring a dangerous frontier as a Magician, Necromancer, or Druid with a summoned companion. Explore five habitats and eight camps, from Willowmere’s forest and crypt to golden downs, marshland, frozen ruins, and volcanic barrens. Collect equipment and grow an earth or air pet into the center of your combat strategy.
+Everwild is a solo fantasy RPG about exploring a dangerous frontier as a Magician, Necromancer, or Druid with a summoned companion. Explore five habitats and eight camps, from Willowmere’s forest and crypt to golden downs, marshland, frozen ruins, and volcanic barrens. Collect magical equipment and develop your class’s approach to companions, control, survival, and damage.
 
 The game runs entirely in your browser with HTML, CSS, and JavaScript. It has no runtime dependencies, account requirement, or server-side game state.
 
@@ -12,13 +12,15 @@ Start at character selection, create a named adventurer, or return to an existin
 
 | Class | Strength | Tradeoff |
 | --- | --- | --- |
-| Magician | Balanced elementals and strong direct damage | Standard healing and control |
-| Necromancer | 35% stronger damage over time; Siphon Life heals 30% of damage dealt; harder-hitting undead | Less personal and companion health; weaker direct damage and healing |
-| Druid | 4-second longer roots, 30% stronger healing, durable wild companions | Gentler direct damage and pet strikes |
+| Magician | Permanent Earth/Air elementals, strong direct damage and explosive area damage | Relies on companion positioning and mana management |
+| Necromancer | Siphon Life restores health; Dark Pact trades health for mana; Blight Bloom consumes rot for burst damage; ranged Shade | Lower health, fragile undead, and deliberate health/mana risk |
+| Druid | Temporary Briar Stag, Wild Stride sprint, Rejuvenation over time, Barkskin thorns, stationary healing sanctuary | Must renew the guardian and position inside the sanctuary; weaker direct damage |
 
 The default desktop camera now shows roughly 520 world units vertically, bringing characters and combat closer. **Esc → Camera zoom** adjusts it. Enemies no longer reset when they cross a camp radius: kite across the frontier with roots, slows, and damage over time. They abandon pursuit after losing both you and your companion by over 1000 paces for 10 seconds without an active damage-over-time effect. Willowmere remains a safe refuge. Pets can remain engaged up to 900 paces from you. Outside combat they lag behind your recent path, react after you move away, catch up when distant, and settle nearby rather than occupying a fixed offset.
 
-Biome borders follow warped, blended regional shapes. Groves, clearings, mixed ground, pools, grass, fallen logs, fungi, reeds, ice outcrops, boulders, vents, and charred stumps break up the old uniform scatter. All three classes now have four-frame walking cycles and gather/channel/release casting sequences. Walking follows distance traveled, with surface-specific footsteps; interrupted casts return to movement. New spell buildup, luminous projectile trails, impact bursts, and class colors accompany designed one-shot sounds: fire roars, crystalline cracks, grave pulses, wood snaps, and material impacts. Sustained bodies replace the old rapidly fading oscillator chirps; cached variants, stereo positioning, short reflections, compression, and an output ceiling keep the mix consistent. Sound starts after your first interaction unless previously muted; **Esc → Effects / Effects volume** controls it; **Test effects** plays the current class’s release and impact sounds.
+Biome borders follow warped, blended regional shapes. Groves, clearings, mixed ground, pools, grass, fallen logs, fungi, reeds, ice outcrops, boulders, vents, and charred stumps break up the old uniform scatter. All three classes now have four-frame walking cycles and gather/channel/release casting sequences. Walking follows distance traveled, with surface-specific footsteps; interrupted casts return to movement. Spell buildup, luminous projectile trails, impact bursts, and class colors accompany soft sustained **“ah” choir** magic, warm bells, and gentle plucks. Additive vowel formants, slow vibrato, and long fades create a relaxed retro fantasy sound. The source bank and filtered delay reverb contain no noise layer. Footsteps and impacts sit below the spell choir. Sound starts after your first interaction unless previously muted; **Esc → Effects / Effects volume** controls it; **Test effects** previews the current class’s release and impact sounds. [Audio measurements](docs/AUDIO_REVIEW.json) verify tonality and output behavior, rather than claiming a listening preference.
+
+Dark Pact has a 10-second cooldown and cannot kill its caster. Blight Bloom requires active Grave Rot and consumes 60% of its remaining damage as additional burst. Briar Stag lasts 30 seconds at rank 1; Wild Stride grants 45% movement speed for 8 seconds on a 20-second cooldown. Rejuvenation delivers five healing pulses over 10 seconds. Verdant Sanctuary forms at your feet, roots nearby enemies once, and heals you and your companion only while inside its circle. Cooldowns appear on the hotbar.
 
 ## Beyond the old road
 
@@ -28,8 +30,8 @@ The map is now **4200 × 2600**, over four times its original area. The original
 | --- | --- | --- | --- |
 | Amberfall Downs | Crownfang Den / fast wolves | 3–4 | Crownfang’s Signet: +12% pet strike damage |
 | Lantern Mire | Lanternfen Shrine / durable beetles | 5–6 | Lanternheart: recover 8 health per credited kill |
-| Rimeglass Reach | Rimeglass Spire / ranged wisps | 8–9 | Rimeglass Focus: +25% Frost Lance damage |
-| Cinderwake Barrens | Cinderwake Forge / heavy drakes | 10–11 | Ashwake Mantle: Nova radius 135 instead of 100 |
+| Rimeglass Reach | Rimeglass Spire / ranged wisps | 8–9 | Rimeglass Focus: +25% slowing-strike damage |
+| Cinderwake Barrens | Cinderwake Forge / heavy drakes | 10–11 | Ashwake Mantle: Area-skill radius 135 instead of 100 |
 
 There are **24 equipment items**: twelve new finds include eight common pieces with stat tradeoffs and four named relics. Each new camp has its own common loot table, named drop, landmark, habitat texture, tree species, and marked special attack. Rowan and Liora offer the new hunts as earlier assignments progress. Open the map [M] and camp notes for routes and drop sources.
 
@@ -37,9 +39,9 @@ Trees now ease into transparency near your party and recover smoothly afterward.
 
 ## Clothing worth keeping
 
-Your first ordinary victory guarantees a **Worn Linen Robe**. It adds mana and spell power in a new **garb** slot. A **Waxed Travel Cloak** trades mana for health. Liora rewards the Mossfang assignment with a **Mosswoven Mantle**: more health and 25% stronger Pet Mend, at the cost of the linen robe’s mana and power. Older completed assignments receive the new item once without replaying experience or copper.
+Your first ordinary victory guarantees a **Worn Linen Robe**. It adds mana and spell power in a new **garb** slot. A **Waxed Travel Cloak** trades mana for health. Liora rewards the Mossfang assignment with a **Mosswoven Mantle**: more health and 25% stronger companion healing, at the cost of the linen robe’s mana and power. Older completed assignments receive the new item once without replaying experience or copper.
 
-Othrek can also drop an **Emberwoven Robe** with a 25% additional chance: 15% more fire-spell damage, mana and spell power, but 10 less maximum health. Camp notes show both his guaranteed focus and this optional robe. Comparisons explain negative stats and lost properties before you swap.
+Othrek can also drop an **Emberwoven Robe** with a 25% additional chance: 15% more primary-strike, affliction, and damaging-burst power, mana and spell power, but 10 less maximum health. Camp notes show both his guaranteed focus and this optional robe. Comparisons explain negative stats and lost properties before you swap. Equipment properties apply by ability role across classes; inventory names the current class’s matching abilities. Ashwake also widens the Druid’s healing sanctuary.
 
 The first expedition now has a closing journal card and villagers who react to your progress. The [completion audit](docs/FIRST_EXPEDITION_AUDIT.md) links each acceptance criterion to its verification, and the [development plan](docs/DEVELOPMENT_PLAN.md) records future scope.
 

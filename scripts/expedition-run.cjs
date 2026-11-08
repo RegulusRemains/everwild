@@ -4,7 +4,7 @@
 const assert = require('node:assert/strict');
 const { Game, SPELLS, ITEMS, WORLD } = require('../src/engine.js');
 function runExpedition(seed = 42, companion = 'Earth', verifyRecovery = true, includeSave = false, classId = 'magician') {
-  assert.ok(['Earth', 'Air'].includes(companion));
+  assert.ok((classId==='druid'?['Stag']:['Earth','Air']).includes(companion));
   const companionSpell = companion === 'Air' ? 5 : 0;
   let state = seed >>> 0;
   const random = () => { state = (Math.imul(state, 1664525) + 1013904223) >>> 0; return state / 4294967296; };
@@ -36,6 +36,8 @@ function runExpedition(seed = 42, companion = 'Earth', verifyRecovery = true, in
     for (let attempts=0;mob.alive && attempts<80;attempts++) {
       if (!game.pet) assert.ok(cast(companionSpell),'Cannot replace lost companion '+label+' '+game.player.mp+' '+game.logs.slice(-12).map(l=>l.text).join(' | '));
       lowestPet=Math.min(lowestPet,game.pet.hp);
+      if(classId==='necromancer'&&game.player.mp<30&&game.player.hp>game.player.maxHp*.65&&game.spellCooldownRemaining(7)===0&&cast(7))continue;
+      if(classId==='druid'&&game.player.hp<game.player.maxHp*.65&&!game.regeneration&&cast(7))continue;
       if (mob.intent && game.player.mp>=SPELLS[3].cost && cast(3)) { report.interruptions++; continue; }
       if (game.pet.hp < game.pet.maxHp*.55 && game.player.mp>=SPELLS[4].cost && cast(4)) continue;
       if (game.pet.tauntReadyAt<=game.clock) game.commandPet('taunt');
