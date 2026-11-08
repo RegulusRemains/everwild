@@ -1,10 +1,29 @@
 # Everwild
 
-**Version 0.11.0 — distinct paths and choir magic**
+**Version 0.12.0 — deliberate combat and fourteen paths**
 
-Everwild is a solo fantasy RPG about exploring a dangerous frontier as a Magician, Necromancer, or Druid with a summoned companion. Explore five habitats and eight camps, from Willowmere’s forest and crypt to golden downs, marshland, frozen ruins, and volcanic barrens. Collect magical equipment and develop your class’s approach to companions, control, survival, and damage.
+Everwild is a solo fantasy RPG about exploring a dangerous frontier. Choose from **14 classes**: Magician, Necromancer, Druid, Enchanter, Shaman, Warrior, Rogue, Monk, Ranger, Paladin, Shadowknight, Cleric, Bard, and Wizard. Explore five habitats and eight camps, collect magical equipment, and build a strategy around control, attrition, companions, weapons, or restoration.
 
 The game runs entirely in your browser with HTML, CSS, and JavaScript. It has no runtime dependencies, account requirement, or server-side game state.
+
+## Slower, tactical encounters
+
+Combat now leaves time for sustained effects and decisions. Across 48 seeded fresh-character expedition routes, ordinary fights have a **20.7-second median** and named fights a **52.5-second median**. These simulation measurements include combat movement and preparation; individual classes and encounters vary. [Measured results](docs/CLASS_BALANCE.json) include the full range.
+
+Ordinary health increased 3.8× and named health 2.8× from v0.11, while enemy hit damage fell 20%. DoTs are more efficient than repeated direct casts, companions have more endurance, and resource recovery supports longer fights. Named healing is less frequent and restores a smaller fraction. Root buys positioning and recovery time; nearby rooted enemies still attack. Interrupt marked attacks or leave their ground warning.
+
+**F** starts weapon attacks for melee and hybrid classes and approaches the target. **G** stops, **C** holds position, and **Q** challenges within 85 paces. Manual movement cancels automatic pursuit. Weapon attacks only hit within actual range; most weapon abilities require 60 paces. Ranger bow attacks reach 270 paces. Weapon strikes build combo stacks used by finishers. The spellbook [B] prepares any eight unlocked abilities and shows costs, cooldowns, range and rank previews.
+
+## Expanded class roster
+
+| Path | Classes | Defining mechanics |
+| --- | --- | --- |
+| Control and attrition | Enchanter, Shaman, Necromancer | Damage-breaking mez and temporary charm; stacked poison/disease and attack slow; health-to-mana and rot detonation |
+| Weapons | Warrior, Rogue, Monk | Defensive Resolve finishers; stealth openers and combo points; Focus, kicks and feigned death |
+| Hybrids | Ranger, Paladin, Shadowknight, Bard | Bow kiting and temporary hawk; Conviction healing and consecration; draining weapons and a shade; mutually exclusive songs |
+| Spellcraft and restoration | Magician, Wizard, Druid, Cleric | Permanent elementals; fragile ranged burst and Blink; timed stag, regeneration and sanctuary; barriers, holy DoTs and powerful healing |
+
+Every class has ten abilities, rank upgrades, its own character identity, class guide and saved progression. The 11 new classes have individual illustrated characters and selection portraits, with new guardian/shade/hawk/wolf art. Their motion uses rendered lean, bob, wing and strike transforms; the original three classes keep their authored four-frame walk/cast sequences. [Class designs and ability tables](docs/CLASS_DESIGN.md) document the full kits and current presentation limits.
 
 ## Characters, classes, and roaming combat
 
@@ -51,7 +70,7 @@ The world now includes illustrated camp tents, shaman totems, crypt entrances, r
 
 Summoning circles, a persistent shield, pet-mend connections, frost crystals, melee arcs, and final-pass attack warnings make combat easier to read. The HUD keeps health, mana, companion status, a compact top-edge target, and icon spell slots visible. Character details, quests, map, combat log, and instructions live in menus. The game fills the window at desktop, 4K, ultrawide, and phone sizes; Esc offers HUD sizing, camera zoom, and fullscreen (also Alt+Enter).
 
-Combat tuning is based on a reproducible fresh-character run: ordinary fights take about 6–9 seconds and named fights about 13–18 seconds using supported pet tactics, healing, interrupts, gear, and consumables. Both Earth and Air builds complete the entire quest chain across three seeded runs, including a deliberate unprotected death, revival with retained progression, and save/reload before the crypt. These are simulation measurements, not a measure of how long a human expedition takes. Run `npm run test:journey` or inspect [the results](docs/EXPEDITION_BALANCE.json).
+Combat tuning is based on a reproducible fresh-character run: ordinary fights now have a measured median near 21 seconds and named fights near 53 seconds using supported pet tactics, healing, interrupts, gear, and consumables. All 14 classes complete the entire quest chain across three seeded runs, including a deliberate unprotected death, revival with retained progression, and save/reload before the crypt. These are simulation measurements, not a measure of how long a human expedition takes. Run `npm run test:journey` or inspect [the results](docs/EXPEDITION_BALANCE.json).
 
 ## Illustrated Willowmere
 

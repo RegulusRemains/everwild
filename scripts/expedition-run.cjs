@@ -32,18 +32,24 @@ function runExpedition(seed = 42, companion = 'Earth', verifyRecovery = true, in
     assert.ok(mob?.alive, 'Missing encounter '+label);
     const start=game.clock, startHp=game.player.hp, startMana=game.player.mp, startLevel=game.player.level;
     let lowestPet=game.pet.hp;
-    game.setTarget(mob.id); assert.ok(game.commandPet('attack').ok); tick(1.5);
+    game.setTarget(mob.id);
+    if(classId==='druid'&&mob.campId==='crypt'){cast(2);game.commandPet('follow');game.moveTo(game.player.x,game.player.y+100);while(game.moveTarget)tick(.05);tick(1);}
+    assert.ok(game.commandPet('attack').ok); tick(1.5);
     for (let attempts=0;mob.alive && attempts<80;attempts++) {
+      if(!game.pet&&game.player.mp<game.spells[companionSpell].cost){if(mob.rootUntil<=game.clock&&game.player.mp>=game.spells[3].cost)cast(3);if(mob.rootUntil>game.clock){game.toggleMeditate();tick(3);game.toggleMeditate();}else tick(1);continue;}
       if (!game.pet) assert.ok(cast(companionSpell),'Cannot replace lost companion '+label+' '+game.player.mp+' '+game.logs.slice(-12).map(l=>l.text).join(' | '));
+      if(!game.pet.targetId)game.commandPet('attack');
       lowestPet=Math.min(lowestPet,game.pet.hp);
       if(classId==='necromancer'&&game.player.mp<30&&game.player.hp>game.player.maxHp*.65&&game.spellCooldownRemaining(7)===0&&cast(7))continue;
       if(classId==='druid'&&game.player.hp<game.player.maxHp*.65&&!game.regeneration&&cast(7))continue;
       if (mob.intent && game.player.mp>=SPELLS[3].cost && cast(3)) { report.interruptions++; continue; }
+      if(mob.intent){const intent=mob.intent,dx=game.player.x-intent.x,dy=game.player.y-intent.y,d=Math.hypot(dx,dy)||1;if(d<intent.radius+25){game.moveTo(intent.x,intent.y+intent.radius+50);while(game.moveTarget)tick(.05);continue;}}
       if (game.pet.hp < game.pet.maxHp*.55 && game.player.mp>=SPELLS[4].cost && cast(4)) continue;
       if (game.pet.tauntReadyAt<=game.clock) game.commandPet('taunt');
       if (game.player.hp<game.player.maxHp*.45) game.useSupply('health-tonic');
       if (game.player.mp<SPELLS[1].cost) game.useSupply('mana-tonic');
       if (mob.dotUntil <= game.clock && game.player.mp >= SPELLS[2].cost && mob.hp > game.spellProfile(1).damage * 2) { cast(2); continue; }
+      if(game.player.mp<80&&game.pet&&mob.dotUntil>game.clock){tick(1);continue;}
       if (!cast(1)) tick(.5);
     }
     assert.ok(!mob.alive,'Encounter did not finish: '+label);

@@ -1,13 +1,13 @@
 /* Everwild — Willowmere Frontier. Deterministic, DOM-free game simulation. */
 (function (root, factory) {
   'use strict';
-  const api = factory();
+  const api = factory(typeof module === 'object' && module.exports ? require('./roster.js') : root.EverwildRoster);
   if (typeof module === 'object' && module.exports) module.exports = api;
   root.Everwild = api;
-})(typeof globalThis !== 'undefined' ? globalThis : this, function () {
+})(typeof globalThis !== 'undefined' ? globalThis : this, function (expandedRoster) {
   'use strict';
 
-  const VERSION = '0.11.0';
+  const VERSION = '0.12.0';
   const WORLD = Object.freeze({ w: 4200, h: 2600, spawn: Object.freeze({ x: 260, y: 250 }), bindstone: Object.freeze({ x: 202, y: 214 }) });
   const BIOMES = Object.freeze([
     { id:'willowmere', name:'Willowmere Woodland', x:0, y:0, w:1850, h:2600, color:'#46633e', level:1 },
@@ -72,6 +72,7 @@
     { id: 'ember-nova', name: 'Ember Nova', cost: 38, cast: 2.6, key: '', unlockLevel: 5, description: 'Burst into flame around your selected enemy, damaging foes within 100 paces. Nearby allies may join the fight.' }
   ].map((spell,index) => Object.freeze({ unlockLevel: 1, target:[1,2,3,8,9].includes(index)?'enemy':index===4?'companion':'self', role:['durable-companion','strike','affliction','root','companion-heal','swift-companion','ward','heal','slow-strike','burst'][index], ...spell })));
   const CLASSES = Object.freeze({
+    ...expandedRoster,
     magician:Object.freeze({id:'magician',name:'Magician',role:'Elemental command',description:'Powerful direct spells and sturdy elementals. The original balanced pet caster.',color:'#c4b174',hp:110,mp:160,hpStep:13,mpStep:18,direct:1,dot:1,healing:1,root:0,petHp:1,petDamage:1,drain:0,primaryPet:'Earth Elemental',secondaryPet:'Air Elemental'}),
     necromancer:Object.freeze({id:'necromancer',name:'Necromancer',role:'Attrition and life drain',description:'Drain life to recover health, trade health for mana with Dark Pact, and consume Grave Rot with Blight Bloom. Boneguard tanks; Shade attacks at range.',color:'#b999c9',hp:92,mp:175,hpStep:11,mpStep:20,direct:.85,dot:1.35,healing:.85,root:0,petHp:.8,petDamage:1.12,drain:.3,primaryPet:'Boneguard',secondaryPet:'Shade'}),
     druid:Object.freeze({id:'druid',name:'Druid',role:'Roots and restoration',description:'Kite with roots and Wild Stride, recover through Rejuvenation, and defend a healing sanctuary. Your Briar Stag is a temporary guardian; Barkskin retaliates with thorns.',color:'#a9bf82',hp:120,mp:145,hpStep:14,mpStep:17,direct:.85,dot:1,healing:1.3,root:4,petHp:1.15,petDamage:.88,drain:0,primaryPet:'Briar Stag',secondaryPet:'Wild Stride',companionStyle:'Briar Stag · temporary guardian'})
@@ -91,7 +92,7 @@
       9:{id:'verdant-sanctuary',role:'sanctuary',target:'self',cost:38,description:'Create a stationary 10-second sanctuary at your feet. It heals you and your companion every 2 seconds while inside. Nearby foes are rooted when it forms.'}
     }
   };
-  const CLASS_SPELLS=Object.freeze(Object.fromEntries(Object.values(CLASSES).map(cls=>[cls.id,cls.id==='magician'?SPELLS:Object.freeze(SPELLS.map((spell,i)=>Object.freeze({...spell,name:classSpellNames[cls.id][i],description:[
+  const CLASS_SPELLS=Object.freeze(Object.fromEntries(Object.values(CLASSES).map(cls=>[cls.id,cls.skills?cls.skills:cls.id==='magician'?SPELLS:Object.freeze(SPELLS.map((spell,i)=>Object.freeze({...spell,name:classSpellNames[cls.id][i],description:[
     'Summon your durable '+cls.primaryPet+'. Order it to attack with F; recall it with G.',
     cls.id==='necromancer'?'Drain life from your enemy, restoring 30% of damage dealt as health. Range: 330 paces.':'Strike your enemy with focused sunlight. Range: 330 paces.',
     'Afflict your enemy with '+(cls.id==='necromancer'?'grave rot':'creeping briars')+' every two seconds for 14 seconds.',
@@ -160,6 +161,7 @@
       this.moveTarget = null;
       this.meditate = false;
       this.shieldUntil = 0;
+      this.skillReadyAt={};this.barrier=0;this.barrierUntil=0;this.autoAttack=false;this.autoChase=false;this.weaponReadyAt=0;this.combo=0;this.song=null;this.hasteUntil=0;this.focusUntil=0;this.evasionUntil=0;this.stealthUntil=0;this.feignUntil=0;this.clarityUntil=0;
       this.supplyReadyAt = 0;this.pactReadyAt=0;this.strideReadyAt=0;this.strideUntil=0;this.regeneration=null;this.sanctuary=null;
       this.logs = [];
       this.effects = [];
@@ -217,6 +219,7 @@
         this.log('Liora’s Mosswoven Mantle has been added for your completed Mossfang assignment. Inspect it in your pack.', 'rare');
       }
       this.supplyReadyAt = numeric(data.supplyCooldownRemaining, 0, 0, SUPPLY_COOLDOWN);
+      for(const [id,remaining]of Object.entries(data.skillCooldowns||{}))if(this.spells.some(a=>a.id===id))this.skillReadyAt[id]=numeric(remaining,0,0,120);
       this.pactReadyAt=numeric(data.pactCooldownRemaining,0,0,10);this.strideReadyAt=numeric(data.strideCooldownRemaining,0,0,20);
       this._refreshStats();
       this.player.hp = numeric(source.hp, this.player.maxHp, 0, this.player.maxHp);
@@ -324,12 +327,14 @@
     }
 
     spellCooldownRemaining(index){
-      const role=this.spells[index]?.role;return Math.max(0,(role==='mobility'?this.strideReadyAt:role==='resource-conversion'?this.pactReadyAt:0)-this.clock);
+      const ability=this.spells[index];if(ability?.kind)return Math.max(0,(this.skillReadyAt[ability.id]||0)-this.clock);
+      const role=ability?.role;return Math.max(0,(role==='mobility'?this.strideReadyAt:role==='resource-conversion'?this.pactReadyAt:0)-this.clock);
     }
 
     spellProfile(index, rank = this.player.spellRanks[index]) {
       if (!Number.isInteger(index) || index < 0 || index >= this.spells.length) return null;
       rank = whole(rank, 1, 1, 3);
+      if(this.spells[index].kind)return this._expandedProfile(index,rank);
       const cls=this.characterClass;
       const level = this.player.level, power = this.player.power, bonus = 1 + (rank - 1) * 0.15;
       const binding = this.hasEquipped('othreks-focus') ? 3 : 0;
@@ -346,7 +351,7 @@
       }
       if (index === 0 || index === 5) {
         const earth = index === 0;
-        profile.petHp = Math.round((earth ? 95 + level * 19 : 65 + level * 14) * bonus * cls.petHp);
+        profile.petHp = Math.round((earth ? 95 + level * 19 : 65 + level * 14) * bonus * cls.petHp * 1.3);
         profile.petDamage = Math.round((earth ? 10 + level * 4 : 14 + level * 5) * (1 + (rank - 1) * 0.12) * cls.petDamage);
         profile.petRange=cls.id==='necromancer'&&!earth?180:35;profile.petInterval=cls.id==='necromancer'&&!earth?2.4:earth?1.65:1.45;profile.petDuration=cls.id==='druid'?30+(rank-1)*5:0;
         profile.summary = `${profile.petHp} pet health · ${Math.round(profile.petDamage*(this.hasEquipped('crownfang-ring')?1.12:1))} damage per strike · ${profile.petInterval}s between strikes${profile.petRange>35?' · 180-pace range':''}${profile.petDuration?' · lasts '+profile.petDuration+'s':''}`;
@@ -357,7 +362,7 @@
         profile.radius = this.hasEquipped('ashwake-mantle') ? 135 : 100;
         profile.summary = `${profile.damage} damage${index === 8 ? ' · slows movement for ' + profile.slow + 's' : index === 9 ? ' per enemy within ' + profile.radius + ' paces' : ' to one enemy'}${profile.detonate?' + 60% of remaining rot · consumes the rot':''}${profile.lifeDrain?' · restores '+Math.round(profile.lifeDrain*100)+'% of damage dealt as health':''}`;
       } else if (index === 2) {
-        profile.tickDamage = Math.round((7 + level * 2 + power * 0.4) * bonus * damageBonus * cls.dot);
+        profile.tickDamage = Math.round((7 + level * 2 + power * 0.4) * bonus * damageBonus * cls.dot * 1.35);
         profile.summary = `${profile.tickDamage} damage every 2s for 14s · reapplying refreshes the mark`;
       } else if (index === 3) {
         profile.root = 9 + (rank - 1) * 2 + binding + cls.root;
@@ -372,6 +377,103 @@
         profile.summary = `Absorbs ${profile.shield}% of incoming damage for ${profile.duration}s${profile.thorns?' · retaliates for '+profile.thorns+' damage per hit':''}`;
       }
       return profile;
+    }
+
+    _expandedProfile(index,rank=1){
+      const a=this.spells[index],c=this.characterClass,l=this.player.level,power=this.player.power,b=1+(rank-1)*.15;
+      const damageRole=['weapon','drain-strike','stun-strike','ambush'].includes(a.kind)?'strike':['bleed','disease'].includes(a.kind)?'affliction':['finisher','volley'].includes(a.kind)?'burst':a.kind;
+      const itemBonus=Object.values(this.player.equipment).reduce((v,id)=>v*(ITEMS[id]?.damageRoles?.includes(damageRole)?ITEMS[id].damageMultiplier:1),1);
+      const p={rank,damage:Math.round((23+l*8+power)*b*(a.scale||1)*c.direct*itemBonus*(c.martial?(['rogue','monk'].includes(c.id)?.58:.7):1)),tickDamage:Math.round((7+l*2+power*.4)*b*c.dot*itemBonus),heal:Math.round((40+l*10+power)*b*c.healing*(a.healScale||1)),healTick:Math.round((6+l*2+power*.25)*b*c.healing),duration:a.duration||10,radius:this.hasEquipped('ashwake-mantle')?135:100,root:9+(rank-1)*2+(this.hasEquipped('othreks-focus')?3:0),slow:10+(this.hasEquipped('othreks-focus')?3:0),shield:this.hasEquipped('warden-boneguard')?55:45,barrier:Math.round((48+l*13+power)*b),petHp:Math.round((95+l*19)*c.petHp*b),petDamage:Math.round((9+l*3)*c.petDamage*b),petInterval:1.8,healthCost:Math.ceil(this.player.maxHp*.18),mana:Math.round((38+l*4)*b)};
+      let detail='';const k=a.kind;
+      if(['strike','weapon','drain-strike','stun-strike','slow-strike','ambush','finisher','mana-tap','charge','volley'].includes(k))detail=p.damage+' damage'+(k==='finisher'?' · requires 3 '+this.comboName:'')+(k==='ambush'?' · requires Hide':'')+(k==='slow-strike'?' · '+p.slow+'s movement slow':'')+(k==='drain-strike'?' · restores '+Math.round((a.drain||.5)*100)+'% as health':'')+(k==='stun-strike'?' · '+p.duration+'s stun':'');
+      else if(['affliction','bleed','disease'].includes(k))detail=p.tickDamage+' damage every 2s for '+(k==='disease'?18:14)+'s'+(k==='bleed'?' + '+p.damage+' initial damage':'');
+      else if(k==='root')detail=p.root+'s root · interrupts special attacks';
+      else if(k==='heal'||k==='combo-heal')detail='Up to '+p.heal+' health'+(k==='combo-heal'?' · requires 3 '+this.comboName:'');
+      else if(k==='regeneration')detail=p.healTick+' health every 2s for 10s';
+      else if(k==='barrier'||k==='last-stand')detail=p.barrier+' damage absorbed for 24s'+(k==='last-stand'?' + '+p.heal+' health':'');
+      else if(k==='ward')detail=p.shield+'% mitigation for '+p.duration+'s';
+      else if(k==='pact')detail=p.healthCost+' health → up to '+p.mana+' '+(c.resource||'mana');
+      else if(k==='summon')detail=p.petHp+' companion health · '+p.petDamage+' damage / '+p.petInterval+'s'+(a.duration?' · '+a.duration+'s guardian':' · permanent until defeated');
+      else if(k==='sanctuary'||k==='consecration')detail=p.radius+'-pace field · '+p.healTick+' healing every 2s for 10s'+(k==='consecration'?' · '+p.tickDamage+' damage per pulse':'');
+      else detail=a.description;
+      p.summary=detail+(a.range<=60?' · melee range':'')+(a.cooldown?' · '+a.cooldown+'s cooldown':'');return p;
+    }
+
+    get comboName(){return({rogue:'combo points',monk:'Focus',paladin:'Conviction',bard:'combo points'})[this.player.classId]||'Resolve';}
+
+    _expandedRequirement(index,t=this.selected){
+      const a=this.spells[index],p=this._expandedProfile(index,this.player.spellRanks[index]);
+      if(['finisher','combo-heal'].includes(a.kind)&&this.combo<3)return 'Build 3 '+this.comboName+' before using '+a.name+'.';
+      if(a.kind==='ambush'&&this.stealthUntil<=this.clock)return 'Use Hide before Ambush.';
+      if(a.kind==='stealth'&&this.inCombat)return 'You cannot hide during combat.';
+      if(a.kind==='pact'&&(this.player.hp<=p.healthCost||this.player.mp>=this.player.maxMp))return 'You need spare health and missing mana to make this trade.';
+      if(a.kind==='charm'&&(!t||t.named||t.hp>t.maxHp*.5||t.charmedUntil>this.clock))return 'Beguile requires an ordinary enemy below half health.';
+      if(a.kind==='mana-restore'&&this.player.mp>=this.player.maxMp)return 'Your mana is already full.';
+      if(a.target==='enemy'&&t?.charmedUntil>this.clock)return 'That enemy is your charmed ally.';
+      return '';
+    }
+
+    _executeExpanded(index,target){
+      const a=this.spells[index],p=this.spellProfile(index),k=a.kind,c=this.characterClass,now=this.clock;
+      const damage=(m,amount)=>{if(!m?.alive||m.returning||m.charmedUntil>this.clock)return;const actual=Math.min(m.hp,amount);this.stealthUntil=0;this.feignUntil=0;this._visual(a.range<=60?'melee':'bolt',m,{fromX:this.player.x,fromY:this.player.y,color:c.color,radius:26,life:.5});this._damageMob(m,amount,'player');if(a.drain&&this.player.hp<this.player.maxHp)this._heal(this.player,Math.round(actual*a.drain));};
+      if(['weapon','drain-strike','ambush','finisher','stun-strike','slow-strike','strike','mana-tap'].includes(k)){
+        if(k==='finisher')this.combo-=3;else if(c.martial)this.combo=Math.min(5,this.combo+1);
+        damage(target,p.damage);
+        if(k==='stun-strike'){target.stunUntil=now+p.duration;target.intent=null;target.attackAt=now+p.duration;}
+        if(k==='slow-strike')target.slowUntil=now+p.slow;
+        if(k==='mana-tap')this.player.mp=Math.min(this.player.maxMp,this.player.mp+p.mana*.5);
+      }else if(['affliction','bleed','disease'].includes(k)){
+        if(k==='bleed')damage(target,p.damage);if(k==='disease'){target.diseaseUntil=now+18;target.diseaseAt=now+2;target.diseaseDamage=p.tickDamage;}else{target.dotUntil=now+14;target.dotAt=now+2;target.dotDamage=p.tickDamage;target.dotSchool=c.id;}this._engage(target,'player',8,true);
+      }else if(k==='root'||k==='pull'){
+        if(k==='pull'&&!target.named){const d=distance(target,this.player);target.x=this.player.x+(target.x-this.player.x)/Math.max(1,d)*65;target.y=this.player.y+(target.y-this.player.y)/Math.max(1,d)*65;}
+        target.rootUntil=now+(k==='pull'?4:p.root);target.intent=null;target.abilityReadyAt=now+8;this._engage(target,'player',8,true);this._visual('root',target,{color:c.color,life:.8});
+      }else if(k==='attack-slow'){target.attackSlowUntil=now+p.duration;target.intent=null;target.abilityReadyAt=now+8;this._engage(target,'player',8,true);this._effect(target,'Attack slowed',c.color);
+      }else if(['mez','aoe-mez','smoke'].includes(k)){
+        const center=k==='smoke'?this.player:target;const victims=k==='mez'?[target]:this.mobs.filter(m=>m.alive&&!m.returning&&!(m.charmedUntil>now)&&distance(m,center)<=p.radius);
+        for(const m of victims){m.mezUntil=now+(m.named?Math.min(5,p.duration):p.duration);m.intent=null;this._engage(m,'player',2,true);this._effect(m,'Mesmerized',c.color);if(this.pet?.targetId===m.id)this.pet.targetId=null;}
+        this.autoAttack=false;this.autoChase=false;
+      }else if(k==='charm'){
+        if(this.pet?.charmedMobId){const old=this.mobs.find(m=>m.id===this.pet.charmedMobId);if(old)old.charmedUntil=now;}
+        target.charmedUntil=now+p.duration;target.mezUntil=0;target.dotUntil=0;target.diseaseUntil=0;target.intent=null;target.aggro=false;
+        this.pet={id:'charm-'+target.id,charmedMobId:target.id,name:target.name,type:'Charm',classId:c.id,x:target.x,y:target.y,hp:target.hp,maxHp:target.maxHp,damage:target.damage,attackRange:35,attackInterval:2.2,speed:150,attackAt:now,mode:'follow',targetId:null,expiresAt:target.charmedUntil,tauntReadyAt:0};
+      }else if(k==='summon'){
+        if(this.pet?.charmedMobId){const old=this.mobs.find(m=>m.id===this.pet.charmedMobId);if(old)old.charmedUntil=now;}
+        this.pet={id:'pet-'+ ++this._uid,type:'Spirit',classId:c.id,name:c.primaryPet,x:this.player.x-40,y:this.player.y+20,hp:p.petHp,maxHp:p.petHp,damage:p.petDamage,attackRange:c.id==='ranger'?150:35,attackInterval:p.petInterval,speed:155,attackAt:now,mode:'guard',targetId:null,expiresAt:a.duration?now+a.duration:0,tauntReadyAt:0};
+      }else if(k==='heal'||k==='combo-heal'){if(k==='combo-heal')this.combo-=3;this._heal(this.player,p.heal);
+      }else if(k==='regeneration')this.regeneration={expiresAt:now+10,nextPulse:now+2,heal:p.healTick};
+      else if(k==='barrier'||k==='last-stand'){this.barrier=p.barrier;this.barrierUntil=now+24;if(k==='last-stand')this._heal(this.player,p.heal);}
+      else if(k==='ward')this.shieldUntil=now+p.duration;
+      else if(k==='evasion')this.evasionUntil=now+p.duration;
+      else if(k==='pact'){this.player.hp-=p.healthCost;this.player.mp=Math.min(this.player.maxMp,this.player.mp+p.mana);}
+      else if(k==='mana-restore')this.player.mp=Math.min(this.player.maxMp,this.player.mp+p.mana*2.2);
+      else if(k==='clarity')this.clarityUntil=now+p.duration;
+      else if(k==='haste')this.hasteUntil=now+p.duration;
+      else if(k==='battle-focus')this.focusUntil=now+16;
+      else if(k==='stealth')this.stealthUntil=now+20;
+      else if(k==='feign'){this.feignUntil=now+p.duration;this.autoAttack=false;this.autoChase=false;}
+      else if(k==='mobility')this.strideUntil=now+8;
+      else if(k==='blink'){const focus=this.selected;const dx=focus?this.player.x-focus.x:(this.player.facing||1),dy=focus?this.player.y-focus.y:0,d=Math.hypot(dx,dy)||1;this.player.x=clamp(this.player.x+dx/d*170,24,WORLD.w-24);this.player.y=clamp(this.player.y+dy/d*170,24,WORLD.h-24);}
+      else if(k==='charge'){const d=distance(this.player,target)||1;this.player.x=target.x+(this.player.x-target.x)/d*48;this.player.y=target.y+(this.player.y-target.y)/d*48;damage(target,p.damage);this.autoAttack=true;this.autoChase=true;}
+      else if(k==='sanctuary'||k==='consecration')this.sanctuary={x:this.player.x,y:this.player.y,radius:p.radius,expiresAt:now+10,nextPulse:now+2,heal:p.healTick,petHeal:Math.round(p.healTick*(this.hasEquipped('mosswoven-mantle')?1.25:1)),damage:k==='consecration'?p.tickDamage:0};
+      else if(k.startsWith('song-'))this.song={kind:k,expiresAt:now+p.duration,nextPulse:now+2,heal:p.healTick,damage:p.tickDamage};
+      else if(k==='volley'){for(const m of this.mobs)if(m.alive&&!m.returning&&distance(m,target)<=p.radius)damage(m,p.damage);}
+      if(['strike','weapon','drain-strike','bleed','affliction','disease','volley'].includes(k))this._assistPet(target);
+      if(a.target==='self')this._visual('heal',this.player,{color:c.color,radius:35,life:.6});
+      this.log(a.name+'.','combat');
+    }
+
+    _updateExpandedCombat(dt){
+      const now=this.clock,c=this.characterClass,p=this.player;
+      if(this.song){if(now>this.song.expiresAt)this.song=null;else if(now>=this.song.nextPulse){this.song.nextPulse+=2;if(this.song.kind==='song-heal')this._heal(p,this.song.heal);if(this.song.kind==='song-damage')for(const m of this.mobs)if(m.alive&&!m.returning&&!(m.charmedUntil>now)&&distance(m,p)<=130)this._damageMob(m,this.song.damage,'player');}}
+      if(!c.martial||!this.autoAttack||this.dead||this.feignUntil>now)return;
+      const t=this.selected;if(!t||t.returning||t.charmedUntil>now){this.autoAttack=false;return;}if(t.mezUntil>now)return;
+      const range=c.attackRange||55;
+      if(this.autoChase&&!this.cast&&!this._moving&&distance(p,t)>range-5){this._moving=this._walk(p,t,175*(this.strideUntil>now?1.45:1),dt,range-6);}
+      if(distance(p,t)<=range&&!this.cast&&now>=this.weaponReadyAt){this.weaponReadyAt=now+1.9*(this.hasteUntil>now||this.song?.kind==='song-haste'?.7:1);this.stealthUntil=0;this.combo=Math.min(5,this.combo+1);p.facing=t.x>=p.x?1:-1;p.strikeUntil=now+.3;const amount=Math.round((8+p.level*3+p.power*.5)*(c.weapon||1)*.8*(this.focusUntil>now?1.25:1));this._visual(range>100?'bolt':'melee',t,{fromX:p.x,fromY:p.y,color:c.color,life:.35,radius:27});const actual=Math.min(t.hp,amount);this._damageMob(t,amount,'player');if(c.drain)this._heal(p,Math.round(actual*c.drain));}
+    }
+
+    _updateCharmed(mob,dt){
+      const pet=this.pet;if(!pet||pet.charmedMobId!==mob.id){mob.charmedUntil=this.clock;return;}mob.x=pet.x;mob.y=pet.y;mob.hp=pet.hp;mob.intent=null;
     }
 
     _refreshStats() {
@@ -419,7 +521,7 @@
       slot.misses = named ? 0 : slot.misses + 1;
       slot.count++;
       const level = camp.level + (named ? 1 : 0);
-      const maxHp = Math.round((camp.type === 'goblin' ? 42 + level * 13 : 50 + level * 15) * (named ? 4.125 : 2) * ({wolf:0.9,beetle:1.25,wisp:0.75,drake:1.1}[camp.type] || 1));
+      const maxHp = Math.round((camp.type === 'goblin' ? 42 + level * 13 : 50 + level * 15) * (named ? 4.125*2.8 : 2*3.8) * ({wolf:0.9,beetle:1.25,wisp:0.75,drake:1.1}[camp.type] || 1));
       const frontierNames = {wolf:['Amber Wolf','Downs Prowler','Pack Stalker'], beetle:['Fen Beetle','Mire Carapace','Lantern Scarab'], wisp:['Rime Wisp','Shard Singer','Frost Echo'], drake:['Ash Drake','Cinder Stalker','Forge Drake']};
       const names = frontierNames[camp.type] || (camp.type === 'goblin' ? ['Goblin Scout', 'Goblin Raider', 'Goblin Shaman'] : ['Crypt Skeleton', 'Crypt Guardian', 'Crypt Acolyte']);
       const mob = {
@@ -430,7 +532,7 @@
         rootUntil: 0, dotUntil: 0, slowUntil: 0, returning: false,
         threatPlayer: 0, threatPet: 0, targetId: null,
         attackAt: 0, dotAt: 0, dotDamage: 0, _slot: slot,
-        damage: Math.round((4 + level * 2.2) * (named ? 1.72 : 1.5)),
+        damage: Math.round((4 + level * 2.2) * (named ? 1.72 : 1.5)*.8),
         speed: ({wolf:122,beetle:63,wisp:80,drake:92}[camp.type] || 86) + level * 2,
         reach: camp.type === 'wisp' ? 185 : 35,
         ability: null, intent: null, abilityReadyAt: 0
@@ -622,6 +724,7 @@
     }
 
     moveTo(x, y) {
+      this.autoChase=false;
       if (this.dead || !Number.isFinite(x) || !Number.isFinite(y)) return { ok: false };
       this.moveTarget = { x: clamp(x, 24, WORLD.w - 24), y: clamp(y, 24, WORLD.h - 24) };
       this.meditate = false;
@@ -646,6 +749,7 @@
       const spell = this.spells[index];
       if(this.spellCooldownRemaining(index)>0)return this._result(false,spell.name+' is recovering for '+Math.ceil(this.spellCooldownRemaining(index))+' seconds.','warning');
       if(spell.role==='resource-conversion'){const p=this.spellProfile(index);if(this.player.hp<=p.healthCost)return this._result(false,'You need more health for Dark Pact.','warning');if(this.player.mp>=this.player.maxMp)return this._result(false,'Your mana is already full.','warning');}
+      if(this.spells[index].kind){const reason=this._expandedRequirement(index);if(reason)return this._result(false,reason,'warning');}
       if(this.player.classId==='necromancer'&&index===9&&(!this.selected||this.selected.dotUntil<=this.clock))return this._result(false,'Apply Grave Rot before using Blight Bloom.','warning');
       if (this.player.mp < spell.cost) return this._result(false, 'Not enough mana for ' + spell.name + '. Meditate [R] or return to the bindstone.', 'warning');
       let targetId = null;
@@ -653,10 +757,10 @@
         const target = this.selected;
         if (!target) return this._result(false, 'Select an enemy first. Click one or press Space.', 'warning');
         if (target.returning) return this._result(false, target.name + ' is returning home and cannot be attacked.', 'warning');
-        if (distance(target, this.player) > CAST_RANGE) return this._result(false, 'Move closer to your target. Spell range is 330 paces.', 'warning');
+        if (distance(target, this.player) > (spell.range||CAST_RANGE)) return this._result(false, 'Move closer to your target. Ability range is '+(spell.range||CAST_RANGE)+' paces.', 'warning');
         targetId = target.id;
       }
-      if (index === 4) {
+      if (index === 4 && !spell.kind) {
         if (!this.pet) return this._result(false, 'Summon a companion before using companion healing.', 'warning');
         if (distance(this.pet, this.player) > 360) return this._result(false, 'Your companion is too far away to mend.', 'warning');
         targetId = this.pet.id;
@@ -674,15 +778,16 @@
       const spell = this.spells[pending.i];
       const rank = this.player.spellRanks[pending.i];
       const target = this.mobs.find(mob => mob.id === pending.targetId && mob.alive);
-      if (this.spells[pending.i].target==='enemy' && (!target || target.returning || distance(target, this.player) > CAST_RANGE)) {
+      if (this.spells[pending.i].target==='enemy' && (!target || target.returning || distance(target, this.player) > (spell.range||CAST_RANGE))) {
         this.log('Your original target is gone or out of range. Mana was not spent.', 'warning');
         return;
       }
-      if (pending.i === 4 && (!this.pet || this.pet.id !== pending.targetId || distance(this.pet, this.player) > 360)) {
+      if (!spell.kind && pending.i === 4 && (!this.pet || this.pet.id !== pending.targetId || distance(this.pet, this.player) > 360)) {
         this.log('Your companion is gone or out of range. Mana was not spent.', 'warning');
         return;
       }
       if (this.player.mp < spell.cost) return;
+      if(spell.kind){const reason=this._expandedRequirement(pending.i,target);if(reason){this.log(reason+' Nothing was spent.','warning');return;}this.player.mp-=spell.cost;this.skillReadyAt[spell.id]=this.clock+(spell.cooldown||0);this._spellVisualIndex=pending.i;this.player.castReleaseUntil=this.clock+.25;this._executeExpanded(pending.i,target);this._spellVisualIndex=null;return;}
       if(spell.role==='resource-conversion'&&this.player.hp<=this.spellProfile(pending.i,rank).healthCost){this.log('Not enough health for Dark Pact. Nothing was spent.','warning');return;}
       if(this.player.classId==='necromancer'&&pending.i===9&&target.dotUntil<=this.clock){this.log('The rot faded. Mana was not spent.','warning');return;}
       this.player.mp -= spell.cost;
@@ -811,13 +916,14 @@
     }
 
     _assistPet(target) {
-      if (!target || !target.alive || target.returning || !this.pet || this.pet.mode !== 'guard' || this.pet.targetId) return;
+      if (!target || !target.alive || target.returning || target.mezUntil>this.clock || !this.pet || this.pet.mode !== 'guard' || this.pet.targetId) return;
       if (distance(target, this.player) > 360) return;
       this.pet.targetId = target.id;
     }
 
     commandPet(command) {
       if (this.dead) return { ok: false };
+      if(this.characterClass.martial){if(command==='follow'){this.autoAttack=false;this.autoChase=false;this.cancelMovement();return this._result(true,'Weapon attacks stopped.');}if(command==='attack'){if(!this.selected||this.selected.returning)return this._result(false,'Select a nearby enemy.','warning');if(distance(this.player,this.selected)>360)return this._result(false,'Move within 360 paces.','warning');this.autoAttack=true;this.autoChase=true;this.meditate=false;this.stealthUntil=0;return this._result(true,'Approaching with weapon ready.');}if(command==='guard'){this.autoChase=false;return this._result(true,'Holding position with weapon ready.');}if(command==='taunt'){if(!this.selected||distance(this.player,this.selected)>85)return this._result(false,'Move within 85 paces to challenge.','warning');this._engage(this.selected,'player',40,true);return this._result(true,'You challenge '+this.selected.name+'.');}}
       if (!this.pet) return this._result(false, 'Summon a companion from your spell bar first.', 'warning');
       if (command === 'follow') {
         this.pet.targetId = null;
@@ -845,6 +951,7 @@
       const target = this.selected;
       if (!target) return this._result(false, 'Select an enemy for your pet.', 'warning');
       if (target.returning) return this._result(false, 'That enemy is returning home.', 'warning');
+      if(target.charmedUntil>this.clock)return this._result(false,'That creature is your ally.','warning');
       if (distance(target, this.player) > 360) return this._result(false, 'Move closer before sending your companion. Command range is 360 paces.', 'warning');
       this.pet.targetId = target.id;
       // Threat begins when the elemental reaches its enemy, so distant allies do not pull remotely.
@@ -853,7 +960,7 @@
 
     toggleMeditate() {
       if (this.dead) return { ok: false };
-      this.meditate = !this.meditate;
+      this.autoAttack=false;this.autoChase=false;this.song=null;this.meditate = !this.meditate;
       this.cancelMovement();
       if (this.meditate && this.cast) {
         this.cast = null;
@@ -935,7 +1042,7 @@
       this._recentCombat = this.clock;
       if (assist) {
         for (const ally of this.mobs) {
-          if (ally !== mob && ally.alive && !ally.returning && !ally.aggro && ally.campId === mob.campId && distance(ally, mob) < 75) {
+          if (ally !== mob && !(ally.charmedUntil>this.clock) && ally.alive && !ally.returning && !ally.aggro && ally.campId === mob.campId && distance(ally, mob) < 75) {
             this._engage(ally, source, 5, false);
             this.log(ally.name + ' comes to its ally’s aid!', 'warning');
           }
@@ -944,6 +1051,7 @@
     }
 
     _damageMob(mob, amount, source) {
+      mob.mezUntil=0;
       if (!mob.alive || mob.returning || this.dead) return;
       this._engage(mob, source, amount * (source === 'pet' ? 1.55 : 1), true);
       mob.hp = Math.max(0, mob.hp - amount);
@@ -981,7 +1089,7 @@
       mob.aggro = false;
       mob.dotUntil = 0;
       mob.rootUntil = 0;
-      mob.slowUntil = 0;
+      mob.charmedUntil=0;mob.stunUntil=0;mob.slowUntil = 0;mob.attackSlowUntil=0;mob.mezUntil=0;mob.diseaseUntil=0;
       mob.intent = null;
       mob._slot.at = this.clock + CAMPS[mob._slot.campIndex].delay;
       mob._slot.mobId = null;
@@ -1062,7 +1170,7 @@
       mob.targetId = null;
       mob.rootUntil = 0;
       mob.dotUntil = 0;
-      mob.slowUntil = 0;
+      mob.charmedUntil=0;mob.stunUntil=0;mob.slowUntil = 0;mob.attackSlowUntil=0;mob.mezUntil=0;mob.diseaseUntil=0;
       mob.intent = null;
       mob.abilityReadyAt = this.clock + 4.5;
       mob.dotDamage = 0;
@@ -1076,6 +1184,9 @@
       if (this.dead) return;
       this._recentCombat = this.clock;
       if (this.meditate) { this.meditate = false; this.log('Taking damage ends your meditation.', 'warning'); }
+      this.stealthUntil=0;
+      amount*=1-(this.characterClass.armor||0);if(this.evasionUntil>this.clock)amount*=.45;
+      if(this.barrierUntil>this.clock&&this.barrier>0){const absorbed=Math.min(this.barrier,amount);amount-=absorbed;this.barrier-=absorbed;if(amount<=0){this._effect(this.player,'Absorbed','#ccdae5');return;}}
       const damage = Math.max(1, Math.round(amount * (this.shieldUntil > this.clock ? (this.hasEquipped('warden-boneguard') ? 0.45 : 0.55) : 1)));
       this.player.hp = Math.max(0, this.player.hp - damage);
       this._impact(this.player, damage, 'enemy');
@@ -1093,6 +1204,7 @@
       this._impact(pet, amount, 'enemy');
       this._effect(pet, '−' + amount, '#efb691');
       if (pet.hp <= 0) {
+        if(pet.charmedMobId){const source=this.mobs.find(m=>m.id===pet.charmedMobId);if(source){source.charmedUntil=0;source.alive=false;source.hp=0;if(source._slot){source._slot.mobId=null;source._slot.at=this.clock+45;}}}
         this._fall(pet, 'pet');
         this.log((pet.name||'Your companion')+' falls. Summon another or retreat.','danger');
         this.pet = null;
@@ -1107,6 +1219,7 @@
       const penalty = Math.ceil(this.xpNeeded() * 0.15);
       this.player.debt = Math.min(this.xpNeeded() * 3, this.player.debt + penalty);
       this.cast = null;
+      this.autoAttack=false;this.autoChase=false;this.combo=0;this.song=null;this.barrier=0;this.stealthUntil=0;this.feignUntil=0;this.regeneration=null;this.sanctuary=null;
       this.pet = null;
       this.meditate = false;
       this.shieldUntil = 0;
@@ -1121,7 +1234,7 @@
       if (!this.dead) return { ok: false, message: 'You are already alive.' };
       this.dead = false;
       Object.assign(this.player, { x: WORLD.spawn.x, y: WORLD.spawn.y, hp: this.player.maxHp, mp: this.player.maxMp });
-      this.pet = null;this.regeneration=null;this.sanctuary=null;this.strideUntil=0;
+      this.autoAttack=false;this.autoChase=false;this.combo=0;this.song=null;this.barrier=0;this.stealthUntil=0;this.feignUntil=0;this.pet = null;this.regeneration=null;this.sanctuary=null;this.strideUntil=0;
       this.cast = null;
       this.meditate = false;
       this.shieldUntil = 0;
@@ -1176,6 +1289,7 @@
 
       this._updateClassEffects();
       const inputLength = Math.hypot(input.dx, input.dy);
+      if(inputLength>0){this.autoChase=false;this.feignUntil=0;}
       if (inputLength > 0) {
         this.moveTarget = null;
         this._interruptCast();
@@ -1196,14 +1310,16 @@
       }
       // Movement is resolved first, including a movement input on a cast's final frame.
       if (this.cast && this.clock >= this.cast.done) this._finishCast();
+      this._updateExpandedCombat(dt);
       if (this.pet) this._updatePet(dt);
       for (const mob of this.mobs) {
         if (this.dead) break;
         this._updateMob(mob, dt);
       }
       if (this.dead) return;
+      if(this.clarityUntil>this.clock)this.player.mp=Math.min(this.player.maxMp,this.player.mp+dt*3);
       const resting = !this.inCombat && this.clock - this._recentCombat > 4;
-      this.player.mp = Math.min(this.player.maxMp, this.player.mp + dt * (this.meditate ? 9 : this.cast ? 1.3 : 3));
+      this.player.mp = Math.min(this.player.maxMp, this.player.mp + dt * (this.meditate ? 9 : this.cast ? 2 : 4.5));
       this.player.hp = Math.min(this.player.maxHp, this.player.hp + dt * (this.meditate ? 2.8 : resting ? 0.5 : 0));
       if (this.pet && resting) this.pet.hp = Math.min(this.pet.maxHp, this.pet.hp + dt * 1.2);
       for (const camp of CAMPS) {
@@ -1217,6 +1333,7 @@
 
     _updatePet(dt) {
       const pet = this.pet;
+      if(pet.charmedMobId){const source=this.mobs.find(m=>m.id===pet.charmedMobId);if(!source?.alive||this.clock>=pet.expiresAt){this.pet=null;this._clearPetThreat();return;}}
       if(pet.expiresAt&&this.clock>=pet.expiresAt){this._fall(pet,'pet');this.pet=null;this._clearPetThreat();this.log('Your guardian returns to the wilds.','info');return;}
       let target = this.mobs.find(mob => mob.id === pet.targetId && mob.alive && !mob.returning);
       if (target && (distance(target, this.player) > 1000 || distance(pet, this.player) > 900)) {
@@ -1224,11 +1341,12 @@
         target = null;
         this.log('Your companion returns; its target is too far away.', 'warning');
       }
+      if (target?.mezUntil>this.clock){pet.targetId=null;target=null;}
       if (target) {
         pet.followTrail=[{x:this.player.x,y:this.player.y}];pet.following=false;
         this._walk(pet, target, pet.speed, dt, Math.max(29,(pet.attackRange||35)-6));
         if (distance(pet, target) <= (pet.attackRange||35) && this.clock >= pet.attackAt) {
-          pet.attackAt = this.clock + (pet.attackInterval||(pet.type === 'Air' ? 1.45 : 1.65));
+          pet.attackAt = this.clock + (pet.attackInterval||(pet.type === 'Air' ? 1.45 : 1.65))*(this.hasteUntil>this.clock?.7:1);
           this._strike(pet, target);
           this._damageMob(target, Math.round(pet.damage * (this.hasEquipped('crownfang-ring') ? 1.12 : 1)), 'pet');
         }
@@ -1242,7 +1360,7 @@
       const regen=this.regeneration;
       if(regen){if(this.clock+1e-6>=regen.nextPulse&&regen.nextPulse<=regen.expiresAt+1e-6){regen.nextPulse+=2;const restored=this.player.hp<this.player.maxHp?this._heal(this.player,regen.heal):0;this._healingThreat(restored*.25);}if(this.clock>regen.expiresAt)this.regeneration=null;}
       const zone=this.sanctuary;
-      if(zone){if(this.clock+1e-6>=zone.nextPulse&&zone.nextPulse<=zone.expiresAt+1e-6){zone.nextPulse+=2;let healed=0;if(this.player.hp<this.player.maxHp&&distance(this.player,zone)<=zone.radius)healed+=this._heal(this.player,zone.heal);if(this.pet&&this.pet.hp<this.pet.maxHp&&distance(this.pet,zone)<=zone.radius)healed+=this._heal(this.pet,zone.petHeal);this._healingThreat(healed*.25);}if(this.clock>zone.expiresAt)this.sanctuary=null;}
+      if(zone){if(this.clock+1e-6>=zone.nextPulse&&zone.nextPulse<=zone.expiresAt+1e-6){zone.nextPulse+=2;if(zone.damage)for(const m of this.mobs)if(m.alive&&!m.returning&&!(m.charmedUntil>this.clock)&&distance(m,zone)<=zone.radius)this._damageMob(m,zone.damage,'player');let healed=0;if(this.player.hp<this.player.maxHp&&distance(this.player,zone)<=zone.radius)healed+=this._heal(this.player,zone.heal);if(this.pet&&this.pet.hp<this.pet.maxHp&&distance(this.pet,zone)<=zone.radius)healed+=this._heal(this.pet,zone.petHeal);this._healingThreat(healed*.25);}if(this.clock>zone.expiresAt)this.sanctuary=null;}
     }
 
     _followParty(pet,dt){
@@ -1300,10 +1418,10 @@
       const intent = mob.intent;
       if (!intent || !mob.alive || mob.returning || this.dead) return;
       mob.intent = null;
-      mob.abilityReadyAt = this.clock + (intent.kind === 'heal' ? 12 : intent.kind === 'slam' ? 10 : 8);
+      mob.abilityReadyAt = this.clock + (intent.kind === 'heal' ? 18 : intent.kind === 'slam' ? 10 : 8);
       mob.attackAt = Math.max(mob.attackAt, this.clock + 0.7);
       if (intent.kind === 'heal') {
-        const amount = this._heal(mob, Math.round(mob.maxHp * 0.22));
+        const amount = this._heal(mob, Math.round(mob.maxHp * 0.12));
         this._visual('heal', mob, { color: '#b9c985', radius: intent.radius, life: 0.8 });
         this.log(mob.name + ' restores ' + amount + ' health with ' + intent.name + '.', 'warning');
         return;
@@ -1324,22 +1442,28 @@
 
     _updateMob(mob, dt) {
       if (!mob.alive) return;
+      if(mob.charmedUntil>this.clock){this._updateCharmed(mob,dt);return;}
+      if(mob.charmedUntil){mob.charmedUntil=0;if(this.pet?.charmedMobId===mob.id)this.pet=null;this._engage(mob,'player',40,true);this.log(mob.name+' breaks free of your charm!','warning');}
+      if(mob.mezUntil>this.clock&&!(mob.dotUntil>=this.clock&&mob.dotAt<=this.clock)&&!(mob.diseaseUntil>=this.clock&&mob.diseaseAt<=this.clock)){mob.intent=null;return;}
       if (mob.returning) { this._updateReturning(mob, dt); return; }
       const safe = distance(this.player, WORLD.spawn) < SAFE_RADIUS;
+      if(this.feignUntil>this.clock){mob.intent=null;return;}
       // Pursuit is tied to losing the party, not an invisible circle around camp.
       const lostParty = distance(mob,this.player)>1000 && (!this.pet || distance(mob,this.pet)>1000);
-      if(mob.aggro && lostParty && mob.dotUntil<=this.clock){
+      if(mob.aggro && lostParty && mob.dotUntil<=this.clock && (mob.diseaseUntil||0)<=this.clock){
         if(mob.pursuitLostAt==null)mob.pursuitLostAt=this.clock;
       }else mob.pursuitLostAt=null;
       if(mob.aggro && (safe || (mob.pursuitLostAt!=null && this.clock-mob.pursuitLostAt>=10))){
         this._returnHome(mob);return;
       }
+      if(mob.diseaseUntil>this.clock&&this.clock>=mob.diseaseAt){mob.diseaseAt+=2;this._damageMob(mob,mob.diseaseDamage,'player');if(!mob.alive)return;}
       if (mob.dotUntil > 0 && this.clock >= mob.dotAt && mob.dotAt <= mob.dotUntil) {
         mob.dotAt += 2;
         this._damageMob(mob, mob.dotDamage, 'player');
         if (!mob.alive) return;
       }
-      if (!mob.aggro && !safe) {
+      if(mob.stunUntil>this.clock){mob.intent=null;return;}
+      if (!mob.aggro && this.stealthUntil<=this.clock && !safe) {
         if (distance(mob, this.player) < 78) this._engage(mob, 'player', 2, true);
         else if (this.pet && distance(mob, this.pet) < 55) this._engage(mob, 'pet', 2, true);
       }
@@ -1359,7 +1483,7 @@
       if (this._beginIntent(mob, target)) return;
       if (mob.rootUntil <= this.clock) this._walk(mob, target, mob.speed * (mob.slowUntil > this.clock ? 0.55 : 1), dt, Math.max(30,mob.reach-5));
       if (distance(mob, target) <= mob.reach && this.clock >= mob.attackAt) {
-        mob.attackAt = this.clock + 2.2;
+        mob.attackAt = this.clock + 2.2*(mob.attackSlowUntil>this.clock?1.67:1);
         this._strike(mob, target);
         if (attacksPet) this._takePetDamage(mob.damage);
         else this._takePlayerDamage(mob.damage, mob);
@@ -1371,6 +1495,7 @@
       return {
         version: VERSION, dead: this.dead, discovered: [...this.discovered],
         supplyCooldownRemaining: Math.max(0, this.supplyReadyAt - this.clock),
+        skillCooldowns:Object.fromEntries(Object.entries(this.skillReadyAt).map(([id,at])=>[id,Math.max(0,at-this.clock)])),
         pactCooldownRemaining:Math.max(0,this.pactReadyAt-this.clock),strideCooldownRemaining:Math.max(0,this.strideReadyAt-this.clock),
         player: {
           classId:player.classId,name:player.name,

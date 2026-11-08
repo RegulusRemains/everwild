@@ -9,6 +9,8 @@
   artBoxes.frontier = [[13, 106, 230, 137], [269, 111, 230, 132], [548, 40, 183, 203], [781, 110, 230, 133], [13, 279, 230, 220], [269, 308, 230, 191], [525, 271, 230, 228], [781, 296, 230, 203], [13, 544, 230, 211], [269, 545, 230, 210], [525, 526, 230, 229], [781, 546, 230, 209], [13, 792, 230, 219], [269, 798, 230, 213], [525, 799, 230, 212], [781, 790, 230, 221], [21, 1058, 213, 209], [281, 1037, 206, 230], [525, 1053, 230, 214], [782, 1037, 228, 230]];
   artBoxes.journey = [[31, 14, 193, 230], [283, 14, 201, 230], [536, 14, 208, 230], [831, 70, 130, 174], [13, 277, 230, 223], [269, 292, 230, 208], [525, 292, 230, 208], [793, 270, 206, 230], [23, 526, 209, 230], [269, 605, 230, 151], [525, 582, 230, 174], [781, 592, 230, 164], [34, 782, 187, 230], [271, 812, 225, 200], [525, 799, 230, 213], [785, 880, 222, 132], [13, 1046, 230, 222], [269, 1128, 230, 140], [528, 1039, 224, 229], [782, 1102, 227, 166], [14, 1313, 228, 211], [269, 1388, 230, 136], [529, 1294, 221, 230], [781, 1305, 230, 219]];
   artBoxes.classMotion = [[0, 75, 256, 169], [256, 75, 256, 169], [512, 75, 256, 169], [768, 75, 256, 169], [0, 339, 256, 161], [256, 339, 256, 161], [512, 339, 256, 161], [768, 339, 256, 161], [0, 602, 256, 154], [256, 602, 256, 154], [512, 602, 256, 154], [768, 602, 256, 154], [0, 843, 256, 169], [256, 843, 256, 169], [512, 843, 256, 169], [768, 843, 256, 169], [0, 1107, 256, 161], [256, 1107, 256, 161], [512, 1107, 256, 161], [768, 1107, 256, 161], [0, 1370, 256, 154], [256, 1370, 256, 154], [512, 1370, 256, 154], [768, 1370, 256, 154]];
+  artBoxes.roster = [[19, 14, 217, 230], [269, 14, 230, 230], [525, 14, 230, 230], [782, 14, 227, 230], [13, 270, 230, 230], [269, 270, 230, 230], [525, 270, 230, 230], [785, 270, 221, 230], [13, 526, 230, 230], [269, 526, 230, 230], [525, 526, 230, 230], [781, 526, 230, 230]];
+  artBoxes.companions = [[13, 14, 230, 230], [269, 15, 230, 229], [13, 270, 230, 230], [271, 270, 226, 230]];
   const frontierTypes = {wolf:0,beetle:1,wisp:2,drake:3};
   const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
   const intentColors = { slam: '#dfad70', hex: '#e29581', heal: '#bcb6d2' };
@@ -92,7 +94,7 @@
       });
       this.artReady = Promise.all([
         load('atlas', 'assets/woodland-atlas.webp'), load('environment', 'assets/environment-atlas.webp'),
-        load('classMotion','assets/class-motion.webp'), load('journey','assets/journey-atlas.webp'), load('frontier','assets/frontier-atlas.webp'), load('frontierFloor','assets/frontier-floor.webp'), load('walk', 'assets/walk-atlas.webp'), load('action', 'assets/action-atlas.webp'), load('floor', 'assets/floor-atlas.webp')
+        load('companions','assets/companions-atlas.webp'), load('roster','assets/roster-atlas.webp'), load('classMotion','assets/class-motion.webp'), load('journey','assets/journey-atlas.webp'), load('frontier','assets/frontier-atlas.webp'), load('frontierFloor','assets/frontier-floor.webp'), load('walk', 'assets/walk-atlas.webp'), load('action', 'assets/action-atlas.webp'), load('floor', 'assets/floor-atlas.webp')
       ]).then(results => results.every(Boolean));
       this.camera = { x: 0, y: 0 };
       this.width = 1; this.height = 1; this.dpr = 1; this.zoom = 1.3;
@@ -128,6 +130,7 @@
     _pose(kind, entity, game, time) {
       const row = kind === 'player' ? 0 : kind === 'pet' ? (entity.type === 'Earth' ? 1 : 2) : entity.type === 'goblin' ? 3 : entity.ability === 'hex' ? 5 : 4;
       if (this.reducedMotion) return null;
+      if(kind==='player'&&game.characterClass.skills)return null;
       if(kind==='player'&&this.classMotionLoaded){
         const cls=game.player.classId==='necromancer'?1:game.player.classId==='druid'?2:0;
         if(game.cast){const progress=clamp((time-game.cast.started)/(game.cast.done-game.cast.started),0,1);const frame=progress<.2?0:progress<.45?1:progress<.9?1+Math.floor(time*5)%2:3;return{sheet:'classMotion',index:(3+cls)*4+frame};}
@@ -933,6 +936,7 @@
       c.filter = 'saturate(0.3)';
       if (!this.reducedMotion) { c.rotate(progress * (entity.facing === -1 ? -0.8 : 0.8)); c.scale(1, 1 - progress * 0.65); }
       if(frontierTypes[entity.type]!==undefined){this._sheet(c,'frontier',frontierTypes[entity.type]+(entity.named?4:0),0,0,entity.named?65:47);c.restore();return;}
+      if(entity.kind==='pet'&&root.Everwild.CLASSES[entity.classId]?.skills&&this.companionsLoaded){this._sheet(c,'companions',({enchanter:0,shadowknight:1,ranger:2,shaman:3}[entity.classId]??3),0,0,47);c.restore();return;}
       if(entity.kind==='pet'&&entity.classId&&entity.classId!=='magician'){if(entity.type==='Earth')this._sheet(c,'journey',entity.classId==='necromancer'?3:7,0,0,51);else this._sheet(c,'frontier',entity.classId==='necromancer'?2:0,0,0,47);c.restore();return;}
       const index = entity.kind === 'pet' ? (entity.type === 'Earth' ? 9 : 10) : entity.type === 'goblin' ? 11 : 12;
       if (entity.named) this._sheet(c, 'environment', 12 + CAMPS.findIndex(camp => camp.id === entity.campId), 0, 0, 52);
@@ -941,6 +945,8 @@
     }
 
     _spellAuras(c, game, time) {
+      if(game.barrier>0&&game.barrierUntil>time&&!game.dead){c.save();c.translate(game.player.x,game.player.y-22);ellipse(c,0,0,24,32,'#d3bce910',game.characterClass.color+'88');if(!this.reducedMotion)c.rotate(Math.sin(time)*.05);for(let i=0;i<4;i++){const a=i*TAU/4;ellipse(c,Math.cos(a)*24,Math.sin(a)*32,2,2,game.characterClass.color);}c.restore();}
+
       if (game.shieldUntil > game.clock && !game.dead) {
         const p = game.player, remaining = game.shieldUntil - game.clock;
         c.save(); c.translate(p.x, p.y - 23); c.strokeStyle = '#b0dce5'; c.lineWidth = 1.2;
@@ -976,6 +982,7 @@
     }
 
     _actor(c, kind, entity, game, time) {
+      if(kind==='mob'&&entity.charmedUntil>time)return;
       const x = entity.x, y = entity.y;
       const motionTime = this.reducedMotion ? 0 : time;
       c.translate(x, y); c.lineJoin = 'round'; c.lineCap = 'round';
@@ -997,13 +1004,19 @@
         const face = entity.facing === -1 ? -1 : 1;
         c.scale(face, 1);
         const pose = this._pose(kind, entity, game, time);
-        if(kind==='player'&&this.classMotionLoaded&&this.journeyLoaded){
+        if(kind==='player'&&game.characterClass.skills&&this.rosterLoaded){
+          if(!this.reducedMotion){if(entity.walkUntil>time)c.rotate(Math.sin((entity.walkDistance||0)/10)*.035);if(entity.strikeUntil>time||game.cast)c.rotate(Math.sin(time*14)*.075);}
+          this._sheet(c,'roster',game.characterClass.artIndex,0,0,52);
+        } else if(kind==='player'&&this.classMotionLoaded&&this.journeyLoaded){
           const cls=game.player.classId==='necromancer'?1:game.player.classId==='druid'?2:0;
           if(pose)this._sheet(c,pose.sheet,pose.index,0,0,52);else this._sheet(c,'journey',cls,0,0,52);
         } else if(kind==='player' && game.player.classId!=='magician' && this.journeyLoaded){
           const index=game.player.classId==='necromancer'?1:2;
           if(entity.walkUntil>time&&!this.reducedMotion)c.translate(0,Math.sin(time*10)*1.5);
           this._sheet(c,'journey',index+(game.cast?4:0),0,0,52);
+        } else if(kind==='pet'&&game.characterClass.skills&&this.rosterLoaded){
+          if(entity.charmedMobId){const m=game.mobs.find(m=>m.id===entity.charmedMobId);if(m&&frontierTypes[m.type]!==undefined)this._sheet(c,'frontier',frontierTypes[m.type],0,0,47);else this._art(c,m?.type==='skeleton'?12:11,0,0,47);}
+          else{const spirit={enchanter:0,shadowknight:1,ranger:2,shaman:3}[entity.classId]??3;if(!this.reducedMotion&&spirit===2)c.scale(1,1+Math.sin(time*9)*.09);this._sheet(c,'companions',spirit,0,0,spirit===2?32:47);}
         } else if(kind==='pet' && game.player.classId!=='magician' && this.journeyLoaded){
           if(entity.type==='Earth')this._sheet(c,'journey',game.player.classId==='necromancer'?3:7,0,0,51);
           else {if(game.player.classId==='necromancer')c.filter='hue-rotate(55deg)';this._sheet(c,'frontier',game.player.classId==='necromancer'?2:0,0,0,47);}
@@ -1025,6 +1038,7 @@
         else this._skeleton(c, entity);
       }
       c.restore();
+      if(kind==='mob'&&entity.mezUntil>time)text(c,'Zzz',0,-62,10,'#d6b7ef');
       if (kind === 'mob') {
         if (entity.rootUntil > time) {
           c.lineWidth = 2;
@@ -1056,6 +1070,7 @@
     _actorLabel(c, kind, entity, game, time) {
       // Labels sit above all scenery, even while their actor walks behind it.
       c.save(); c.translate(entity.x, entity.y);
+      if(kind==='mob'&&entity.mezUntil>time)text(c,'Zzz',0,-62,10,'#d6b7ef');
       if (kind === 'mob') {
         const intent = activeIntent(entity, time) ? entity.intent : null;
         const healthY = entity.named ? -58 : -46;

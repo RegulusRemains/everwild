@@ -273,3 +273,22 @@ dialog{width:min(57rem,calc(100vw - 2rem));max-height:calc(100dvh - 2rem);paddin
 @media(max-width:600px){.character-creation{grid-template-columns:1fr;gap:.5rem}.class-showcase .class-portrait{width:120px;height:120px}.class-showcase h3{font-size:24px}.class-showcase p{font-size:12px}.class-showcase small{font-size:10px}.class-choices{grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;margin:10px 0}.class-choices button{padding:9px 5px;text-align:center;align-items:center}.class-choices strong{font-size:12px}.class-choices small{font-size:8px}.name-label{font-size:11px}.character-roster{grid-template-columns:1fr}.roster-character .class-portrait{width:65px;height:70px}.roster-character strong{font-size:17px}.roster-character small{font-size:10px}}
 
 .spell[data-cooldown]:not([data-cooldown=""])::after{content:attr(data-cooldown);position:absolute;inset:0;display:grid;place-items:center;background:#071115a6;color:#e0d4af;font:1.2rem Georgia,serif}
+
+/* Expanded class selection. */
+.class-choices{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.class-choices button{padding:.6rem}.class-choices strong{font-size:1rem}.class-choices small{font-size:.65rem}.character-creation{grid-template-columns:.8fr 1.2fr;gap:1rem}
+.portrait-enchanter{background-image:url('assets/roster-atlas.webp');background-size:400% 300%;background-position:0.0% 0%}
+.portrait-warrior{background-image:url('assets/roster-atlas.webp');background-size:400% 300%;background-position:33.333333333333336% 0%}
+.portrait-rogue{background-image:url('assets/roster-atlas.webp');background-size:400% 300%;background-position:66.66666666666667% 0%}
+.portrait-monk{background-image:url('assets/roster-atlas.webp');background-size:400% 300%;background-position:100.0% 0%}
+.portrait-ranger{background-image:url('assets/roster-atlas.webp');background-size:400% 300%;background-position:0.0% 50%}
+.portrait-paladin{background-image:url('assets/roster-atlas.webp');background-size:400% 300%;background-position:33.333333333333336% 50%}
+.portrait-shadowknight{background-image:url('assets/roster-atlas.webp');background-size:400% 300%;background-position:66.66666666666667% 50%}
+.portrait-shaman{background-image:url('assets/roster-atlas.webp');background-size:400% 300%;background-position:100.0% 50%}
+.portrait-cleric{background-image:url('assets/roster-atlas.webp');background-size:400% 300%;background-position:0.0% 100%}
+.portrait-bard{background-image:url('assets/roster-atlas.webp');background-size:400% 300%;background-position:33.333333333333336% 100%}
+.portrait-wizard{background-image:url('assets/roster-atlas.webp');background-size:400% 300%;background-position:66.66666666666667% 100%}
+@media(max-width:600px){.character-creation{grid-template-columns:1fr}.class-choices strong{font-size:11px}.class-choices small{font-size:8px}.class-choices button{padding:7px 4px}}
+
+.ability-engraving{display:inline-flex;align-items:center;justify-content:center;width:100%;height:100%;color:var(--ability-color,#ceb87d);background:radial-gradient(ellipse,#9d875a33,#0b1713 72%)}.ability-engraving svg{width:75%;height:75%;filter:drop-shadow(0 1px 2px #000)}.ability-engraving.spellbook-art{width:4rem;height:4rem;flex-shrink:0;border:1px solid #aa996044}
+
+@media(max-width:560px){.ability-engraving.spellbook-art{width:2.8571rem;height:2.8571rem}}

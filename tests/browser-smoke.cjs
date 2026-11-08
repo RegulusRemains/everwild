@@ -159,7 +159,7 @@ async function main() {
         game.setTarget(targetId);
       }, id);
       await page.locator('#game').focus();
-      for (let casts = 0; casts < 3; casts++) {
+      for (let casts = 0; casts < 7; casts++) {
         if (!(await page.evaluate(targetId => window.everwild.game.mobs.some(mob => mob.id === targetId && mob.alive), id))) break;
         await page.keyboard.press('2');
         await page.waitForFunction(() => !window.everwild.game.cast, undefined, { timeout: 7000 });
@@ -358,6 +358,7 @@ async function main() {
     await require('./pet-follow-review.cjs').runPetFollowChecks(page,screenshots);
     await require('./animation-review.cjs').runAnimationChecks(page,screenshots);
     await require('./class-play-review.cjs').runClassPlayChecks(page,screenshots);
+    await require('./roster-review.cjs').runRosterChecks(page,screenshots);
     assert.deepEqual(errors, [], 'The browser must not report runtime or console errors');
     console.log('Browser smoke passed: controls, NPC dialogue, quest rewards, equipment, spell assignment, pet guard/taunt, tonic purchase/cooldown, save/reload, and mobile layout.');
     console.log(`Screenshots: ${screenshots}`);

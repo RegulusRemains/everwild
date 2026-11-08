@@ -17,7 +17,7 @@
         <section class="vitals hud-frame" aria-label="Character health and mana">
           <button class="character-tag" data-dialog="character" title="Character [V]"><span class="character-sigil" aria-hidden="true">✧</span><span id="character-name">Wayfarer</span><span id="level">Lv. 1</span></button>
           <div class="resource health-resource"><span>HP</span><div class="meter health"><i id="hpbar"></i><span id="hptext"></span></div></div>
-          <div class="resource mana-resource"><span>MP</span><div class="meter mana"><i id="mpbar"></i><span id="mptext"></span></div></div>
+          <div class="resource mana-resource"><span id="resource-label">MP</span><div class="meter mana"><i id="mpbar"></i><span id="mptext"></span></div></div>
         </section>
         <section id="pet-frame" class="pet-frame hud-frame" aria-label="Companion" hidden>
           <div class="pet-line"><span id="pet-type">Earth</span><span id="pet-order">Guard</span></div>
@@ -59,6 +59,7 @@
   </main>
   <dialog id="menu-dialog" aria-labelledby="dialog-title"><div class="dialog-top"><div><span id="dialog-eyebrow" class="eyebrow">EVERWILD</span><h2 id="dialog-title"></h2></div><button id="dialog-close" aria-label="Close menu">✕</button></div><div id="dialog-content"></div><div class="dialog-footer"><span>World paused</span><span><kbd>Esc</kbd> return</span></div></dialog>
   <input id="import-file" type="file" accept="application/json,.json" hidden>
+  <script src="src/roster.js"></script>
   <script src="src/engine.js"></script>
   <script src="src/render.js"></script>
   <script src="src/audio.js"></script>

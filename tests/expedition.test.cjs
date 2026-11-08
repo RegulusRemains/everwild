@@ -80,11 +80,13 @@ test('a fresh character can complete the four-guard patrol through normal travel
     game.setTarget(mob.id);
     assert.equal(game.commandPet('attack').ok, true);
     advance(game, 1.5);
-    for (let attempts = 0; mob.alive && attempts < 20; attempts++) {
+    for (let attempts = 0; mob.alive && attempts < 120; attempts++) {
       if (game.player.mp < 28) game.useSupply('mana-tonic');
+      if(!game.pet){if(game.player.mp>=45){cast(game,0);game.commandPet('attack');}else advance(game,1);continue;}
       if (mob.intent && game.player.mp >= 24) cast(game, 3);
       else if (game.pet && game.pet.hp < game.pet.maxHp * 0.55 && game.player.mp >= 28) cast(game, 4);
-      else if (game.player.mp >= 19) cast(game, 1);
+      else if(mob.dotUntil<=game.clock&&game.player.mp>=26)cast(game,2);
+      else if (game.player.mp >= 50) cast(game, 1);
       else advance(game, 0.5);
     }
     assert.equal(mob.alive, false);

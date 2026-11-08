@@ -35,8 +35,8 @@ function castAndFinish(game, index) {
 }
 
 function defeatWithBolts(game, mob) {
-  assert.equal(game.setTarget(mob.id).ok, true);
-  for (let attempt = 0; mob.alive && attempt < 8; attempt++) castAndFinish(game, 1);
+  castAndFinish(game,0);assert.equal(game.setTarget(mob.id).ok, true);game.commandPet('attack');castAndFinish(game,2);
+  for(let attempt=0;mob.alive&&attempt<40;attempt++){if(game.pet&&game.pet.hp<game.pet.maxHp*.5&&game.player.mp>=28)castAndFinish(game,4);else if(game.player.mp>=19)castAndFinish(game,1);else advance(game,1);}
   assert.equal(mob.alive, false, 'The selected enemy should be defeated');
 }
 
@@ -54,7 +54,8 @@ test('the opening loop supports summoning, exploration, a solo pet kill, loot, a
   const sentry = firstSentry(game);
   game.setTarget(sentry.id);
   assert.equal(game.commandPet('attack').ok, true);
-  for (let elapsed = 0; sentry.alive && elapsed < 25; elapsed += 0.1) advance(game, 0.1);
+  castAndFinish(game,2);
+  for(let turn=0;sentry.alive&&turn<100;turn++){if(game.pet&&game.pet.hp<game.pet.maxHp*.5&&game.player.mp>=28)castAndFinish(game,4);else if(sentry.dotUntil<=game.clock&&game.player.mp>=26)castAndFinish(game,2);else advance(game,.5);}
 
   assert.equal(sentry.alive, false);
   assert.equal(game.dead, false);

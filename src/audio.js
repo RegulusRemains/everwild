@@ -5,7 +5,7 @@
  const lengths={'step-grass':.18,'step-water':.24,'step-snow':.2,'step-stone':.2,fire:1.6,'fire-hit':.85,frost:1.65,'frost-hit':1.05,grave:1.85,'grave-hit':.95,'nature-hit':.8,nature:1.6,flesh:.28,stone:.4,wood:.34,melee:.3,nova:2.2,summon:2.5,root:1.6,heal:2.1,shield:1.7,taunt:.9};
  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
  function soundFor(e){
-  const dark=e.school==='necromancer',wild=e.school==='druid';
+  const dark=['necromancer','shadowknight'].includes(e.school),wild=['druid','ranger','shaman'].includes(e.school);
   if(e.kind==='step')return e.surface==='mire'?'step-water':e.surface==='rime'?'step-snow':e.surface==='cinder'?'step-stone':'step-grass';
   if(e.kind==='cast')return dark?'charge-grave':wild?'charge-nature':'charge-arcane';
   if(e.kind==='bolt')return e.spellIndex===8?'frost':dark?'grave':wild?'nature':'fire';

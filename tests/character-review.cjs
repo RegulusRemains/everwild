@@ -3,7 +3,7 @@ async function runCharacterChecks(page,output){
  const context=await page.context().browser().newContext({viewport:{width:1440,height:1000}}),p=await context.newPage(),errors=[];p.on('pageerror',e=>errors.push(e.message));
  try{
   await p.goto(new URL('/',page.url()).href);await p.waitForFunction(()=>Boolean(window.everwild));
-  await p.waitForSelector('#new-character-name');assert.equal(await p.locator('[data-action="choose-class"]').count(),3);
+  await p.waitForSelector('#new-character-name');assert.equal(await p.locator('[data-action="choose-class"]').count(),14);
   await p.screenshot({path:path.join(output,'character-create-desktop.png')});
   await p.fill('#new-character-name','Aster');await p.click('[data-action="create-character"]');
   assert.equal(await p.evaluate(()=>window.everwild.game.player.classId),'magician');

@@ -2,7 +2,7 @@
 const fresh=id=>new Game({save:{player:{classId:id,name:'Aster',level:4,inventory:[]}},random:()=>.5});
 const tick=(g,s)=>{for(let t=0;t<s;t+=.05)g.update(.05);};
 test('class identity, character name, stats, spells and persistence are independent',()=>{
- const games=Object.keys(CLASSES).map(fresh);assert.equal(new Set(games.map(g=>g.player.maxHp)).size,3);assert.equal(new Set(games.map(g=>g.spells[1].name)).size,3);
+ const games=Object.keys(CLASSES).map(fresh);assert.ok(new Set(games.map(g=>g.player.maxHp)).size>=3);assert.equal(new Set(games.map(g=>g.spells[1].name)).size,games.length);
  for(const g of games){assert.equal(g.spells.length,SPELLS.length);g.player.gold=53;g._loot('worn-linen-robe');const copy=new Game({save:g.serialize()});assert.equal(copy.player.classId,g.player.classId);assert.equal(copy.player.name,'Aster');assert.equal(copy.player.gold,53);assert.ok(copy.player.inventory.includes('worn-linen-robe'));}
  assert.equal(new Game({save:{player:{level:5,inventory:[]}}}).player.classId,'magician');assert.equal(fresh('unknown').player.classId,'magician');
 });
